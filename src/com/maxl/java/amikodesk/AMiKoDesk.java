@@ -153,6 +153,8 @@ public class AMiKoDesk {
 	private static final String VERSION = "1.1.0 (32-bit)";	
 	private static final String GEN_DATE = "30.09.2013";
 	
+	private static String DB_LANGUAGE = "";
+	
 	private static Long m_start_time = 0L;
 	private static final String HTML_FILES = "./fis/fi_de_html/";
 	private static final String CSS_SHEET = "./css/amiko_stylesheet.css";
@@ -163,10 +165,10 @@ public class AMiKoDesk {
 
 	private static String SectionTitle_DE[] = {"Zusammensetzung", "Galenische Form", "Indikationen", "Dosierung", "Kontraindikationen",
 		"Vorsichtmass.", "Interaktionen", "Schwangerschaft", "Fahrtüchtigkeit", "UAW", "Überdosierung", 
-		"Eig./Wirkung", "Kinetik", "Präklinik", "Sonstige Hinweise", "Packungen", "Firma", "Stand"};
+		"Eig./Wirkung", "Kinetik", "Präklinik", "Sonstige Hinweise", "Zulassungsnummer", "Packungen", "Firma", "Stand"};
 	private static String SectionTitle_FR[] = {"Composition", "Forme galénique", "Indications", "Posologie", "Contre-indic.", 
 		"Précautions", "Interactions", "Grossesse/All.", "Conduite", "Effets indésir.",	"Surdosage", 
-		"Propriétés/Effets", "Cinétique", "Préclinique", "Remarques", "Présentation", "Titulaire", "Mise à jour"};
+		"Propriétés/Effets", "Cinétique", "Préclinique", "Remarques", "Numéro d'autor", "Présentation", "Titulaire", "Mise à jour"};
 	
 	private static int med_index = 0;
 	private static WebPanel2 m_web_panel = null;
@@ -199,6 +201,7 @@ public class AMiKoDesk {
 	 * @param isMandatory - if set to true, the option must be provided.
 	 */
 	@SuppressWarnings("static-access")
+	
 	static void addOption(Options opts, String optionName, String description, boolean hasValue, boolean isMandatory) {
 		OptionBuilder opt = OptionBuilder.withLongOpt(optionName);
 		opt = opt.withDescription(description);
@@ -215,11 +218,29 @@ public class AMiKoDesk {
 			CommandLine cmd = parser.parse(opts, args);
 			if (cmd.hasOption("help")) {				
 				HelpFormatter formatter = new HelpFormatter();
-				formatter.printHelp("aips2xml", opts);
+				formatter.printHelp("amikodesk", opts);
 				System.exit(0);
 			}
 			if (cmd.hasOption("version")) {
-				System.out.println("Version of aips2xml: " + VERSION);
+				System.out.println("Version of amikodesk: " + VERSION);
+			}
+			if (cmd.hasOption("lang")) {
+				if (cmd.getOptionValue("lang").equals("de")) {
+					// Check if db exists
+					System.out.println("Sprache: Deutsch");
+					File wfile = new File("./dbs/amiko_db_full_idx_de.db");
+					if (!wfile.exists())
+						System.out.println("de DB does not exist");
+					DB_LANGUAGE = "DE"; 
+				}
+				else if (cmd.getOptionValue("lang").equals("fr")) {
+					// Check if db exists
+					System.out.println("Language: Francois");
+					File wfile = new File("./dbs/amiko_db_full_idx_fr.db");
+					if (!wfile.exists())
+						System.out.println("fr DB does not exist");
+					DB_LANGUAGE = "FR";								
+				}
 			}
 		} catch(ParseException e) {
 			System.err.println("Parsing failed: " + e.getMessage());
@@ -227,7 +248,11 @@ public class AMiKoDesk {
 	}			
 	
 	private static String appLanguage() {
-		if (APP_NAME.equals(AMIKO_NAME) || APP_NAME.equals(AMIKO_DESITIN_NAME) 
+		if (DB_LANGUAGE.equals("DE"))
+			return "de";
+		else if (DB_LANGUAGE.equals("FR"))
+			return "fr";
+		else if (APP_NAME.equals(AMIKO_NAME) || APP_NAME.equals(AMIKO_DESITIN_NAME) 
 				|| APP_NAME.equals(AMIKO_MEDDRUGS_NAME) || APP_NAME.equals(AMIKO_ZURROSE_NAME)) {
 			return "de";
 		} else if (APP_NAME.equals(COMED_NAME) || APP_NAME.equals(COMED_DESITIN_NAME) 
@@ -237,7 +262,7 @@ public class AMiKoDesk {
 		return "";
 	}
 
-	private static String appCustomization() {
+	private static String appCustomization() {		
 		if (APP_NAME.equals(AMIKO_NAME) || APP_NAME.equals(COMED_NAME)) {
 			return "ywesee";
 		} else if (APP_NAME.equals(AMIKO_DESITIN_NAME) || APP_NAME.equals(COMED_DESITIN_NAME)) {
@@ -252,6 +277,14 @@ public class AMiKoDesk {
 	
 	public static void main(String[] args) {		
 	
+		// Specify command line options
+		Options options = new Options();
+		addOption(options, "help", "print this message", false, false );
+		addOption(options, "version", "print the version information and exit", false, false);
+		addOption(options, "lang", "use given language", true, false);
+		// Activate command line parser
+		commandLineParse(options, args);		
+		
 		if (appCustomization().equals("desitin")) {
 			SplashWindow splash = new SplashWindow(APP_NAME, 7500);
 		} else if (appCustomization().equals("meddrugs")) {

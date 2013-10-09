@@ -1,3 +1,5 @@
 bin/
 dbs/amiko_db_full_idx_de.db
 dbs/amiko_db_full_idx_fr.db
+
+*.db
