@@ -155,6 +155,14 @@ public class AMiKoDesk {
 	
 	private static String DB_LANGUAGE = "";
 	
+	// Constants for command line options
+	private static int CML_OPT_WIDTH = 1024;
+	private static int CML_OPT_HEIGHT = 768;
+	private static String CML_OPT_TYPE = "";
+	private static String CML_OPT_TITLE = "";
+	private static String CML_OPT_EANCODE = "";
+	private static String CML_OPT_REGNR = "";
+	
 	private static Long m_start_time = 0L;
 	private static final String HTML_FILES = "./fis/fi_de_html/";
 	private static final String CSS_SHEET = "./css/amiko_stylesheet.css";
@@ -224,10 +232,19 @@ public class AMiKoDesk {
 			if (cmd.hasOption("version")) {
 				System.out.println("Version of amikodesk: " + VERSION);
 			}
+			if (cmd.hasOption("width")) {
+				int width = Integer.parseInt(cmd.getOptionValue("width"));
+				if (width>1024 && width<=1920)
+					CML_OPT_WIDTH = width;					
+			}
+			if (cmd.hasOption("height")) {
+				int height = Integer.parseInt(cmd.getOptionValue("height"));
+				if (height>768 && height<=1200)
+					CML_OPT_WIDTH = height;									
+			}
 			if (cmd.hasOption("lang")) {
 				if (cmd.getOptionValue("lang").equals("de")) {
 					// Check if db exists
-					System.out.println("Sprache: Deutsch");
 					File wfile = new File("./dbs/amiko_db_full_idx_de.db");
 					if (!wfile.exists())
 						System.out.println("de DB does not exist");
@@ -235,17 +252,41 @@ public class AMiKoDesk {
 				}
 				else if (cmd.getOptionValue("lang").equals("fr")) {
 					// Check if db exists
-					System.out.println("Language: Francois");
 					File wfile = new File("./dbs/amiko_db_full_idx_fr.db");
 					if (!wfile.exists())
 						System.out.println("fr DB does not exist");
 					DB_LANGUAGE = "FR";								
 				}
 			}
+			if (cmd.hasOption("type")) {
+				String type = cmd.getOptionValue("type");
+				if (type!=null && !type.isEmpty())
+					CML_OPT_TYPE = type;
+			}
+			if (cmd.hasOption("title")) {
+				String title = cmd.getOptionValue("title");
+				if (title!=null && !title.isEmpty())
+					CML_OPT_TITLE = title;
+			}
+			if (cmd.hasOption("eancode")) {
+				String eancode = cmd.getOptionValue("eancode");
+				if (eancode!=null && !eancode.isEmpty())
+					CML_OPT_EANCODE = eancode;
+			}
+			if (cmd.hasOption("regnr")) {
+				String regnr = cmd.getOptionValue("regnr");
+				if (regnr!=null && !regnr.isEmpty())
+					CML_OPT_REGNR = regnr;
+			}
 		} catch(ParseException e) {
 			System.err.println("Parsing failed: " + e.getMessage());
 		}
 	}			
+	
+	private static boolean commandLineOptionsProvided() {
+		return (!CML_OPT_TYPE.isEmpty() && 
+				(!CML_OPT_TITLE.isEmpty() || !CML_OPT_EANCODE.isEmpty() || !CML_OPT_REGNR.isEmpty()) );
+	}
 	
 	private static String appLanguage() {
 		if (DB_LANGUAGE.equals("DE"))
@@ -281,7 +322,13 @@ public class AMiKoDesk {
 		Options options = new Options();
 		addOption(options, "help", "print this message", false, false );
 		addOption(options, "version", "print the version information and exit", false, false);
+		addOption(options, "width", "sets window width", true, false);
+		addOption(options, "height", "sets window height", true, false);
 		addOption(options, "lang", "use given language", true, false);
+		addOption(options, "type", "start plain or full app", true, false);
+		addOption(options, "title", "display medical info related to given title", true, false);
+		addOption(options, "eancode", "display medical info related to given 13-digit ean-code", true, false);
+		addOption(options, "regnr", "display medical info related to given 5-digit registration number", true, false);
 		// Activate command line parser
 		commandLineParse(options, args);		
 		
@@ -318,7 +365,13 @@ public class AMiKoDesk {
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {			
 			@Override
 			public void run() {
-				createAndShowGUI();
+				if (!commandLineOptionsProvided())
+					createAndShowGUI();
+				else if (CML_OPT_TYPE.equals("full"))
+					createAndShowGUI();
+				else if (CML_OPT_TYPE.equals("plain")) {
+					// Start plain app
+				}
 			}
 		});
 
@@ -554,29 +607,6 @@ public class AMiKoDesk {
 					// Fallback solution (used to be preferred implementation)
 					jWeb.setHTMLContent(content_str.toString());
 				}
-				
-				/*
-				PrintRequestAttributeSet attr_set = new HashPrintRequestAttributeSet();
-				attr_set.add(new Copies(2));
-				attr_set.add(Sides.DUPLEX);
-				PrintService[] service = PrinterJob.lookupPrintServices();
-				if (service.length==0)
-					System.out.println("no printing services available");
-				for (int i=0; i<service.length; ++i)
-					System.out.println(service[i].getName());
-				DocPrintJob job = service[0].createPrintJob(); 
-				*/				    
-				
-				/*
-				System.out.println("--> " + jWeb.getNativeComponent().getName());
-			    int instanceID = ObjectRegistry.getInstance().add(this);
-			    String resourcePath = WebServer.getDefaultWebServer().getDynamicContentURL(WebBrowserObject.class.getName(), "html/" + instanceID);
-			    System.out.println(instanceID + ": " + resourcePath);
-			    String lUrl = WebServer.getDefaultWebServer().getURLPrefix(); // e.g. http://127.0.0.1:4716
-			    System.out.println(lUrl);
-				System.out.println(jWeb.getBrowserType() + ", version: " + jWeb.getBrowserVersion());
-				System.out.println(jWeb.getResourceLocation() + " / " + jWeb.getName() + " / " + jWeb.getPageTitle());
-				*/
 				
 				jWeb.setVisible(true);
 			}
@@ -963,8 +993,9 @@ public class AMiKoDesk {
 	private static void createAndShowGUI() {
 		// Create and setup window
 		final JFrame jframe = new JFrame(APP_NAME);
-        int min_width = 1024;
-        int min_height = 768;
+        int min_width = CML_OPT_WIDTH;
+        int min_height = CML_OPT_HEIGHT;
+       
         jframe.setPreferredSize(new Dimension(min_width, min_height));
 		jframe.setMinimumSize(new Dimension(min_width, min_height));
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
@@ -1380,7 +1411,7 @@ public class AMiKoDesk {
 		final String final_ingredient = l_ingredient;
 		final String final_therapy = l_therapy;
 		final String final_search = l_search;
-		
+
 		// -> searchField.addActionListener(new ActionListener() {
 		// Add keylistener to text field (type as you go feature)
 		searchField.addKeyListener(new KeyAdapter() {
@@ -1393,6 +1424,7 @@ public class AMiKoDesk {
 			*/
 				m_start_time = System.currentTimeMillis();
 				m_query_str = searchField.getText();
+				// Queries for SQLite DB
 				if (!m_query_str.isEmpty()) {
 					if (m_query_type==0) {
 						med_search = m_sqldb.searchTitle(m_query_str);						
@@ -1419,7 +1451,7 @@ public class AMiKoDesk {
 						sTherapy(m_query_str);
 						cardl.show(p_results, final_therapy);	
 					} else {
-						//
+						// do nothing
 					}
 					m_status_label.setText(med_search.size() + " Suchresultate in " + 
 							(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
@@ -1490,8 +1522,50 @@ public class AMiKoDesk {
 		// jframe.setAlwaysOnTop(true);
 		jframe.setVisible(true);
 		//jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		jframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);		
+		jframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);	
+		
+		// If command line options are provided start app with a particular title or eancode
+		if (commandLineOptionsProvided()) {
+			if (!CML_OPT_TITLE.isEmpty())
+				startAppWithTitle(but_title);
+			else if (!CML_OPT_EANCODE.isEmpty())
+				startAppWithEancode(but_regnr);
+			else if (!CML_OPT_REGNR.isEmpty())
+				startAppWithRegnr(but_regnr);
+		}
 	}	
+	
+	static void startAppWithTitle(JButton but_title)
+	{
+		m_query_str = CML_OPT_TITLE;
+		med_search = m_sqldb.searchTitle(m_query_str);
+		but_title.doClick();
+		med_index = 0;
+		m_web_panel.updateText();						
+	}
+	
+	static void startAppWithEancode(JButton but_regnr)
+	{
+		// Extract 5-digit registration number
+		if (CML_OPT_EANCODE.length()==13 && CML_OPT_EANCODE.indexOf("7680")==0) {
+			m_query_str = CML_OPT_EANCODE.substring(4, 9);
+			med_search = m_sqldb.searchRegNr(m_query_str);
+			but_regnr.doClick();
+			med_index = 0;
+			m_web_panel.updateText();
+		}
+	}
+	
+	static void startAppWithRegnr(JButton but_regnr)
+	{
+		if (CML_OPT_REGNR.length()==5) {
+			m_query_str = CML_OPT_REGNR;
+			med_search = m_sqldb.searchRegNr(m_query_str);
+			but_regnr.doClick();
+			med_index = 0;
+			m_web_panel.updateText();	
+		}
+	}
 	
 	static void sTitle(String query_str) {
 		med_id.clear();
