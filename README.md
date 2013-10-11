@@ -3,10 +3,10 @@ AmiKo-Desktop
 
 AmiKo Desktop für Windows
 
-##Setpu
+##Setup
 * The database goes into jars/dbs/
-** amiko_db_full_idx_de.db
-** amiko_db_full_idx_fr.db
+* * amiko_db_full_idx_de.db
+* * amiko_db_full_idx_fr.db
 
 ## Help
 * java -jar amikowindows.jar --help
