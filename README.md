@@ -8,6 +8,12 @@ AmiKo Desktop für Windows
 * * amiko_db_full_idx_de.db
 * * amiko_db_full_idx_fr.db
 
+###Grab the database from here:
+* wget http://pillbox.oddb.org/amiko_db_full_idx_de.db
+
+### Error File:
+* http://pillbox.oddb.org/amiko_report_de.html
+
 ## Help
 * java -jar amikowindows.jar --help
 
