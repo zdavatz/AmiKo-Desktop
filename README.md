@@ -14,5 +14,5 @@ AmiKo Desktop für Windows
 ## Version
 * java -jar amikowindows.jar --version
 
-## Usage to show one FI
+## Usage to show one Fachinfo
 * java -jar amikowindows.jar --lang=de --type=full --regnr=62069
