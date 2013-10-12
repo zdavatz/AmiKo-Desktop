@@ -325,7 +325,7 @@ public class AMiKoDesk {
 		addOption(options, "width", "sets window width", true, false);
 		addOption(options, "height", "sets window height", true, false);
 		addOption(options, "lang", "use given language", true, false);
-		addOption(options, "type", "start plain or full app", true, false);
+		addOption(options, "type", "start light or full app", true, false);
 		addOption(options, "title", "display medical info related to given title", true, false);
 		addOption(options, "eancode", "display medical info related to given 13-digit ean-code", true, false);
 		addOption(options, "regnr", "display medical info related to given 5-digit registration number", true, false);
@@ -366,11 +366,11 @@ public class AMiKoDesk {
 			@Override
 			public void run() {
 				if (!commandLineOptionsProvided())
-					createAndShowGUI();
+					createAndShowFullGUI();
 				else if (CML_OPT_TYPE.equals("full"))
-					createAndShowGUI();
-				else if (CML_OPT_TYPE.equals("plain")) {
-					// Start plain app
+					createAndShowFullGUI();
+				else if (CML_OPT_TYPE.equals("light")) {
+					createAndShowLightGUI();
 				}
 			}
 		});
@@ -584,12 +584,14 @@ public class AMiKoDesk {
 		
 		public void updateText() {
 			if (med_index>=0) {
+
 				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
 				String[] sections = m.getSectionIds().split(",");
 	    		m_section_str = Arrays.asList(sections);
 				String[] ids = m.getSectionIds().split(",");
 	    		m_section_ids = Arrays.asList(ids);	
-				content_str = new StringBuffer(m.getContent());	
+				content_str = new StringBuffer(m.getContent());
+				
 				// DateFormat df = new SimpleDateFormat("dd.MM.yy");
 				String _amiko_str = APP_NAME + " - Datenstand AIPS Swissmedic " + GEN_DATE;
 				content_str = content_str.insert(content_str.indexOf("<head>"), "<title>" + _amiko_str + "</title>");
@@ -989,8 +991,110 @@ public class AMiKoDesk {
 			this.setResizable(false);
 		}
 	}
+
+	private static void createAndShowLightGUI() {
+		// Create and setup window
+		final JFrame jframe = new JFrame(APP_NAME);
+        int min_width = CML_OPT_WIDTH;
+        int min_height = CML_OPT_HEIGHT;
+       
+        jframe.setPreferredSize(new Dimension(min_width, min_height));
+		jframe.setMinimumSize(new Dimension(min_width, min_height));
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        int x = (screen.width-min_width)/2;
+        int y = (screen.height-min_height)/2;
+        jframe.setBounds(x,y,min_width,min_height);		
+        
+		// Action listeners
+		jframe.addWindowListener(new WindowListener() {
+			// Use WindowAdapter!
+	        @Override 
+	        public void windowOpened(WindowEvent e) {}
+	        @Override 
+	        public void windowClosed(WindowEvent e) {
+				m_web_panel.dispose();
+				Runtime.getRuntime().exit(0);	        	
+	        }
+	        @Override
+	        public void windowClosing(WindowEvent e) {}
+	        @Override 
+	        public void windowIconified(WindowEvent e) {}
+	        @Override 
+	        public void windowDeiconified(WindowEvent e) {}
+	        @Override 
+	        public void windowActivated(WindowEvent e) {}
+	        @Override 
+	        public void windowDeactivated(WindowEvent e) {}
+		});        
+        
+    	// Container
+		final Container container = jframe.getContentPane();
+		container.setBackground(Color.WHITE);
+		container.setLayout(new BorderLayout());
+		
+		// ==== Light panel ====
+		JPanel light_panel = new JPanel();
+		light_panel.setBackground(Color.WHITE);
+		light_panel.setLayout(new GridBagLayout());
+		
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.anchor = GridBagConstraints.CENTER;
+		gbc.insets = new Insets(2,2,2,2);		
+		
+		// ---- Section titles ----
+		IndexPanel m_section_titles = null;
+		if (appLanguage().equals("de")) {
+			m_section_titles = new IndexPanel(SectionTitle_DE);	
+		} else if (appLanguage().equals("fr")) {
+			m_section_titles = new IndexPanel(SectionTitle_FR);				
+		}			
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		gbc.gridwidth = 1;
+		gbc.gridheight = 8;
+		gbc.weightx = gbc.weighty = 0.0;
+		// --> container.add(m_section_titles, gbc);
+		if (m_section_titles!=null)
+			light_panel.add(m_section_titles, gbc);
+		
+		// ---- Fachinformation ----
+		m_web_panel = new WebPanel2();
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx = 1;
+		gbc.gridy = 0;
+		gbc.gridwidth = 3;
+		gbc.gridheight = 20;
+		gbc.weightx = 2.0;
+		gbc.weighty = 1.0;
+		gbc.anchor = GridBagConstraints.EAST;
+		// --> container.add(m_web_panel, gbc);
+		light_panel.add(m_web_panel, gbc);
+		
+		// ---- Add panel to main container ----
+		container.add(light_panel, BorderLayout.CENTER);
+		
+		// Display window
+		jframe.pack();
+		// jframe.setAlwaysOnTop(true);
+		jframe.setVisible(true);
+		//jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		jframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);			
+		
+		// If command line options are provided start app with a particular title or eancode
+		if (commandLineOptionsProvided()) {
+			JButton but_dummy = new JButton("dummy_button");
+			if (!CML_OPT_TITLE.isEmpty())
+				startAppWithTitle(but_dummy);
+			else if (!CML_OPT_EANCODE.isEmpty())
+				startAppWithEancode(but_dummy);
+			else if (!CML_OPT_REGNR.isEmpty())
+				startAppWithRegnr(but_dummy);
+		}		
+	}
 	
-	private static void createAndShowGUI() {
+	private static void createAndShowFullGUI() {
 		// Create and setup window
 		final JFrame jframe = new JFrame(APP_NAME);
         int min_width = CML_OPT_WIDTH;
@@ -1539,18 +1643,37 @@ public class AMiKoDesk {
 	{
 		m_query_str = CML_OPT_TITLE;
 		med_search = m_sqldb.searchTitle(m_query_str);
-		but_title.doClick();
+		if (CML_OPT_TYPE.equals("full"))
+			but_title.doClick();
+		else if (CML_OPT_TYPE.equals("light")) {
+			m_query_type = 0;
+			med_id.clear();
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				med_id.add(ms.getId());
+			}
+		}
 		med_index = 0;
 		m_web_panel.updateText();						
 	}
 	
 	static void startAppWithEancode(JButton but_regnr)
 	{
-		// Extract 5-digit registration number
+		// Check if delivered eancode is "kosher"
 		if (CML_OPT_EANCODE.length()==13 && CML_OPT_EANCODE.indexOf("7680")==0) {
+			// Extract 5-digit registration number			
 			m_query_str = CML_OPT_EANCODE.substring(4, 9);
 			med_search = m_sqldb.searchRegNr(m_query_str);
-			but_regnr.doClick();
+			if (CML_OPT_TYPE.equals("full"))
+				but_regnr.doClick();
+			else if (CML_OPT_TYPE.equals("light")) {
+				m_query_type = 3;
+				med_id.clear();
+				for (int i=0; i<med_search.size(); ++i) {
+					Medication ms = med_search.get(i);
+					med_id.add(ms.getId());
+				}									
+			}
 			med_index = 0;
 			m_web_panel.updateText();
 		}
@@ -1558,10 +1681,20 @@ public class AMiKoDesk {
 	
 	static void startAppWithRegnr(JButton but_regnr)
 	{
+		// Simple check, should be improved...
 		if (CML_OPT_REGNR.length()==5) {
 			m_query_str = CML_OPT_REGNR;
 			med_search = m_sqldb.searchRegNr(m_query_str);
-			but_regnr.doClick();
+			if (CML_OPT_TYPE.equals("full"))
+				but_regnr.doClick();
+			else if (CML_OPT_TYPE.equals("light")) {
+				m_query_type = 3;
+				med_id.clear();
+				for (int i=0; i<med_search.size(); ++i) {
+					Medication ms = med_search.get(i);
+					med_id.add(ms.getId());
+				}					
+			}
 			med_index = 0;
 			m_web_panel.updateText();	
 		}
