@@ -17,5 +17,6 @@ AmiKo Desktop für Windows
 ## Usage to show one Fachinfo
 ### Full Window
 * java -jar amikowindows.jar --lang=de --type=full --regnr=62069
+
 ### Light Window
 * java -jar amikowindows.jar --lang=de --type=light --regnr=62069
