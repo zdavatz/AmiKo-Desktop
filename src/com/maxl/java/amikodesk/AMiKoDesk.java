@@ -156,6 +156,7 @@ public class AMiKoDesk {
 	private static String DB_LANGUAGE = "";
 	
 	// Constants for command line options
+	private static int CML_OPT_PORT = 7777;
 	private static int CML_OPT_WIDTH = 1024;
 	private static int CML_OPT_HEIGHT = 768;
 	private static String CML_OPT_TYPE = "";
@@ -232,6 +233,13 @@ public class AMiKoDesk {
 			if (cmd.hasOption("version")) {
 				System.out.println("Version of amikodesk: " + VERSION);
 			}
+			if (cmd.hasOption("port")) {
+				int port = Integer.parseInt(cmd.getOptionValue("port"));
+				if (port<9999)
+					CML_OPT_PORT = port;
+				AppServer mTcpServer = new AppServer();
+				mTcpServer.start(CML_OPT_PORT);
+			}
 			if (cmd.hasOption("width")) {
 				int width = Integer.parseInt(cmd.getOptionValue("width"));
 				if (width>1024 && width<=1920)
@@ -247,14 +255,14 @@ public class AMiKoDesk {
 					// Check if db exists
 					File wfile = new File("./dbs/amiko_db_full_idx_de.db");
 					if (!wfile.exists())
-						System.out.println("de DB does not exist");
+						System.out.println("> Error: amiko_db_full_idx_de.db not in directory ./dbs");
 					DB_LANGUAGE = "DE"; 
 				}
 				else if (cmd.getOptionValue("lang").equals("fr")) {
 					// Check if db exists
 					File wfile = new File("./dbs/amiko_db_full_idx_fr.db");
 					if (!wfile.exists())
-						System.out.println("fr DB does not exist");
+						System.out.println("> Error: amiko_db_full_idx_fr.db not in directory ./dbs");
 					DB_LANGUAGE = "FR";								
 				}
 			}
@@ -287,7 +295,7 @@ public class AMiKoDesk {
 		return (!CML_OPT_TYPE.isEmpty() && 
 				(!CML_OPT_TITLE.isEmpty() || !CML_OPT_EANCODE.isEmpty() || !CML_OPT_REGNR.isEmpty()) );
 	}
-	
+
 	private static String appLanguage() {
 		if (DB_LANGUAGE.equals("DE"))
 			return "de";
@@ -322,6 +330,7 @@ public class AMiKoDesk {
 		Options options = new Options();
 		addOption(options, "help", "print this message", false, false );
 		addOption(options, "version", "print the version information and exit", false, false);
+		addOption(options, "port", "starts AmiKo-server at given port", true, false);
 		addOption(options, "width", "sets window width", true, false);
 		addOption(options, "height", "sets window height", true, false);
 		addOption(options, "lang", "use given language", true, false);
@@ -1676,6 +1685,8 @@ public class AMiKoDesk {
 			}
 			med_index = 0;
 			m_web_panel.updateText();
+		} else {
+			System.out.println("> Error: Wrong EAN code");
 		}
 	}
 	
@@ -1697,6 +1708,8 @@ public class AMiKoDesk {
 			}
 			med_index = 0;
 			m_web_panel.updateText();	
+		} else {
+			System.out.println("> Error: Wrong registration number");
 		}
 	}
 	
