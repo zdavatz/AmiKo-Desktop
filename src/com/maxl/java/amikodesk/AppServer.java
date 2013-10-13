@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2013 Max Lungarella <cybrmx@gmail.com>
+
+This file is part of AmiKoDesk for Windows.
+
+AmiKoDesk is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package com.maxl.java.amikodesk;
 
 import java.io.BufferedReader;
@@ -31,8 +50,8 @@ public class AppServer implements Runnable {
 			try {
 				clientSocket = mServerSocket.accept();
 			} catch (IOException e) {
-                if(isStopped()) {
-                    System.out.println("Server Stopped.") ;
+                if (isStopped()) {
+                    System.out.println("Server stopped.") ;
                     return;
                 }
                 throw new RuntimeException(
@@ -59,7 +78,7 @@ public class AppServer implements Runnable {
         try {
             mServerSocket = new ServerSocket(this.mServerPort);
         } catch (IOException e) {
-            throw new RuntimeException("Cannot open port 7777", e);
+            throw new RuntimeException("Cannot open port " + mServerPort, e);
         }
     }	
     
@@ -93,6 +112,7 @@ public class AppServer implements Runnable {
 				
 				while ((input = mBufferedReader.readLine()) != null) {
 					mInput = input;
+					// The following line will have to be changed...
 					output = "?";
 					if (output != null) {
 						mPrintWriter.println(output);
@@ -113,50 +133,3 @@ public class AppServer implements Runnable {
 		}
 	}	    
 }
-
-/**
-	public void start(int port) {
-		boolean listening = true;
-		
-		try {
-			mPort = port;
-			mServerSocket = new ServerSocket(port);
-			System.out.println("Server ready on port: " + mPort);
-		} catch (IOException e) {
-			System.err.println("Could not listen on port " + mPort);
-			System.exit(1);
-		}
-		
-		if (listening) {
-			Socket mClientSocket = null;
-			try {
-				mClientSocket = mServerSocket.accept();
-				// new ConnectionRequestHandler(mClientSocket).run();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			
-			new Thread(new ConnectionRequestHandler(mClientSocket)).start();
-		}
-	}
-	
-	public void stop() {
-		try {
-			mServerSocket.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	public String getInput() {
-		if (_mInput != mInput) {
-			_mInput = mInput;
-			return mInput;
-		}
-		else 
-			return "";
-	}
-	
- */
-

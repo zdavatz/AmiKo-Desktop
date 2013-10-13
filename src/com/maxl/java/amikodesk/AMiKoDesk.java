@@ -164,7 +164,8 @@ public class AMiKoDesk {
 	private static String CML_OPT_TITLE = "";
 	private static String CML_OPT_EANCODE = "";
 	private static String CML_OPT_REGNR = "";
-	
+
+	// TCP server related variables go here
 	private static AppServer mTcpServer;
 	
 	private static Long m_start_time = 0L;
@@ -1117,15 +1118,17 @@ public class AMiKoDesk {
 			else if (!CML_OPT_REGNR.isEmpty())
 				startAppWithRegnr(but_dummy);
 			else if (CML_OPT_SERVER==true) {
-				// Start thread that reads data from server
+				// Start thread that reads data from TCP server
 				SwingUtilities.invokeLater(new Runnable() {
 					public void run() {
 						while (true) {
-							// Check if new input data is available, update GUI
 							System.out.print("Waiting for input...");
 							String tcpServerInput = "";
+							// Wait until new data is available from input stream
+							// Note: the TCP client defines the update rate!
 							while ((tcpServerInput = mTcpServer.getInput()).isEmpty());
 							char typeOfSearch = tcpServerInput.charAt(0);
+							// Detect type of search (t=title, e=eancode, r=regnr)
 							if (typeOfSearch=='t') {
 								// Extract title from received string
 								CML_OPT_TITLE = tcpServerInput.substring(2);
@@ -1701,6 +1704,7 @@ public class AMiKoDesk {
 	{
 		m_query_str = CML_OPT_TITLE;
 		med_search = m_sqldb.searchTitle(m_query_str);
+		// Check first if search delivers any result
 		if (med_search.size()>0) {
 			if (CML_OPT_TYPE.equals("full"))
 				but_title.doClick();
@@ -1724,6 +1728,7 @@ public class AMiKoDesk {
 			// Extract 5-digit registration number			
 			m_query_str = CML_OPT_EANCODE.substring(4, 9);
 			med_search = m_sqldb.searchRegNr(m_query_str);
+			// Check first if search delivers any result			
 			if (med_search.size()>0) {
 				if (CML_OPT_TYPE.equals("full"))
 					but_regnr.doClick();
@@ -1749,6 +1754,7 @@ public class AMiKoDesk {
 		if (CML_OPT_REGNR.length()==5) {
 			m_query_str = CML_OPT_REGNR;
 			med_search = m_sqldb.searchRegNr(m_query_str);
+			// Check first if search delivers any result			
 			if (med_search.size()>0) {
 				if (CML_OPT_TYPE.equals("full"))
 					but_regnr.doClick();
