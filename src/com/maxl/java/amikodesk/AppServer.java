@@ -3,21 +3,118 @@ package com.maxl.java.amikodesk;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class AppServer {
+public class AppServer implements Runnable {
 
-	private int mPort = 7777;
+	private int mServerPort = 7777;
 	private ServerSocket mServerSocket = null;
+	private boolean mIsStopped = false;
+	private String mInput = null;
+	private Thread mRunningThread = null;
+
+	private static String _mInput = null;	
 	
-	public AppServer() {
+	public AppServer(int port) {
+		mServerPort = port;
+	}
+
+	public void run() {
+		synchronized(this) {
+			mRunningThread = Thread.currentThread();
+		}		
+		openServerSocket();
+		while (!mIsStopped) {
+			Socket clientSocket = null;
+			try {
+				clientSocket = mServerSocket.accept();
+			} catch (IOException e) {
+                if(isStopped()) {
+                    System.out.println("Server Stopped.") ;
+                    return;
+                }
+                throw new RuntimeException(
+                    "Error accepting client connection", e);				
+			}
+			new Thread(new ConnectionRequestHandler(clientSocket)).start();
+		}
+	}
+
+    private synchronized boolean isStopped() {
+        return mIsStopped;
+    }
+
+    public synchronized void stop() {
+        mIsStopped = true;
+        try {
+            mServerSocket.close();
+        } catch (IOException e) {
+            throw new RuntimeException("Error closing server", e);
+        }
+    }
+
+    private void openServerSocket() {
+        try {
+            mServerSocket = new ServerSocket(this.mServerPort);
+        } catch (IOException e) {
+            throw new RuntimeException("Cannot open port 7777", e);
+        }
+    }	
+    
+	public synchronized String getInput() {
+		if (_mInput != mInput) {
+			_mInput = mInput;
+			return mInput;
+		}
+		else 
+			return "";
 	}
 	
-	/**
-	 * Starts the AppServer on a given port
-	 * @param port
-	 */
+    public class ConnectionRequestHandler implements Runnable {
+    	
+		private Socket mClientSocket = null;
+		private BufferedReader mBufferedReader = null;
+		private PrintWriter mPrintWriter = null;
+		
+		public ConnectionRequestHandler(Socket socket) {
+			mClientSocket = socket;
+		}
+		
+		public void run() {
+			System.out.println("Client connected to socket: " + mClientSocket.toString());
+			
+			try {
+				mBufferedReader = new BufferedReader(new InputStreamReader(mClientSocket.getInputStream()));
+				mPrintWriter = new PrintWriter(mClientSocket.getOutputStream(), true);
+				
+				String input, output;
+				
+				while ((input = mBufferedReader.readLine()) != null) {
+					mInput = input;
+					output = "?";
+					if (output != null) {
+						mPrintWriter.println(output);
+					} 
+				}				
+			} catch (IOException e) {
+				e.printStackTrace();
+			} finally { 
+				//In case anything goes wrong we need to close our I/O streams and sockets
+				try {
+					mBufferedReader.close();
+					mPrintWriter.close();
+					mServerSocket.close();
+				} catch(Exception e) { 
+					System.out.println("Couldn't close I/O streams");
+				}
+			}
+		}
+	}	    
+}
+
+/**
 	public void start(int port) {
 		boolean listening = true;
 		
@@ -30,18 +127,19 @@ public class AppServer {
 			System.exit(1);
 		}
 		
-		while (listening) {
+		if (listening) {
+			Socket mClientSocket = null;
 			try {
-				new ConnectionRequestHandler(mServerSocket.accept()).run();
+				mClientSocket = mServerSocket.accept();
+				// new ConnectionRequestHandler(mClientSocket).run();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			
+			new Thread(new ConnectionRequestHandler(mClientSocket)).start();
 		}
 	}
 	
-	/**
-	 * Stops and closes the AppServer
-	 */
 	public void stop() {
 		try {
 			mServerSocket.close();
@@ -51,36 +149,14 @@ public class AppServer {
 		}
 	}
 	
-	/**
-	 * Class to handle all requests sent to server
-	 * @author Max
-	 *
-	 */
-	public class ConnectionRequestHandler implements Runnable {
-		private Socket mSocket = null;
-		private BufferedReader mInput = null;
-		
-		public ConnectionRequestHandler(Socket socket) {
-			mSocket = socket;
+	public String getInput() {
+		if (_mInput != mInput) {
+			_mInput = mInput;
+			return mInput;
 		}
-		
-		public void run() {
-			System.out.println("Client connected to socket: " + mSocket.toString());
-			
-			try {
-				mInput = new BufferedReader(new InputStreamReader(mSocket.getInputStream()));
-			} catch (IOException e) {
-				e.printStackTrace();
-			} finally { 
-				//In case anything goes wrong we need to close our I/O streams and sockets
-				try {
-					mInput.close();
-					mSocket.close();
-				} catch(Exception e) { 
-					System.out.println("Couldn't close I/O streams");
-				}
-			}
-		}
-	}	
-}
+		else 
+			return "";
+	}
+	
+ */
 

@@ -91,6 +91,7 @@ import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -156,13 +157,15 @@ public class AMiKoDesk {
 	private static String DB_LANGUAGE = "";
 	
 	// Constants for command line options
-	private static int CML_OPT_PORT = 7777;
+	private static boolean CML_OPT_SERVER = false;
 	private static int CML_OPT_WIDTH = 1024;
 	private static int CML_OPT_HEIGHT = 768;
 	private static String CML_OPT_TYPE = "";
 	private static String CML_OPT_TITLE = "";
 	private static String CML_OPT_EANCODE = "";
 	private static String CML_OPT_REGNR = "";
+	
+	private static AppServer mTcpServer;
 	
 	private static Long m_start_time = 0L;
 	private static final String HTML_FILES = "./fis/fi_de_html/";
@@ -235,10 +238,13 @@ public class AMiKoDesk {
 			}
 			if (cmd.hasOption("port")) {
 				int port = Integer.parseInt(cmd.getOptionValue("port"));
-				if (port<9999)
-					CML_OPT_PORT = port;
-				AppServer mTcpServer = new AppServer();
-				mTcpServer.start(CML_OPT_PORT);
+				if (port>999 && port<9999)
+					CML_OPT_SERVER = true;
+				System.out.print("Initializing TCP server... ");					
+				mTcpServer = new AppServer(port);
+				// NOTE: Must be stopped at a certain point...				
+				new Thread(mTcpServer).start();
+				System.out.println("done");
 			}
 			if (cmd.hasOption("width")) {
 				int width = Integer.parseInt(cmd.getOptionValue("width"));
@@ -292,8 +298,9 @@ public class AMiKoDesk {
 	}			
 	
 	private static boolean commandLineOptionsProvided() {
-		return (!CML_OPT_TYPE.isEmpty() && 
-				(!CML_OPT_TITLE.isEmpty() || !CML_OPT_EANCODE.isEmpty() || !CML_OPT_REGNR.isEmpty()) );
+		return (!CML_OPT_TYPE.isEmpty() && (
+				!CML_OPT_TITLE.isEmpty() || !CML_OPT_EANCODE.isEmpty() || !CML_OPT_REGNR.isEmpty() || 
+				CML_OPT_SERVER==true));
 	}
 
 	private static String appLanguage() {
@@ -374,11 +381,16 @@ public class AMiKoDesk {
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {			
 			@Override
 			public void run() {
-				if (!commandLineOptionsProvided())
+				if (!commandLineOptionsProvided()) {
+					System.out.println("No relevant command line options provided... creating full GUI");
 					createAndShowFullGUI();
-				else if (CML_OPT_TYPE.equals("full"))
+				}
+				else if (CML_OPT_TYPE.equals("full")) {
+					System.out.println("Creating full GUI");
 					createAndShowFullGUI();
+				}
 				else if (CML_OPT_TYPE.equals("light")) {
+					System.out.println("Creating light GUI");
 					createAndShowLightGUI();
 				}
 			}
@@ -593,7 +605,6 @@ public class AMiKoDesk {
 		
 		public void updateText() {
 			if (med_index>=0) {
-
 				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
 				String[] sections = m.getSectionIds().split(",");
 	    		m_section_str = Arrays.asList(sections);
@@ -607,16 +618,21 @@ public class AMiKoDesk {
 				content_str = content_str.insert(content_str.indexOf("</head>"), m_css_str);
 				jWeb.setJavascriptEnabled(true);
 				
-				try {
-					// Currently preferred solution, html saved in C:/Users/ ... folder
-					String path_html = System.getProperty ("user.home") + "/" + APP_NAME +"/htmls/";
-					String _title = m.getTitle();					
-					String file_name = _title.replaceAll("[®,/;.]","_") + ".html";
-					writeToFile(content_str.toString(), path_html, file_name);
-					jWeb.navigate("file:///" + path_html + file_name);
-				} catch(IOException e) {
-					// Fallback solution (used to be preferred implementation)
-					jWeb.setHTMLContent(content_str.toString());
+				if (CML_OPT_SERVER==false) {
+					try {
+						// Currently preferred solution, html saved in C:/Users/ ... folder
+						String path_html = System.getProperty ("user.home") + "/" + APP_NAME +"/htmls/";
+						String _title = m.getTitle();					
+						String file_name = _title.replaceAll("[®,/;.]","_") + ".html";
+						writeToFile(content_str.toString(), path_html, file_name);
+						jWeb.navigate("file:///" + path_html + file_name);
+					} catch(IOException e) {
+						// Fallback solution (used to be preferred implementation)
+						jWeb.setHTMLContent(content_str.toString());
+					}
+				} else {
+					// Original fallback solution works well and is fast...
+					jWeb.setHTMLContent(content_str.toString());					
 				}
 				
 				jWeb.setVisible(true);
@@ -1093,16 +1109,49 @@ public class AMiKoDesk {
 		
 		// If command line options are provided start app with a particular title or eancode
 		if (commandLineOptionsProvided()) {
-			JButton but_dummy = new JButton("dummy_button");
+			final JButton but_dummy = new JButton("dummy_button");
 			if (!CML_OPT_TITLE.isEmpty())
 				startAppWithTitle(but_dummy);
 			else if (!CML_OPT_EANCODE.isEmpty())
 				startAppWithEancode(but_dummy);
 			else if (!CML_OPT_REGNR.isEmpty())
 				startAppWithRegnr(but_dummy);
-		}		
+			else if (CML_OPT_SERVER==true) {
+				// Start thread that reads data from server
+				SwingUtilities.invokeLater(new Runnable() {
+					public void run() {
+						while (true) {
+							// Check if new input data is available, update GUI
+							System.out.print("Waiting for input...");
+							String tcpServerInput = "";
+							while ((tcpServerInput = mTcpServer.getInput()).isEmpty());
+							char typeOfSearch = tcpServerInput.charAt(0);
+							if (typeOfSearch=='t') {
+								// Extract title from received string
+								CML_OPT_TITLE = tcpServerInput.substring(2);
+								System.out.println(" title -> " + CML_OPT_TITLE);
+								// Update GUI
+								startAppWithTitle(but_dummy); 								
+							} else if (typeOfSearch=='e') {
+								// Extract ean code from received string
+								CML_OPT_EANCODE = tcpServerInput.substring(2);
+								System.out.println(" eancode -> " + CML_OPT_EANCODE);
+								// Update GUIG
+								startAppWithEancode(but_dummy); 									
+							} else if (typeOfSearch=='r') {
+								// Extract registration number from received string
+								CML_OPT_REGNR = tcpServerInput.substring(2);
+								System.out.println(" regnr -> " + CML_OPT_REGNR);
+								// Update GUI
+								startAppWithRegnr(but_dummy); 	
+							}
+						}
+					}
+				});		
+			}
+		}
 	}
-	
+		
 	private static void createAndShowFullGUI() {
 		// Create and setup window
 		final JFrame jframe = new JFrame(APP_NAME);
@@ -1652,18 +1701,20 @@ public class AMiKoDesk {
 	{
 		m_query_str = CML_OPT_TITLE;
 		med_search = m_sqldb.searchTitle(m_query_str);
-		if (CML_OPT_TYPE.equals("full"))
-			but_title.doClick();
-		else if (CML_OPT_TYPE.equals("light")) {
-			m_query_type = 0;
-			med_id.clear();
-			for (int i=0; i<med_search.size(); ++i) {
-				Medication ms = med_search.get(i);
-				med_id.add(ms.getId());
+		if (med_search.size()>0) {
+			if (CML_OPT_TYPE.equals("full"))
+				but_title.doClick();
+			else if (CML_OPT_TYPE.equals("light")) {
+				m_query_type = 0;
+				med_id.clear();
+				for (int i=0; i<med_search.size(); ++i) {
+					Medication ms = med_search.get(i);
+					med_id.add(ms.getId());
+				}
 			}
+			med_index = 0;
+			m_web_panel.updateText();						
 		}
-		med_index = 0;
-		m_web_panel.updateText();						
 	}
 	
 	static void startAppWithEancode(JButton but_regnr)
@@ -1673,18 +1724,20 @@ public class AMiKoDesk {
 			// Extract 5-digit registration number			
 			m_query_str = CML_OPT_EANCODE.substring(4, 9);
 			med_search = m_sqldb.searchRegNr(m_query_str);
-			if (CML_OPT_TYPE.equals("full"))
-				but_regnr.doClick();
-			else if (CML_OPT_TYPE.equals("light")) {
-				m_query_type = 3;
-				med_id.clear();
-				for (int i=0; i<med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
-					med_id.add(ms.getId());
-				}									
+			if (med_search.size()>0) {
+				if (CML_OPT_TYPE.equals("full"))
+					but_regnr.doClick();
+				else if (CML_OPT_TYPE.equals("light")) {
+					m_query_type = 3;
+					med_id.clear();
+					for (int i=0; i<med_search.size(); ++i) {
+						Medication ms = med_search.get(i);
+						med_id.add(ms.getId());
+					}									
+				}
+				med_index = 0;
+				m_web_panel.updateText();
 			}
-			med_index = 0;
-			m_web_panel.updateText();
 		} else {
 			System.out.println("> Error: Wrong EAN code");
 		}
@@ -1696,18 +1749,20 @@ public class AMiKoDesk {
 		if (CML_OPT_REGNR.length()==5) {
 			m_query_str = CML_OPT_REGNR;
 			med_search = m_sqldb.searchRegNr(m_query_str);
-			if (CML_OPT_TYPE.equals("full"))
-				but_regnr.doClick();
-			else if (CML_OPT_TYPE.equals("light")) {
-				m_query_type = 3;
-				med_id.clear();
-				for (int i=0; i<med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
-					med_id.add(ms.getId());
-				}					
+			if (med_search.size()>0) {
+				if (CML_OPT_TYPE.equals("full"))
+					but_regnr.doClick();
+				else if (CML_OPT_TYPE.equals("light")) {
+					m_query_type = 3;
+					med_id.clear();
+					for (int i=0; i<med_search.size(); ++i) {
+						Medication ms = med_search.get(i);
+						med_id.add(ms.getId());
+					}					
+				}
+				med_index = 0;
+				m_web_panel.updateText();
 			}
-			med_index = 0;
-			m_web_panel.updateText();	
 		} else {
 			System.out.println("> Error: Wrong registration number");
 		}
