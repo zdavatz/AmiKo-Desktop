@@ -173,11 +173,18 @@ public class SqlDatabase {
 		List<Medication> med_atccode = new ArrayList<Medication>();
 		
 		try {
+			/*
+		    NSString *query = [NSString stringWithFormat:@"select %@ from %@ where %@ like '%%;%@%%' or %@ like '%@%%' or %@ like '%% %@%%' or %@ like '%@%%' or %@ like '%%;%@%%'",
+		                       SHORT_TABLE, DATABASE_TABLE, KEY_ATCCODE, atccode, KEY_ATCCODE, atccode, KEY_ATCCODE, atccode, KEY_ATCCLASS, atccode, KEY_ATCCLASS, atccode];
+		  */
+		    
 			m_stat = m_conn.createStatement();
 			String query = "select " + SHORT_TABLE + " from " + DATABASE_TABLE + " where " 
 					+ KEY_ATCCODE + " like " + "'%;" + atccode + "%' or "
 					+ KEY_ATCCODE + " like " + "'" + atccode + "%' or "
-					+ KEY_ATCCODE + " like " + "'% " + atccode + "%'";
+					+ KEY_ATCCODE + " like " + "'% " + atccode + "%' or "
+					+ KEY_ATCCLASS + " like " + "'" + atccode + "%' or "
+					+ KEY_ATCCLASS + " like " + "'%;" + atccode + "%'";
 			m_rs = m_stat.executeQuery(query);
 			while (m_rs.next()) {
 				med_atccode.add(cursorToShortMedi(m_rs));

@@ -1119,38 +1119,60 @@ public class AMiKoDesk {
 				startAppWithRegnr(but_dummy);
 			else if (CML_OPT_SERVER==true) {
 				// Start thread that reads data from TCP server
-				SwingUtilities.invokeLater(new Runnable() {
+				Thread server_thread = new Thread() {
 					public void run() {
 						while (true) {
-							System.out.print("Waiting for input...");
 							String tcpServerInput = "";
 							// Wait until new data is available from input stream
 							// Note: the TCP client defines the update rate!
+							// System.out.print("Waiting for input...");							
 							while ((tcpServerInput = mTcpServer.getInput()).isEmpty());
-							char typeOfSearch = tcpServerInput.charAt(0);
-							// Detect type of search (t=title, e=eancode, r=regnr)
-							if (typeOfSearch=='t') {
-								// Extract title from received string
-								CML_OPT_TITLE = tcpServerInput.substring(2);
-								System.out.println(" title -> " + CML_OPT_TITLE);
-								// Update GUI
-								startAppWithTitle(but_dummy); 								
-							} else if (typeOfSearch=='e') {
-								// Extract ean code from received string
-								CML_OPT_EANCODE = tcpServerInput.substring(2);
-								System.out.println(" eancode -> " + CML_OPT_EANCODE);
-								// Update GUIG
-								startAppWithEancode(but_dummy); 									
-							} else if (typeOfSearch=='r') {
-								// Extract registration number from received string
-								CML_OPT_REGNR = tcpServerInput.substring(2);
-								System.out.println(" regnr -> " + CML_OPT_REGNR);
-								// Update GUI
-								startAppWithRegnr(but_dummy); 	
-							}
+								/*
+								 * Important note: we use invokeLater to post a "job" to Swing, which will then be run 
+								 * on the event dispatch thread at Swing's next convenience. Failing to do so will freeze
+								 * the main thread.
+								 */								
+
+								// Detect type of search (t=title, e=eancode, r=regnr)								
+								char typeOfSearch = tcpServerInput.charAt(0);							
+								if (typeOfSearch=='t') {
+									// Extract title from received string
+									CML_OPT_TITLE = tcpServerInput.substring(2);
+									// System.out.println(" title -> " + CML_OPT_TITLE);
+									// Post a "job" to Swing, which will be run on the event dispatch thread 
+									// at its next convenience.
+									SwingUtilities.invokeLater(new Runnable() {
+										public void run() {									
+											startAppWithTitle(but_dummy);
+										}
+									});
+								} else if (typeOfSearch=='e') {
+									// Extract ean code from received string
+									CML_OPT_EANCODE = tcpServerInput.substring(2);
+									// System.out.println(" eancode -> " + CML_OPT_EANCODE);
+									// Post a "job" to Swing, which will be run on the event dispatch thread 
+									// at its next convenience.
+									SwingUtilities.invokeLater(new Runnable() {
+										public void run() {									
+											startAppWithEancode(but_dummy);
+										}
+									});
+								} else if (typeOfSearch=='r') {
+									// Extract registration number from received string
+									CML_OPT_REGNR = tcpServerInput.substring(2);
+									// System.out.println(" regnr -> " + CML_OPT_REGNR);
+									// Post a "job" to Swing, which will be run on the event dispatch thread 
+									// at its next convenience.
+									SwingUtilities.invokeLater(new Runnable() {
+										public void run() {	
+											startAppWithRegnr(but_dummy); 
+										}
+									});
+								}
 						}
 					}
-				});		
+				};
+				server_thread.start();
 			}
 		}
 	}
@@ -1816,9 +1838,25 @@ public class AMiKoDesk {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
 		for (int i=0; i<med_search.size(); ++i) {
-			Medication ms = med_search.get(i);
-			String atc_code_str = ms.getAtcCode().replaceAll(";", " - ");
-			m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + "</font></html>");
+			Medication ms = med_search.get(i);			
+			// String atc_code_str = ms.getAtcCode().replaceAll(";", " - ");
+			
+			String[] m_code = ms.getAtcCode().split(";");
+			String atc_code_str = "";
+			String atc_title_str = "";
+			if (m_code.length>1) {
+				atc_code_str = m_code[0];
+				atc_title_str = m_code[1];
+			}
+			
+			String[] m_class = ms.getAtcClass().split(";");			
+			String atc_class_str = "";
+			if (m_class.length==2)
+				atc_class_str = m_class[1];
+			else if (m_class.length==3)
+				atc_class_str = m_class[2];
+			m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
+				+ atc_title_str + "<br>" + atc_class_str + "</font></html>");
 			med_id.add(ms.getId());
 		}										
 		m_list_atccodes.update(m);
