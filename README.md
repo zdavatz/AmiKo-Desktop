@@ -26,3 +26,11 @@ AmiKo Desktop für Windows
 
 ### Light Window
 * java -jar amikowindows.jar --lang=de --type=light --regnr=62069
+
+### Accessing the database via TCP-client
+1. Start Server: java -jar amikowindows.jar --lang=de --type=light --port=7777
+2. Send requests from client using: t = title, e = eancode, r = regnr
+
+Write your own client (Ruby, Java, PHP, C#, etc). Test client in java is here:
+* https://github.com/cybermax/simpleclient
+* to start the sample client do: java -jar simpleclient.jar
