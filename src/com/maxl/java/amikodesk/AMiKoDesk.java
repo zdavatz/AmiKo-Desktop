@@ -177,11 +177,11 @@ public class AMiKoDesk {
 	private static List<Medication> med_title = new ArrayList<Medication>();
 
 	private static String SectionTitle_DE[] = {"Zusammensetzung", "Galenische Form", "Indikationen", "Dosierung", "Kontraindikationen",
-		"Vorsichtmass.", "Interaktionen", "Schwangerschaft", "Fahrtüchtigkeit", "UAW", "Überdosierung", 
-		"Eig./Wirkung", "Kinetik", "Präklinik", "Sonstige Hinweise", "Zulassungsnummer", "Packungen", "Firma", "Stand"};
-	private static String SectionTitle_FR[] = {"Composition", "Forme galénique", "Indications", "Posologie", "Contre-indic.", 
-		"Précautions", "Interactions", "Grossesse/All.", "Conduite", "Effets indésir.",	"Surdosage", 
-		"Propriétés/Effets", "Cinétique", "Préclinique", "Remarques", "Numéro d'autor", "Présentation", "Titulaire", "Mise à jour"};
+		"Vorsichtmass.", "Interaktionen", "Schwangerschaft", "FahrtÃ¼chtigkeit", "UAW", "Ãœberdosierung", 
+		"Eig./Wirkung", "Kinetik", "PrÃ¤klinik", "Sonstige Hinweise", "Zulassungsnummer", "Packungen", "Firma", "Stand"};
+	private static String SectionTitle_FR[] = {"Composition", "Forme galÃ©nique", "Indications", "Posologie", "Contre-indic.", 
+		"PrÃ©cautions", "Interactions", "Grossesse/All.", "Conduite", "Effets indÃ©sir.",	"Surdosage", 
+		"PropriÃ©tÃ©s/Effets", "CinÃ©tique", "PrÃ©clinique", "Remarques", "NumÃ©ro d'autor", "PrÃ©sentation", "Titulaire", "Mise Ã  jour"};
 	
 	private static int med_index = 0;
 	private static WebPanel2 m_web_panel = null;
@@ -189,7 +189,6 @@ public class AMiKoDesk {
 	private static String m_query_str = null;
 	private static SqlDatabase m_sqldb = null;
 	private static List<String> m_section_str = null;
-	private static List<String> m_section_ids = null;
 	
 	// Panels
 	private static ListPanel m_list_titles = null;
@@ -202,7 +201,7 @@ public class AMiKoDesk {
 	// Colors
 	private static Color m_but_color = new Color(220,225,255);
 	
-	// 0: Präparat, 1: Inhaber, 2: ATC Code, 3: Reg. Nr., 4: Wirkstoff, 5: Therapie
+	// 0: PrÃ¤parat, 1: Inhaber, 2: ATC Code, 3: Reg. Nr., 4: Wirkstoff, 5: Therapie
 	// -> {0, 1, 2, 3, 4, 5, 6};
 	private static int m_query_type = 0;
 	
@@ -350,11 +349,11 @@ public class AMiKoDesk {
 		commandLineParse(options, args);		
 		
 		if (appCustomization().equals("desitin")) {
-			SplashWindow splash = new SplashWindow(APP_NAME, 7500);
+			new SplashWindow(APP_NAME, 7500);
 		} else if (appCustomization().equals("meddrugs")) {
-			SplashWindow splash = new SplashWindow(APP_NAME, 7500);
+			new SplashWindow(APP_NAME, 7500);
 		} else if (appCustomization().equals("zurrose")) {
-			SplashWindow splash = new SplashWindow(APP_NAME, 5000);
+			new SplashWindow(APP_NAME, 5000);
 		}
 		// Load css style sheet
 		m_css_str = "<style>" + readFromFile(CSS_SHEET) + "</style>";
@@ -365,6 +364,7 @@ public class AMiKoDesk {
 			m_sqldb.loadDB("de");
 		else if (appLanguage().equals("fr"))
 			m_sqldb.loadDB("fr");
+		
 		// UIUtils.setPreferredLookAndFeel();
 		NativeInterface.open();
 		NativeSwing.initialize();
@@ -425,7 +425,7 @@ public class AMiKoDesk {
 		        		new Font("Dialog", Font.PLAIN, 14));
 				listPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));
 			} else if (appLanguage().equals("fr")) {
-		        TitledBorder titledBorder = BorderFactory.createTitledBorder(null, "Résultat de la Recherche", 
+		        TitledBorder titledBorder = BorderFactory.createTitledBorder(null, "RÃ©sultat de la Recherche", 
 		        		TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, 
 		        		new Font("Dialog", Font.PLAIN, 14));
 				listPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));			
@@ -609,8 +609,6 @@ public class AMiKoDesk {
 				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
 				String[] sections = m.getSectionIds().split(",");
 	    		m_section_str = Arrays.asList(sections);
-				String[] ids = m.getSectionIds().split(",");
-	    		m_section_ids = Arrays.asList(ids);	
 				content_str = new StringBuffer(m.getContent());
 				
 				// DateFormat df = new SimpleDateFormat("dd.MM.yy");
@@ -624,7 +622,7 @@ public class AMiKoDesk {
 						// Currently preferred solution, html saved in C:/Users/ ... folder
 						String path_html = System.getProperty ("user.home") + "/" + APP_NAME +"/htmls/";
 						String _title = m.getTitle();					
-						String file_name = _title.replaceAll("[®,/;.]","_") + ".html";
+						String file_name = _title.replaceAll("[Â®,/;.]","_") + ".html";
 						writeToFile(content_str.toString(), path_html, file_name);
 						jWeb.navigate("file:///" + path_html + file_name);
 					} catch(IOException e) {
@@ -641,7 +639,14 @@ public class AMiKoDesk {
 		}
 		
 		public void dispose() {
+			// Dispose native peer
 			jWeb.disposeNativePeer();
+			// Close socket connection
+			SwingUtilities.invokeLater(new Runnable() {
+				public void run() {									
+					mTcpServer.stop();					
+				}
+			});			
 			// jWeb = null;
 		}
 		
@@ -848,11 +853,11 @@ public class AMiKoDesk {
 		        	if (appCustomization().equals("ywesee")) {
 		        		sponsoring = "<br>" +
 		        				"<br><a href=\"\">AMiKo / CoMed</a>" +
-		        				"<br>Arzneimittel-Kompendium für Android" +
+		        				"<br>Arzneimittel-Kompendium fÃ¼r Android" +
 		        				"<br>";
 		        	} else if (appCustomization().equals("desitin")) {
 			        	sponsoring = "<br>" +
-			        			"<br>Unterstützt durch Desitin Pharma GmbH" +
+			        			"<br>UnterstÃ¼tzt durch Desitin Pharma GmbH" +
 			        			"<br>";
 			        } else if (appCustomization().equals("meddrugs")) {
 			        	//
@@ -862,7 +867,7 @@ public class AMiKoDesk {
 		        	
 			        info.setText(
 				        "<html><center><b>" + APP_NAME + "</b><br><br>" +
-		        		"Arzneimittel-Kompendium für Windows PC<br>" +
+		        		"Arzneimittel-Kompendium fÃ¼r Windows PC<br>" +
 		        		"Version " + VERSION + "<br>" + 
 		        		date_str + "<br>" +
 		        		"Lizenz: GPLv3.0<br><br>" +
@@ -874,11 +879,11 @@ public class AMiKoDesk {
 		        	if (appCustomization().equals("ywesee")) {
 		        		sponsoring = "<br>" +
 		        				"<br><a href=\"\">AMiKo / CoMed</a>" +
-		        				"<br>Compedium des Médicaments pour Android" +
+		        				"<br>Compedium des MÃ©dicaments pour Android" +
 		        				"<br>";
 		        	} else if (appCustomization().equals("desitin")) {
 			        	sponsoring = "<br>" +
-			        			"<br>Supporteè par Desitin Pharma GmbH" +
+			        			"<br>SupporteÃ© par Desitin Pharma GmbH" +
 			        			"<br>";
 			        } else if (appCustomization().equals("meddrugs")) {
 			        	//
@@ -887,12 +892,12 @@ public class AMiKoDesk {
 			        }
 		        	info.setText(
 					        "<html><center><br>" + APP_NAME + "</b><br><br>" +
-			        		"Compendium des Médicaments Suisse pour Windows<br>" +
+			        		"Compendium des MÃ©dicaments Suisse pour Windows<br>" +
 			        		"Version " + VERSION + "<br>" + 
 			        		date_str + "<br>" +
 			        		"Licence: GPLv3.0<br><br>" +
 			        		"Concept: Zeno R.R. Davatz<br>" +
-			        		"Développement: Dr. Max Lungarella<br>" +
+			        		"DÃ©veloppement: Dr. Max Lungarella<br>" +
 			        		sponsoring +
 					        "</center></html>");
 		        }
@@ -1223,7 +1228,7 @@ public class AMiKoDesk {
 		if (appCustomization().equals("desitin")) {
 			update_menu.setText("Update");
 			if (appLanguage().equals("fr"))
-				update_menu.setText("Mise à jour");
+				update_menu.setText("Mise Ã  jour");
 		}
 		menu_bar.add(update_menu);
 		// Menu items
@@ -1398,9 +1403,9 @@ public class AMiKoDesk {
 		gbc.insets = new Insets(2,2,2,2);
 		
 		// ---- Search field ----
-		final SearchField searchField = new SearchField("Suche Präparat");
+		final SearchField searchField = new SearchField("Suche PrÃ¤parat");
 		if (appLanguage().equals("fr"))
-			searchField.setText("Recherche Specialité");			
+			searchField.setText("Recherche SpecialitÃ©");			
 		gbc.gridx = 0;
 		gbc.gridy = 0;
 		gbc.gridwidth = gbc.gridheight = 1;
@@ -1410,7 +1415,7 @@ public class AMiKoDesk {
 		
 		// ---- Buttons ----
 		// Names
-		String l_title = "Präparat";
+		String l_title = "PrÃ¤parat";
 		String l_author = "Inhaberin";
 		String l_atccode = "ATC Code";
 		String l_regnr = "Zulassungsnummer";
@@ -1419,12 +1424,12 @@ public class AMiKoDesk {
 		String l_search = "Suche";
 		
 		if (appLanguage().equals("fr")) {
-			l_title = "Spécialité";
+			l_title = "SpÃ©cialitÃ©";
 			l_author = "Titulaire";
 			l_atccode = "Code ATC";
 			l_regnr = "Nombre Enregistration";
 			l_ingredient = "Principe Active";
-			l_therapy = "Thérapie";
+			l_therapy = "ThÃ©rapie";
 			l_search = "Recherche";
 		}
 		

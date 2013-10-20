@@ -48,39 +48,39 @@ public class AppServer implements Runnable {
 		while (!mIsStopped) {
 			Socket clientSocket = null;
 			try {
+				System.out.println("Server accepting connections...");
 				clientSocket = mServerSocket.accept();
 			} catch (IOException e) {
-                if (isStopped()) {
+				// If anything happens stop the server
+				stop();
+                if (mIsStopped==true) {
                     System.out.println("Server stopped.") ;
                     return;
                 }
                 throw new RuntimeException(
-                    "Error accepting client connection", e);				
+                    "Error accepting client connection", e);
 			}
 			new Thread(new ConnectionRequestHandler(clientSocket)).start();
 		}
 	}
 
-    private synchronized boolean isStopped() {
-        return mIsStopped;
-    }
-
-    public synchronized void stop() {
-        mIsStopped = true;
-        try {
-            mServerSocket.close();
-        } catch (IOException e) {
-            throw new RuntimeException("Error closing server", e);
-        }
-    }
-
-    private void openServerSocket() {
+	private void openServerSocket() {
         try {
             mServerSocket = new ServerSocket(this.mServerPort);
         } catch (IOException e) {
             throw new RuntimeException("Cannot open port " + mServerPort, e);
         }
     }	
+    
+    public synchronized void stop() {
+        mIsStopped = true;
+        try {
+            mServerSocket.close();
+            System.out.println("Server stopped.");            
+        } catch (IOException e) {
+            throw new RuntimeException("Error closing server", e);
+        }
+    }
     
 	public synchronized String getInput() {
 		if (_mInput != mInput) {
@@ -119,7 +119,10 @@ public class AppServer implements Runnable {
 					} 
 				}				
 			} catch (IOException e) {
+				// What happens in the case the connection is reset?
+				// -> java.net.SocketException: Connection reset
 				e.printStackTrace();
+				return;
 			} finally { 
 				//In case anything goes wrong we need to close our I/O streams and sockets
 				try {
