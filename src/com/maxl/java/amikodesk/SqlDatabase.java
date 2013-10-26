@@ -38,6 +38,7 @@ public class SqlDatabase {
 	public static final String KEY_ATCCLASS = "atc_class";
 	public static final String KEY_THERAPY = "tindex_str";
 	public static final String KEY_APPLICATION = "application_str";
+	public static final String KEY_INDICATIONS = "indications_str";
 	public static final String KEY_CUSTOMER_ID = "customer_id";	
 	public static final String KEY_PACK_INFO = "pack_info_str";
 	public static final String KEY_ADDINFO = "add_info_str";
@@ -51,9 +52,10 @@ public class SqlDatabase {
 	/**
 	 * Table columns used for fast queries
 	 */
-	private static final String SHORT_TABLE = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", 
+	private static final String SHORT_TABLE = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", 
 				KEY_ROWID, KEY_TITLE, KEY_AUTH, KEY_ATCCODE, KEY_SUBSTANCES, KEY_REGNRS, 
-				KEY_ATCCLASS, KEY_THERAPY, KEY_APPLICATION, KEY_CUSTOMER_ID, KEY_PACK_INFO, KEY_CONTENT);
+				KEY_ATCCLASS, KEY_THERAPY, KEY_APPLICATION, KEY_INDICATIONS,
+				KEY_CUSTOMER_ID, KEY_PACK_INFO, KEY_CONTENT);
 	
 	private Connection m_conn;
 	private Statement m_stat;
@@ -243,7 +245,9 @@ public class SqlDatabase {
 					+ KEY_APPLICATION + " like " + "'%," + application + "%' or "
 					+ KEY_APPLICATION + " like " + "'" + application + "%' or "
 					+ KEY_APPLICATION + " like " + "'% " + application + "%' or "
-					+ KEY_APPLICATION + " like " + "'%;" + application +"%'";
+					+ KEY_APPLICATION + " like " + "'%;" + application +"%' or "
+					+ KEY_INDICATIONS + " like " + "'" + application + "%' or "					
+					+ KEY_INDICATIONS + " like " + "'%;" + application + "%'";
 			m_rs = m_stat.executeQuery(query);
 			while (m_rs.next()) {
 				med_application.add(cursorToShortMedi(m_rs));
@@ -328,8 +332,9 @@ public class SqlDatabase {
 			medi.setAtcClass(result.getString(7));		// KEY_ATCCLASS
 			medi.setTherapy(result.getString(8));		// KEY_THERAPY
 			medi.setApplication(result.getString(9));	// KEY_APPLICATION
-			medi.setCustomerId(result.getInt(10));		// KEY_CUSTOMER_ID
-			medi.setPackInfo(result.getString(11));		// KEY_PACK_INFO
+			medi.setIndications(result.getString(10));	// KEY_INDICATIONS
+			medi.setCustomerId(result.getInt(11));		// KEY_CUSTOMER_ID
+			medi.setPackInfo(result.getString(12));		// KEY_PACK_INFO
 		} catch(SQLException e) {
 			System.err.println(">> SqlDatabase: SQLException in cursorToShortMedi");
 		}
@@ -353,13 +358,14 @@ public class SqlDatabase {
 			medi.setAtcClass(result.getString(7));			// KEY_ATCCLASS
 			medi.setTherapy(result.getString(8));			// KEY_THERAPY
 			medi.setApplication(result.getString(9));		// KEY_APPLICATION
-			medi.setCustomerId(result.getInt(10));			// KEY_CUSTOMER_ID
-			medi.setPackInfo(result.getString(11));			// KEY_PACK_INFO
-			medi.setAddInfo(result.getString(12));			// KEY_ADD_INFO
-			medi.setSectionIds(result.getString(13));		// KEY_SECTION_IDS
-			medi.setSectionTitles(result.getString(14));	// KEY_SECTION_TITLES
-			medi.setContent(result.getString(15));			// KEY_CONTENT
-			medi.setStyle(result.getString(16));			// KEY_STYLE
+			medi.setIndications(result.getString(10));		// KEY_INDICATIONS
+			medi.setCustomerId(result.getInt(11));			// KEY_CUSTOMER_ID
+			medi.setPackInfo(result.getString(12));			// KEY_PACK_INFO
+			medi.setAddInfo(result.getString(13));			// KEY_ADD_INFO
+			medi.setSectionIds(result.getString(14));		// KEY_SECTION_IDS
+			medi.setSectionTitles(result.getString(15));	// KEY_SECTION_TITLES
+			medi.setContent(result.getString(16));			// KEY_CONTENT
+			medi.setStyle(result.getString(17));			// KEY_STYLE
 		} catch(SQLException e) {
 			System.err.println(">> SqlDatabase: SQLException in cursorToMedi");
 		}

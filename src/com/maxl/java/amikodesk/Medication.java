@@ -29,6 +29,7 @@ public class Medication {
 	private String atcclass;
 	private String therapy;
 	private String application;
+	private String indications;
 	private int customer_id;	
 	private String pack_info;
 	private String addinfo;
@@ -107,6 +108,14 @@ public class Medication {
 	
 	public void setApplication(String application) {
 		this.application = application;
+	}
+	
+	public String getIndications() {
+		return this.indications;
+	}
+	
+	public void setIndications(String indications) {
+		this.indications = indications;
 	}
 	
 	public int getCustomerId() {

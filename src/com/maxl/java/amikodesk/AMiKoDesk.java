@@ -151,8 +151,8 @@ public class AMiKoDesk {
 	// private static final String APP_NAME = COMED_MEDDRUGS_NAME;
 	// private static final String APP_NAME = AMIKO_ZURROSE_NAME;
 	// private static final String APP_NAME = COMED_ZURROSE_NAME;
-	private static final String VERSION = "1.1.0 (32-bit)";	
-	private static final String GEN_DATE = "30.09.2013";
+	private static final String VERSION = "1.1.1 (32-bit)";	
+	private static final String GEN_DATE = "26.10.2013";
 	
 	private static String DB_LANGUAGE = "";
 	
