@@ -1,3 +1,13 @@
 bin/
 dbs/amiko_db_full_idx_de.db
 dbs/amiko_db_full_idx_fr.db
+exes/01_amikodesk_exe32/amikodesk.jar
+exes/01_amikodesk_exe32/
+exes/02_comeddesk_exe32/
+exes/03_amikodesk_desitin_exe32/
+exes/04_comeddesk_desitin_exe32/
+exes/05_meddrugs_exe32/
+exes/06_meddrugs_fr_exe32/
+exes/07_amikodesk_zurrose_exe32/
+exes/08_comeddesk_zurrose_exe32/
+*.db

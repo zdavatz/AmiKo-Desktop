@@ -22,6 +22,7 @@ package com.maxl.java.amikodesk;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Container;
 import java.awt.Desktop;
 import java.awt.Dimension;
@@ -41,6 +42,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.geom.RoundRectangle2D;
@@ -65,6 +67,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -73,8 +76,10 @@ import java.util.regex.Pattern;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
@@ -89,6 +94,7 @@ import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTree;
+import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -169,12 +175,14 @@ public class AMiKoDesk {
 	private static AppServer mTcpServer;
 	
 	private static Long m_start_time = 0L;
+	private static final String FAV_IMAGE_FOLDER = "./images/";	
 	private static final String HTML_FILES = "./fis/fi_de_html/";
 	private static final String CSS_SHEET = "./css/amiko_stylesheet.css";
 	private static List<String> med_content = new ArrayList<String>();
 	private static List<Long> med_id = new ArrayList<Long>();
 	private static List<Medication> med_search = new ArrayList<Medication>();
 	private static List<Medication> med_title = new ArrayList<Medication>();
+	private static HashSet<Integer> favorite_meds_set;
 
 	private static String SectionTitle_DE[] = {"Zusammensetzung", "Galenische Form", "Indikationen", "Dosierung", "Kontraindikationen",
 		"Vorsichtmass.", "Interaktionen", "Schwangerschaft", "Fahrtüchtigkeit", "UAW", "Überdosierung", 
@@ -333,6 +341,9 @@ public class AMiKoDesk {
 	
 	public static void main(String[] args) {		
 	
+		// Initialize globales
+		favorite_meds_set = new HashSet<Integer>();
+		
 		// Specify command line options
 		Options options = new Options();
 		addOption(options, "help", "print this message", false, false );
@@ -400,6 +411,40 @@ public class AMiKoDesk {
 		NativeInterface.runEventPump();
 	}	
 	
+	static class CheckListRenderer extends JCheckBox implements ListCellRenderer {
+		
+		Icon imgFavNotSelected = new ImageIcon(FAV_IMAGE_FOLDER+"28-star-gy.png");
+		Icon imgFavSelected = new ImageIcon(FAV_IMAGE_FOLDER+"28-star-ye.png");
+
+		public Component getListCellRendererComponent(JList list, Object value, 
+				int index, boolean isSelected, boolean hasFocus)
+		{
+			setEnabled(list.isEnabled());
+			setFont(list.getFont());
+			setText(value.toString());
+			if (isSelected) {
+				setBackground(new Color(230,230,230));
+				setForeground(list.getForeground());				
+			} else {
+				setBackground(list.getBackground());
+				setForeground(list.getForeground());
+			}
+			if (favorite_meds_set.contains(index)) 
+				setIcon(imgFavSelected);
+			else				
+				setIcon(imgFavNotSelected);
+
+			setVerticalTextPosition(SwingConstants.TOP);			
+
+			return this;			
+		}
+	}
+	
+	/**
+	 * Panel on the left side displaying the results of the search
+	 * @author Max
+	 *
+	 */
 	static class ListPanel extends JPanel implements ListSelectionListener, FocusListener {
 		
 		private JList<String> list = null;
@@ -412,11 +457,30 @@ public class AMiKoDesk {
 			list = new JList<String>(titles);
 					
 			list.setSelectedIndex(0);
+			list.setCellRenderer(new CheckListRenderer());
 			list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 			list.setSelectionBackground(new Color(240,240,240));
 			list.setSelectionForeground(Color.BLACK);
 			list.setFont(new Font("Dialog", Font.PLAIN, 14));
 			list.addListSelectionListener(this);
+			
+		    MouseListener mouseListener = new MouseAdapter() {
+		        public void mouseClicked(MouseEvent mouseEvent) {
+		        	JList theList = (JList) mouseEvent.getSource();
+		        	if (mouseEvent.getClickCount() == 1) {
+		        		int index = theList.locationToIndex(mouseEvent.getPoint());
+		        		if (index >= 0 && mouseEvent.getX()<32) {
+		        			if (favorite_meds_set.contains(index))
+		        				favorite_meds_set.remove(index);
+		        			else
+		        				favorite_meds_set.add(index);
+
+		        			repaint();
+		        		}
+		        	}
+		        }
+		    };
+		    list.addMouseListener(mouseListener);			
 			
 			JPanel listPanel = new JPanel(new BorderLayout());
 			if (appLanguage().equals("de")) {
@@ -430,6 +494,8 @@ public class AMiKoDesk {
 		        		new Font("Dialog", Font.PLAIN, 14));
 				listPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));			
 			}
+			
+			// Add the list to a scrolling panel
 			jscroll = new JScrollPane(list);
 			listPanel.add(jscroll, BorderLayout.CENTER);
 			add(listPanel, BorderLayout.CENTER);
@@ -438,6 +504,10 @@ public class AMiKoDesk {
 			requestFocusInWindow();
 		}
 		
+		/**
+		 * Updates the data in the ListPanel
+		 * @param lStr
+		 */
 		public void update(List<String> lStr) {
 			String[] m_lStr = lStr.toArray(new String[lStr.size()]);
 			list.setListData(m_lStr);
@@ -446,6 +516,9 @@ public class AMiKoDesk {
 			jscroll.repaint();
 		}
 		
+		/**
+		 * Called when somebody clicks on the ListPanel
+		 */
 		public void valueChanged(ListSelectionEvent e) {
 			if (!e.getValueIsAdjusting()) {
 				med_index = list.getSelectedIndex();
