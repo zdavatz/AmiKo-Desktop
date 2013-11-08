@@ -182,7 +182,8 @@ public class AMiKoDesk {
 	private static List<Long> med_id = new ArrayList<Long>();
 	private static List<Medication> med_search = new ArrayList<Medication>();
 	private static List<Medication> med_title = new ArrayList<Medication>();
-	private static HashSet<Integer> favorite_meds_set;
+	private static HashSet<String> favorite_meds_set;
+	private static DataStore favorite_data = null;
 
 	private static String SectionTitle_DE[] = {"Zusammensetzung", "Galenische Form", "Indikationen", "Dosierung", "Kontraindikationen",
 		"Vorsichtmass.", "Interaktionen", "Schwangerschaft", "Fahrtüchtigkeit", "UAW", "Überdosierung", 
@@ -342,7 +343,9 @@ public class AMiKoDesk {
 	public static void main(String[] args) {		
 	
 		// Initialize globales
-		favorite_meds_set = new HashSet<Integer>();
+       	favorite_meds_set = new HashSet<String>();		
+		favorite_data = new DataStore(System.getenv("APPDATA") + "\\Ywesee\\" + APP_NAME);
+		favorite_meds_set = favorite_data.load();	// HashSet containing registration numbers
 		
 		// Specify command line options
 		Options options = new Options();
@@ -429,7 +432,8 @@ public class AMiKoDesk {
 				setBackground(list.getBackground());
 				setForeground(list.getForeground());
 			}
-			if (favorite_meds_set.contains(index)) 
+			String regnrs = med_search.get(index).getRegnrs();
+			if (favorite_meds_set.contains(regnrs)) 
 				setIcon(imgFavSelected);
 			else				
 				setIcon(imgFavNotSelected);
@@ -466,15 +470,17 @@ public class AMiKoDesk {
 			
 		    MouseListener mouseListener = new MouseAdapter() {
 		        public void mouseClicked(MouseEvent mouseEvent) {
-		        	JList theList = (JList) mouseEvent.getSource();
+		        	// JList theList = (JList) mouseEvent.getSource();
 		        	if (mouseEvent.getClickCount() == 1) {
-		        		int index = theList.locationToIndex(mouseEvent.getPoint());
+		        		int index = list.locationToIndex(mouseEvent.getPoint());
 		        		if (index >= 0 && mouseEvent.getX()<32) {
-		        			if (favorite_meds_set.contains(index))
-		        				favorite_meds_set.remove(index);
+		        			// Note: extracts a String... could be optimized to an array of ints in the future!
+		        			String regnrs = med_search.get(index).getRegnrs();
+		        			if (favorite_meds_set.contains(regnrs))
+		        				favorite_meds_set.remove(regnrs);
 		        			else
-		        				favorite_meds_set.add(index);
-
+		        				favorite_meds_set.add(regnrs);
+		        			favorite_data.save(favorite_meds_set);
 		        			repaint();
 		        		}
 		        	}
