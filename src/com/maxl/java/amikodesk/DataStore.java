@@ -26,10 +26,6 @@ public class DataStore {
 			if (!wfile.exists()) {
 				wfile.getParentFile().mkdirs();
 				wfile.createNewFile();
-				HashSet<String> hs = new HashSet<String>();
-				hs.add("59000");
-				hs.add("59011");
-				save(hs);				
 			}	
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -40,9 +36,12 @@ public class DataStore {
 		HashSet<String> hs = new HashSet<String>();
 		try {
 			FileInputStream file_in = new FileInputStream(m_dir + "\\favorites.txt");
-			ObjectInputStream in = new ObjectInputStream(file_in);
-			hs = (HashSet<String>)in.readObject();
-			in.close();
+			// Make sure there is something to read...
+			if (file_in.available()>0) {
+				ObjectInputStream in = new ObjectInputStream(file_in);
+				hs = (HashSet<String>)in.readObject();
+				in.close();
+			}
 			file_in.close();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -59,7 +58,7 @@ public class DataStore {
 	        out.writeObject(hs);
 	        out.close();
 	        file_out.close();
-	        System.out.println("Serialized data is saved in " + m_dir);
+	        // System.out.println("Serialized data is saved in " + m_dir);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

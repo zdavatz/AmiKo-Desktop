@@ -67,6 +67,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
@@ -93,12 +95,14 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -175,7 +179,7 @@ public class AMiKoDesk {
 	private static AppServer mTcpServer;
 	
 	private static Long m_start_time = 0L;
-	private static final String FAV_IMAGE_FOLDER = "./images/";	
+	private static final String IMG_FOLDER = "./images/";	
 	private static final String HTML_FILES = "./fis/fi_de_html/";
 	private static final String CSS_SHEET = "./css/amiko_stylesheet.css";
 	private static List<String> med_content = new ArrayList<String>();
@@ -389,7 +393,8 @@ public class AMiKoDesk {
         UIManager.put("Button.font", new Font("Dialog", Font.BOLD, 14));
         UIManager.put("Menu.font", new Font("Dialog", Font.PLAIN, 14));
         UIManager.put("MenuBar.font", new Font("Dialog", Font.PLAIN, 14));
-        UIManager.put("MenuItem.font", new Font("Dialog", Font.PLAIN, 14)); 
+        UIManager.put("MenuItem.font", new Font("Dialog", Font.PLAIN, 14));
+        UIManager.put("Toolbar.font", new Font("Dialog", Font.PLAIN, 14));
         
 		// Schedule a job for the event-dispatching thread:
 		// creating and showing this application's GUI
@@ -416,8 +421,8 @@ public class AMiKoDesk {
 	
 	static class CheckListRenderer extends JCheckBox implements ListCellRenderer {
 		
-		Icon imgFavNotSelected = new ImageIcon(FAV_IMAGE_FOLDER+"28-star-gy.png");
-		Icon imgFavSelected = new ImageIcon(FAV_IMAGE_FOLDER+"28-star-ye.png");
+		Icon imgFavNotSelected = new ImageIcon(IMG_FOLDER+"28-star-gy.png");
+		Icon imgFavSelected = new ImageIcon(IMG_FOLDER+"28-star-ye.png");
 
 		public Component getListCellRendererComponent(JList list, Object value, 
 				int index, boolean isSelected, boolean hasFocus)
@@ -1101,7 +1106,7 @@ public class AMiKoDesk {
 			this.setResizable(false);
 		}
 	}
-
+	
 	private static void createAndShowLightGUI() {
 		// Create and setup window
 		final JFrame jframe = new JFrame(APP_NAME);
@@ -1289,7 +1294,7 @@ public class AMiKoDesk {
 			jframe.setIconImage(img.getImage());        	
         }
 
-		// Setup menubar
+		// ------ Setup menubar ------
 		JMenuBar menu_bar = new JMenuBar();	
 		// menu_bar.add(Box.createHorizontalGlue());	// --> aligns menu items to the right!
 		// Main menus
@@ -1330,7 +1335,24 @@ public class AMiKoDesk {
 		hilfe_menu.add(about_item);
 		jframe.setJMenuBar(menu_bar);
 		
-		// Action listeners
+		// ------ Setup toolbar ------
+		JToolBar toolBar = new JToolBar("Database");	    
+		JButton selectAipsButton = new JButton(new ImageIcon(IMG_FOLDER+"aips32x32.png"));
+		JButton selectFavoritesButton = new JButton(new ImageIcon(IMG_FOLDER+"favorites32x32.png"));
+		// Remove border
+		Border emptyBorder = BorderFactory.createEmptyBorder();
+		selectAipsButton.setBorder(emptyBorder);
+		selectFavoritesButton.setBorder(emptyBorder);
+		// Set adequate size
+		selectAipsButton.setPreferredSize(new Dimension(32,32));
+		selectFavoritesButton.setPreferredSize(new Dimension(32,32));
+		// Add to toolbar and set up
+		toolBar.add(selectAipsButton);
+		toolBar.addSeparator();
+		toolBar.add(selectFavoritesButton);
+		toolBar.setRollover(true);
+		toolBar.setFloatable(false);
+
 		jframe.addWindowListener(new WindowListener() {
 			// Use WindowAdapter!
 	        @Override 
@@ -1470,6 +1492,9 @@ public class AMiKoDesk {
 		final Container container = jframe.getContentPane();
 		container.setBackground(Color.WHITE);
 		container.setLayout(new BorderLayout());
+		
+		// ==== Toolbar =====
+		container.add(toolBar, BorderLayout.NORTH);
 		
 		// ==== Left panel ====
 		JPanel left_panel = new JPanel();
@@ -1649,7 +1674,7 @@ public class AMiKoDesk {
 		gbc.anchor = GridBagConstraints.EAST;
 		// --> container.add(m_web_panel, gbc);
 		right_panel.add(m_web_panel, gbc);
-		
+				
 		// Add JSplitPane
 		JSplitPane split_pane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left_panel, right_panel);
 		split_pane.setOneTouchExpandable(true);
@@ -1683,8 +1708,50 @@ public class AMiKoDesk {
 		final String final_therapy = l_therapy;
 		final String final_search = l_search;
 
-		// -> searchField.addActionListener(new ActionListener() {
-		// Add keylistener to text field (type as you go feature)
+		// ------ Add toolbar action listeners ------
+		selectAipsButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				m_start_time = System.currentTimeMillis();
+				m_query_str = searchField.getText();				
+						
+				med_search = m_sqldb.searchTitle("");						
+				sTitle("");		// "" argument unused
+				cardl.show(p_results, final_title);	
+							
+				m_status_label.setText(med_search.size() + " Suchresultate in " + 
+						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");				
+			}
+		});
+		selectFavoritesButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				m_start_time = System.currentTimeMillis();
+				m_query_str = searchField.getText();
+				
+				// Clear the search container
+				med_search.clear();
+				for (String regnr : favorite_meds_set) {
+					List<Medication> meds = m_sqldb.searchRegNr(regnr);
+					if (!meds.isEmpty())
+						med_search.add(meds.get(0));
+				}
+				// Sort list of meds
+				Collections.sort(med_search, new Comparator<Medication>() {
+					@Override
+					public int compare(final Medication m1, final Medication m2) {
+						return m1.getTitle().compareTo(m2.getTitle());
+					}
+				});
+				sTitle("");		// "" argument unused
+				cardl.show(p_results, final_title);
+
+				m_status_label.setText(med_search.size() + " Suchresultate in " + 
+						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");				
+			}
+		});
+				
+		// ------ Add keylistener to text field (type as you go feature) ------
 		searchField.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyReleased(KeyEvent e) {		
@@ -1805,7 +1872,7 @@ public class AMiKoDesk {
 				startAppWithRegnr(but_regnr);
 		}
 	}	
-	
+		
 	static void startAppWithTitle(JButton but_title)
 	{
 		m_query_str = CML_OPT_TITLE;
