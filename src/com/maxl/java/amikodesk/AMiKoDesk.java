@@ -75,9 +75,11 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.swing.AbstractListModel;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.DefaultListModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -188,7 +190,8 @@ public class AMiKoDesk {
 	private static List<Medication> med_title = new ArrayList<Medication>();
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
-
+	private static ProgressIndicator m_progress_indicator = new ProgressIndicator(32);
+	
 	private static String SectionTitle_DE[] = {"Zusammensetzung", "Galenische Form", "Indikationen", "Dosierung", "Kontraindikationen",
 		"Vorsichtmass.", "Interaktionen", "Schwangerschaft", "Fahrtüchtigkeit", "UAW", "Überdosierung", 
 		"Eig./Wirkung", "Kinetik", "Präklinik", "Sonstige Hinweise", "Zulassungsnummer", "Packungen", "Firma", "Stand"};
@@ -419,17 +422,27 @@ public class AMiKoDesk {
 		NativeInterface.runEventPump();
 	}	
 	
-	static class CheckListRenderer extends JCheckBox implements ListCellRenderer {
+	static class CheckListRenderer extends JCheckBox implements ListCellRenderer<Object> {
 		
-		Icon imgFavNotSelected = new ImageIcon(IMG_FOLDER+"28-star-gy.png");
-		Icon imgFavSelected = new ImageIcon(IMG_FOLDER+"28-star-ye.png");
+		final static Icon imgFavNotSelected = new ImageIcon(IMG_FOLDER+"28-star-gy.png");
+		final static Icon imgFavSelected = new ImageIcon(IMG_FOLDER+"28-star-ye.png");
 
-		public Component getListCellRendererComponent(JList list, Object value, 
+		public CheckListRenderer() {
+			setOpaque(true);
+		}
+		
+		/* Method called when it's time to draw each cell
+		 * Returns the specific rendering for that one cell of the JList
+		 * (non-Javadoc)
+		 * @see javax.swing.ListCellRenderer#getListCellRendererComponent(javax.swing.JList, java.lang.Object, int, boolean, boolean)
+		 */				
+		public Component getListCellRendererComponent(JList<?> list, Object value, 
 				int index, boolean isSelected, boolean hasFocus)
-		{
+		{					
 			setEnabled(list.isEnabled());
 			setFont(list.getFont());
 			setText(value.toString());
+			
 			if (isSelected) {
 				setBackground(new Color(230,230,230));
 				setForeground(list.getForeground());				
@@ -437,15 +450,40 @@ public class AMiKoDesk {
 				setBackground(list.getBackground());
 				setForeground(list.getForeground());
 			}
+			// Extract registration number corresponding to index
 			String regnrs = med_search.get(index).getRegnrs();
 			if (favorite_meds_set.contains(regnrs)) 
 				setIcon(imgFavSelected);
 			else				
 				setIcon(imgFavNotSelected);
-
+			// Set position of the star
 			setVerticalTextPosition(SwingConstants.TOP);			
 
+			// System.out.println(index);
+			
 			return this;			
+		}
+	}
+	
+	static class CustomListModel extends AbstractListModel<String> {
+		
+		List<String> m_lStr = null;
+		int m_lStrSize = 0;
+		
+		public CustomListModel(List<String> lStr) {
+			m_lStr = lStr;
+			m_lStrSize = lStr.size();
+		}
+		
+		public int getSize() {
+			if (m_lStrSize>1000)
+				return 1000;
+			else 
+				return m_lStrSize;
+		}
+		
+		public String getElementAt(int index) {
+			return m_lStr.get(index);
 		}
 	}
 	
@@ -462,9 +500,11 @@ public class AMiKoDesk {
 		public ListPanel() {
 			super(new BorderLayout());
 			
-			String[] titles = med_title.toArray(new String[med_title.size()]);
-			list = new JList<String>(titles);
-					
+			// String[] titles = med_title.toArray(new String[med_title.size()]);
+			// list = new JList<String>(titles);	
+			
+		    DefaultListModel<String> model = new DefaultListModel<String>();
+			list = new JList<String>(model);
 			list.setSelectedIndex(0);
 			list.setCellRenderer(new CheckListRenderer());
 			list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -520,11 +560,15 @@ public class AMiKoDesk {
 		 * @param lStr
 		 */
 		public void update(List<String> lStr) {
+			/*
 			String[] m_lStr = lStr.toArray(new String[lStr.size()]);
 			list.setListData(m_lStr);
+			*/
+			CustomListModel dlm = new CustomListModel(lStr);
+			list.setModel(dlm);
 			
 			jscroll.revalidate();
-			jscroll.repaint();
+			jscroll.repaint();	
 		}
 		
 		/**
@@ -1353,6 +1397,9 @@ public class AMiKoDesk {
 		toolBar.setRollover(true);
 		toolBar.setFloatable(false);
 
+		toolBar.addSeparator(new Dimension(32,32));
+		toolBar.add(m_progress_indicator);		
+		
 		jframe.addWindowListener(new WindowListener() {
 			// Use WindowAdapter!
 	        @Override 
@@ -1633,7 +1680,7 @@ public class AMiKoDesk {
 		p_results.add(m_list_regnrs, l_regnr);
 		p_results.add(m_list_atccodes, l_atccode);
 		p_results.add(m_list_ingredients, l_ingredient);
-		p_results.add(m_list_therapies, l_therapy);
+		p_results.add(m_list_therapies, l_therapy);		
 		
 		// --> container.add(p_results, gbc);
 		left_panel.add(p_results, gbc);
@@ -1706,28 +1753,29 @@ public class AMiKoDesk {
 		final String final_regnr = l_regnr;
 		final String final_ingredient = l_ingredient;
 		final String final_therapy = l_therapy;
-		final String final_search = l_search;
-
+		final String final_search = l_search;	
+		
 		// ------ Add toolbar action listeners ------
 		selectAipsButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
 				m_start_time = System.currentTimeMillis();
-				m_query_str = searchField.getText();				
-						
-				med_search = m_sqldb.searchTitle("");						
-				sTitle("");		// "" argument unused
+				// m_query_str = searchField.getText();
+				
+				med_search = m_sqldb.searchTitle("");
+				// sTitle("");	// Takes approx. 1.6 sec on Intel i7-960@3.2GHz for 4000 meds
+				sTitleFast("");	// Takes approx. 0.4 sec on Intel i7-960@3.2GHz for 4000 meds
 				cardl.show(p_results, final_title);	
-							
+
 				m_status_label.setText(med_search.size() + " Suchresultate in " + 
-						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");				
+						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");			
 			}
 		});
 		selectFavoritesButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
 				m_start_time = System.currentTimeMillis();
-				m_query_str = searchField.getText();
+				// m_query_str = searchField.getText();
 				
 				// Clear the search container
 				med_search.clear();
@@ -1765,7 +1813,7 @@ public class AMiKoDesk {
 				// Queries for SQLite DB
 				if (!m_query_str.isEmpty()) {
 					if (m_query_type==0) {
-						med_search = m_sqldb.searchTitle(m_query_str);						
+						med_search = m_sqldb.searchTitle(m_query_str);
 						sTitle(m_query_str);
 						cardl.show(p_results, final_title);
 					} else if (m_query_type==1) {
@@ -1974,6 +2022,18 @@ public class AMiKoDesk {
 		m_list_titles.update(m);
 	}
 
+	static void sTitleFast(String query_str) {
+		med_id.clear();
+		List<String> m = new ArrayList<String>();
+		for (int i=0; i<med_search.size(); ++i) {
+			Medication ms = med_search.get(i);
+			String pack_info_str = ms.getPackInfo().replaceAll("\n", "<br>");
+			m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + pack_info_str + "</font></html>");
+			med_id.add(ms.getId());
+		}
+		m_list_titles.update(m);		
+	}
+	
 	static void sAuth(String query_str) {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
