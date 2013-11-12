@@ -79,13 +79,11 @@ public class ProgressIndicator extends JComponent {
 	 * @param spinning
 	 */
 	public void setSpinning(boolean spinning) {
-		this.spinning = spinning;
-		/*
+		this.spinning = spinning;		
 		if (spinning) {
 			Thread thread = new Thread(spinLoop);
 			thread.start();
-		}
-		*/
+		}		
 		repaint();
 	}
 

@@ -166,6 +166,9 @@ public class AMiKoDesk {
 	private static final String VERSION = "1.1.1 (32-bit)";	
 	private static final String GEN_DATE = "26.10.2013";
 	
+	// Important Constants
+	private static final int BigCellNumber = 512;	
+	
 	private static String DB_LANGUAGE = "";
 	
 	// Constants for command line options
@@ -179,7 +182,7 @@ public class AMiKoDesk {
 
 	// TCP server related variables go here
 	private static AppServer mTcpServer;
-	
+		
 	private static Long m_start_time = 0L;
 	private static final String IMG_FOLDER = "./images/";	
 	private static final String HTML_FILES = "./fis/fi_de_html/";
@@ -435,6 +438,10 @@ public class AMiKoDesk {
 		 * Returns the specific rendering for that one cell of the JList
 		 * (non-Javadoc)
 		 * @see javax.swing.ListCellRenderer#getListCellRendererComponent(javax.swing.JList, java.lang.Object, int, boolean, boolean)
+		 * 
+		 * Note: Swing insists on accessing each item in the entire ListModel while getting it displayed on screen. 
+		 * Furthermore, after accessing all the items, Swing then re-accesses the first n number of items visible on screen 
+		 * (in the viewport, not off screen below).
 		 */				
 		public Component getListCellRendererComponent(JList<?> list, Object value, 
 				int index, boolean isSelected, boolean hasFocus)
@@ -442,7 +449,7 @@ public class AMiKoDesk {
 			setEnabled(list.isEnabled());
 			setFont(list.getFont());
 			setText(value.toString());
-			
+
 			if (isSelected) {
 				setBackground(new Color(230,230,230));
 				setForeground(list.getForeground());				
@@ -457,9 +464,7 @@ public class AMiKoDesk {
 			else				
 				setIcon(imgFavNotSelected);
 			// Set position of the star
-			setVerticalTextPosition(SwingConstants.TOP);			
-
-			// System.out.println(index);
+			setVerticalTextPosition(SwingConstants.TOP);
 			
 			return this;			
 		}
@@ -467,23 +472,22 @@ public class AMiKoDesk {
 	
 	static class CustomListModel extends AbstractListModel<String> {
 		
-		List<String> m_lStr = null;
-		int m_lStrSize = 0;
-		
+		List<String> model = new ArrayList<>();
+		int modelSize = 0;
+				
 		public CustomListModel(List<String> lStr) {
-			m_lStr = lStr;
-			m_lStrSize = lStr.size();
+			model = lStr;
+			modelSize = lStr.size();
 		}
 		
+		@Override
 		public int getSize() {
-			if (m_lStrSize>1000)
-				return 1000;
-			else 
-				return m_lStrSize;
+			return modelSize;
 		}
 		
+		@Override
 		public String getElementAt(int index) {
-			return m_lStr.get(index);
+			return model.get(index);
 		}
 	}
 	
@@ -512,7 +516,7 @@ public class AMiKoDesk {
 			list.setSelectionForeground(Color.BLACK);
 			list.setFont(new Font("Dialog", Font.PLAIN, 14));
 			list.addListSelectionListener(this);
-			
+						
 		    MouseListener mouseListener = new MouseAdapter() {
 		        public void mouseClicked(MouseEvent mouseEvent) {
 		        	// JList theList = (JList) mouseEvent.getSource();
@@ -560,13 +564,15 @@ public class AMiKoDesk {
 		 * @param lStr
 		 */
 		public void update(List<String> lStr) {
+			CustomListModel dlm = new CustomListModel(lStr);						
 			/*
-			String[] m_lStr = lStr.toArray(new String[lStr.size()]);
-			list.setListData(m_lStr);
+			if (lStr.size()>BigCellNumber)
+				list.setPrototypeCellValue(dlm.getElementAt(0));
+			else 
+				list.setPrototypeCellValue(null);		// Does not work!
 			*/
-			CustomListModel dlm = new CustomListModel(lStr);
 			list.setModel(dlm);
-			
+			// System.out.println("update " + lStr.size() + " value = " + list.getPrototypeCellValue());			
 			jscroll.revalidate();
 			jscroll.repaint();	
 		}
@@ -1761,14 +1767,12 @@ public class AMiKoDesk {
 			public void actionPerformed(ActionEvent event) {
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();
-				
 				med_search = m_sqldb.searchTitle("");
-				// sTitle("");	// Takes approx. 1.6 sec on Intel i7-960@3.2GHz for 4000 meds
-				sTitleFast("");	// Takes approx. 0.4 sec on Intel i7-960@3.2GHz for 4000 meds
+				sTitle("");	// Used instead of sTitle (which is slow)
 				cardl.show(p_results, final_title);	
 
 				m_status_label.setText(med_search.size() + " Suchresultate in " + 
-						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");			
+						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
 			}
 		});
 		selectFavoritesButton.addActionListener(new ActionListener() {
@@ -1802,48 +1806,51 @@ public class AMiKoDesk {
 		// ------ Add keylistener to text field (type as you go feature) ------
 		searchField.addKeyListener(new KeyAdapter() {
 			@Override
-			public void keyReleased(KeyEvent e) {		
-			/*
-			// -> Check if return key was hit
-			@Override
-			public void actionPerformed(ActionEvent ae) {
-			*/
-				m_start_time = System.currentTimeMillis();
-				m_query_str = searchField.getText();
-				// Queries for SQLite DB
-				if (!m_query_str.isEmpty()) {
-					if (m_query_type==0) {
-						med_search = m_sqldb.searchTitle(m_query_str);
-						sTitle(m_query_str);
-						cardl.show(p_results, final_title);
-					} else if (m_query_type==1) {
-						med_search = m_sqldb.searchAuth(m_query_str);
-						sAuth(m_query_str);
-						cardl.show(p_results, final_author);
-					} else if (m_query_type==2) {
-						med_search = m_sqldb.searchATC(m_query_str);
-						sATC(m_query_str);
-						cardl.show(p_results, final_atccode);
-					} else if (m_query_type==3) {
-						med_search = m_sqldb.searchRegNr(m_query_str);
-						sRegNr(m_query_str);
-						cardl.show(p_results, final_regnr);					
-					} else if (m_query_type==4) {
-						med_search = m_sqldb.searchIngredient(m_query_str);
-						sIngredient(m_query_str);
-						cardl.show(p_results, final_ingredient);	
-					} else if (m_query_type==5) {
-						med_search = m_sqldb.searchApplication(m_query_str);
-						sTherapy(m_query_str);
-						cardl.show(p_results, final_therapy);	
-					} else {
-						// do nothing
+			public void keyReleased(KeyEvent e) {
+				//invokeLater potentially in the wrong place... more testing required
+				SwingUtilities.invokeLater(new Runnable() {
+					@Override
+					public void run() {
+						m_start_time = System.currentTimeMillis();
+						m_query_str = searchField.getText();
+						// Queries for SQLite DB
+						if (!m_query_str.isEmpty()) {
+							if (m_query_type==0) {
+								med_search = m_sqldb.searchTitle(m_query_str);
+								sTitle(m_query_str);
+								cardl.show(p_results, final_title);
+							} else if (m_query_type==1) {
+								med_search = m_sqldb.searchAuth(m_query_str);
+								sAuth(m_query_str);
+								cardl.show(p_results, final_author);
+							} else if (m_query_type==2) {
+								med_search = m_sqldb.searchATC(m_query_str);
+								sATC(m_query_str);
+								cardl.show(p_results, final_atccode);
+							} else if (m_query_type==3) {
+								med_search = m_sqldb.searchRegNr(m_query_str);
+								sRegNr(m_query_str);
+								cardl.show(p_results, final_regnr);					
+							} else if (m_query_type==4) {
+								med_search = m_sqldb.searchIngredient(m_query_str);
+								sIngredient(m_query_str);
+								cardl.show(p_results, final_ingredient);	
+							} else if (m_query_type==5) {
+								med_search = m_sqldb.searchApplication(m_query_str);
+								sTherapy(m_query_str);
+								cardl.show(p_results, final_therapy);	
+							} else {
+								// do nothing
+							}
+							m_status_label.setText(med_search.size() + " Suchresultate in " + 
+									(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
+						}
+						/*
+						if (DEBUG)
+							System.out.println("Time for search in [sec]: " + (System.currentTimeMillis()-m_start_time)/1000.0f);
+							*/
 					}
-					m_status_label.setText(med_search.size() + " Suchresultate in " + 
-							(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
-				}
-				if (DEBUG)
-					System.out.println("Time for search in [sec]: " + (System.currentTimeMillis()-m_start_time)/1000.0f);
+				});
 			}				
 		});
 		
@@ -1994,44 +2001,48 @@ public class AMiKoDesk {
 			System.out.println("> Error: Wrong registration number");
 		}
 	}
-	
+
 	static void sTitle(String query_str) {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
 		Pattern p_red = Pattern.compile(".*O]");
 		Pattern p_green = Pattern.compile(".*G]");
-		for (int i=0; i<med_search.size(); ++i) {
-			Medication ms = med_search.get(i);
-			Scanner pack_str_scanner = new Scanner(ms.getPackInfo());
-			String pack_info_str = "";
-			while (pack_str_scanner.hasNextLine()) {
-				String pack_str_line = pack_str_scanner.nextLine();
-				Matcher m_red = p_red.matcher(pack_str_line);
-				Matcher m_green = p_green.matcher(pack_str_line);							
-				if (m_red.find())
-					pack_info_str += "<font color=red>" + pack_str_line + "</font><br>";					
-				else if (m_green.find())
-					pack_info_str += "<font color=green>" + pack_str_line + "</font><br>";
-				else
-					pack_info_str += "<font color=gray>" + pack_str_line + "</font><br>";
+		if (med_search.size() < BigCellNumber) {
+			for (int i = 0; i < med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				String pack_info_str = "";
+				Scanner pack_str_scanner = new Scanner(ms.getPackInfo());
+				while (pack_str_scanner.hasNextLine()) {
+					String pack_str_line = pack_str_scanner.nextLine();
+					Matcher m_red = p_red.matcher(pack_str_line);
+					Matcher m_green = p_green.matcher(pack_str_line);
+					if (m_red.find())
+						pack_info_str += "<font color=red>" + pack_str_line
+								+ "</font><br>";
+					else if (m_green.find())
+						pack_info_str += "<font color=green>" + pack_str_line
+								+ "</font><br>";
+					else
+						pack_info_str += "<font color=gray>" + pack_str_line
+								+ "</font><br>";
+				}
+				pack_str_scanner.close();
+				m.add("<html><b>" + ms.getTitle() + "</b><br><font size=-1>"
+						+ pack_info_str + "</font></html>");
+				med_id.add(ms.getId());
 			}
-			pack_str_scanner.close();
-			m.add("<html><b>" + ms.getTitle() + "</b><br><font size=-1>" + pack_info_str +"</font></html>");
-			med_id.add(ms.getId());
+		} else {
+			for (int i = 0; i < med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				String[] pack_info_str = ms.getPackInfo().split("\n");
+				m.add("<html><b>" + ms.getTitle()
+						+ "</b><br><font color=gray size=-1>"
+						+ pack_info_str[0] + "</font></html>");
+				med_id.add(ms.getId());
+			}
 		}
-		m_list_titles.update(m);
-	}
 
-	static void sTitleFast(String query_str) {
-		med_id.clear();
-		List<String> m = new ArrayList<String>();
-		for (int i=0; i<med_search.size(); ++i) {
-			Medication ms = med_search.get(i);
-			String pack_info_str = ms.getPackInfo().replaceAll("\n", "<br>");
-			m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + pack_info_str + "</font></html>");
-			med_id.add(ms.getId());
-		}
-		m_list_titles.update(m);		
+		m_list_titles.update(m);
 	}
 	
 	static void sAuth(String query_str) {
@@ -2048,28 +2059,44 @@ public class AMiKoDesk {
 	static void sATC(String query_str) {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
-		for (int i=0; i<med_search.size(); ++i) {
-			Medication ms = med_search.get(i);			
-			// String atc_code_str = ms.getAtcCode().replaceAll(";", " - ");
-			
-			String[] m_code = ms.getAtcCode().split(";");
-			String atc_code_str = "";
-			String atc_title_str = "";
-			if (m_code.length>1) {
-				atc_code_str = m_code[0];
-				atc_title_str = m_code[1];
+		if (med_search.size()<BigCellNumber) {
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);			
+				// String atc_code_str = ms.getAtcCode().replaceAll(";", " - ");
+				
+				String[] m_code = ms.getAtcCode().split(";");
+				String atc_code_str = "";
+				String atc_title_str = "";
+				if (m_code.length>1) {
+					atc_code_str = m_code[0];
+					atc_title_str = m_code[1];
+				}
+				
+				String[] m_class = ms.getAtcClass().split(";");			
+				String atc_class_str = "";
+				if (m_class.length==2)
+					atc_class_str = m_class[1];
+				else if (m_class.length==3)
+					atc_class_str = m_class[2];
+				m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
+					+ atc_title_str + "<br>" + atc_class_str + "</font></html>");
+				med_id.add(ms.getId());
 			}
-			
-			String[] m_class = ms.getAtcClass().split(";");			
-			String atc_class_str = "";
-			if (m_class.length==2)
-				atc_class_str = m_class[1];
-			else if (m_class.length==3)
-				atc_class_str = m_class[2];
-			m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
-				+ atc_title_str + "<br>" + atc_class_str + "</font></html>");
-			med_id.add(ms.getId());
-		}										
+		} else {
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				String[] m_code = ms.getAtcCode().split(";");
+				String atc_code_str = "";
+				String atc_title_str = "";
+				if (m_code.length>1) {
+					atc_code_str = m_code[0];
+					atc_title_str = m_code[1];
+				}				
+				m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
+						+ atc_title_str + "</font></html>");
+					med_id.add(ms.getId());
+			}
+		}
 		m_list_atccodes.update(m);
 	}
 
@@ -2098,13 +2125,22 @@ public class AMiKoDesk {
 	static void sTherapy(String query_str) {
 		med_id.clear();					
 		List<String> m = new ArrayList<String>();
-		for (int i=0; i<med_search.size(); ++i) {
-			Medication ms = med_search.get(i);
-			String application_str = ms.getApplication().replaceAll("\n", "<p>");
-			application_str = ms.getApplication().replaceAll(";", "<p>");
-			m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
-			med_id.add(ms.getId());
-		}	
+		if (med_search.size()<BigCellNumber) {
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				String application_str = ms.getApplication().replaceAll("\n", "<p>");
+				application_str = ms.getApplication().replaceAll(";", "<p>");
+				m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
+				med_id.add(ms.getId());
+			}
+		} else {
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				String application_str = ms.getApplication().replaceAll(";", " / ");
+				m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
+				med_id.add(ms.getId());		
+			}
+		}
 		m_list_therapies.update(m);
 	}
 	
