@@ -495,7 +495,7 @@ public class AMiKoDesk {
 		
 		@Override
 		public String getElementAt(int index) {
-			System.out.println("getElementAt index = " + index);
+			// System.out.println("getElementAt index = " + index);
 			return model.get(index);
 		}
 	}
