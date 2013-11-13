@@ -445,11 +445,13 @@ public class AMiKoDesk {
 		 */				
 		public Component getListCellRendererComponent(JList<?> list, Object value, 
 				int index, boolean isSelected, boolean hasFocus)
-		{					
+		{	
 			setEnabled(list.isEnabled());
 			setFont(list.getFont());
-			setText(value.toString());
+			setText(value.toString());	
 
+			// System.out.println("getListCellRenderer");
+	
 			if (isSelected) {
 				setBackground(new Color(230,230,230));
 				setForeground(list.getForeground());				
@@ -465,7 +467,7 @@ public class AMiKoDesk {
 				setIcon(imgFavNotSelected);
 			// Set position of the star
 			setVerticalTextPosition(SwingConstants.TOP);
-			
+
 			return this;			
 		}
 	}
@@ -473,20 +475,27 @@ public class AMiKoDesk {
 	static class CustomListModel extends AbstractListModel<String> {
 		
 		List<String> model = new ArrayList<>();
-		int modelSize = 0;
 				
 		public CustomListModel(List<String> lStr) {
-			model = lStr;
-			modelSize = lStr.size();
+			for (String s : lStr) {
+				addElement(s);
+			}
+		}
+		
+		public void addElement(String s) {
+			// System.out.println("addElement");
+			model.add(s);
+			// this.fireContentsChanged(this, 0, model.size()-1);
 		}
 		
 		@Override
 		public int getSize() {
-			return modelSize;
+			return model.size();
 		}
 		
 		@Override
 		public String getElementAt(int index) {
+			System.out.println("getElementAt index = " + index);
 			return model.get(index);
 		}
 	}
@@ -565,12 +574,15 @@ public class AMiKoDesk {
 		 */
 		public void update(List<String> lStr) {
 			CustomListModel dlm = new CustomListModel(lStr);						
-			/*
+	
 			if (lStr.size()>BigCellNumber)
 				list.setPrototypeCellValue(dlm.getElementAt(0));
-			else 
+			else {
 				list.setPrototypeCellValue(null);		// Does not work!
-			*/
+				list.setFixedCellHeight(-1);
+			}
+			
+			// System.out.println("update");
 			list.setModel(dlm);
 			// System.out.println("update " + lStr.size() + " value = " + list.getPrototypeCellValue());			
 			jscroll.revalidate();
