@@ -97,6 +97,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.ListCellRenderer;
@@ -163,8 +164,8 @@ public class AMiKoDesk {
 	// private static final String APP_NAME = COMED_MEDDRUGS_NAME;
 	// private static final String APP_NAME = AMIKO_ZURROSE_NAME;
 	// private static final String APP_NAME = COMED_ZURROSE_NAME;
-	private static final String VERSION = "1.1.1 (32-bit)";	
-	private static final String GEN_DATE = "26.10.2013";
+	private static final String VERSION = "1.1.2 (32-bit)";	
+	private static final String GEN_DATE = "14.11.2013";
 	
 	// Important Constants
 	private static final int BigCellNumber = 512;	
@@ -401,6 +402,7 @@ public class AMiKoDesk {
         UIManager.put("MenuBar.font", new Font("Dialog", Font.PLAIN, 14));
         UIManager.put("MenuItem.font", new Font("Dialog", Font.PLAIN, 14));
         UIManager.put("Toolbar.font", new Font("Dialog", Font.PLAIN, 14));
+        UIManager.put("ToggleButton.select", new Color(190,190,240));
         
 		// Schedule a job for the event-dispatching thread:
 		// creating and showing this application's GUI
@@ -475,17 +477,14 @@ public class AMiKoDesk {
 	static class CustomListModel extends AbstractListModel<String> {
 		
 		List<String> model = new ArrayList<>();
-				
+		
 		public CustomListModel(List<String> lStr) {
-			for (String s : lStr) {
-				addElement(s);
-			}
+			model.addAll(lStr);		
 		}
 		
 		public void addElement(String s) {
-			// System.out.println("addElement");
 			model.add(s);
-			// this.fireContentsChanged(this, 0, model.size()-1);
+			this.fireContentsChanged(this, model.size()-1, model.size()-1);
 		}
 		
 		@Override
@@ -494,8 +493,7 @@ public class AMiKoDesk {
 		}
 		
 		@Override
-		public String getElementAt(int index) {
-			// System.out.println("getElementAt index = " + index);
+		public String getElementAt(int index) {		
 			return model.get(index);
 		}
 	}
@@ -573,8 +571,8 @@ public class AMiKoDesk {
 		 * @param lStr
 		 */
 		public void update(List<String> lStr) {
-			CustomListModel dlm = new CustomListModel(lStr);						
-	
+			CustomListModel dlm = new CustomListModel(lStr);
+			
 			if (lStr.size()>BigCellNumber)
 				list.setPrototypeCellValue(dlm.getElementAt(0));
 			else {
@@ -584,7 +582,6 @@ public class AMiKoDesk {
 			
 			// System.out.println("update");
 			list.setModel(dlm);
-			// System.out.println("update " + lStr.size() + " value = " + list.getPrototypeCellValue());			
 			jscroll.revalidate();
 			jscroll.repaint();	
 		}
@@ -1399,8 +1396,11 @@ public class AMiKoDesk {
 		
 		// ------ Setup toolbar ------
 		JToolBar toolBar = new JToolBar("Database");	    
-		JButton selectAipsButton = new JButton(new ImageIcon(IMG_FOLDER+"aips32x32.png"));
-		JButton selectFavoritesButton = new JButton(new ImageIcon(IMG_FOLDER+"favorites32x32.png"));
+		final JToggleButton selectAipsButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"aips32x32.png"));
+		final JToggleButton selectFavoritesButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"favorites32x32.png"));
+		// Set tooltip
+		selectAipsButton.setToolTipText("AIPS database");
+		selectFavoritesButton.setToolTipText("Favorites");
 		// Remove border
 		Border emptyBorder = BorderFactory.createEmptyBorder();
 		selectAipsButton.setBorder(emptyBorder);
@@ -1409,6 +1409,7 @@ public class AMiKoDesk {
 		selectAipsButton.setPreferredSize(new Dimension(32,32));
 		selectFavoritesButton.setPreferredSize(new Dimension(32,32));
 		// Add to toolbar and set up
+		toolBar.setBackground(new Color(240,240,240));
 		toolBar.add(selectAipsButton);
 		toolBar.addSeparator();
 		toolBar.add(selectFavoritesButton);
@@ -1777,6 +1778,7 @@ public class AMiKoDesk {
 		selectAipsButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
+				selectFavoritesButton.setSelected(false);
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();
 				med_search = m_sqldb.searchTitle("");
@@ -1790,6 +1792,7 @@ public class AMiKoDesk {
 		selectFavoritesButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
+				selectAipsButton.setSelected(false);
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();
 				
@@ -2046,10 +2049,7 @@ public class AMiKoDesk {
 		} else {
 			for (int i = 0; i < med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
-				String[] pack_info_str = ms.getPackInfo().split("\n");
-				m.add("<html><b>" + ms.getTitle()
-						+ "</b><br><font color=gray size=-1>"
-						+ pack_info_str[0] + "</font></html>");
+				m.add("<html><b>" + ms.getTitle() + "</b></html>");
 				med_id.add(ms.getId());
 			}
 		}
