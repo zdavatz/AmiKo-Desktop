@@ -402,7 +402,7 @@ public class AMiKoDesk {
         UIManager.put("MenuBar.font", new Font("Dialog", Font.PLAIN, 14));
         UIManager.put("MenuItem.font", new Font("Dialog", Font.PLAIN, 14));
         UIManager.put("Toolbar.font", new Font("Dialog", Font.PLAIN, 14));
-        UIManager.put("ToggleButton.select", new Color(190,190,240));
+        UIManager.put("ToggleButton.select", new Color(240,240,240));
         
 		// Schedule a job for the event-dispatching thread:
 		// creating and showing this application's GUI
@@ -451,7 +451,7 @@ public class AMiKoDesk {
 			setEnabled(list.isEnabled());
 			setFont(list.getFont());
 			setText(value.toString());	
-
+			
 			// System.out.println("getListCellRenderer");
 	
 			if (isSelected) {
@@ -523,6 +523,7 @@ public class AMiKoDesk {
 			list.setSelectionForeground(Color.BLACK);
 			list.setFont(new Font("Dialog", Font.PLAIN, 14));
 			list.addListSelectionListener(this);
+			
 						
 		    MouseListener mouseListener = new MouseAdapter() {
 		        public void mouseClicked(MouseEvent mouseEvent) {
@@ -1396,8 +1397,10 @@ public class AMiKoDesk {
 		
 		// ------ Setup toolbar ------
 		JToolBar toolBar = new JToolBar("Database");	    
-		final JToggleButton selectAipsButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"aips32x32.png"));
-		final JToggleButton selectFavoritesButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"favorites32x32.png"));
+		final JToggleButton selectAipsButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"aips32x32_bright.png"));
+		final JToggleButton selectFavoritesButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"favorites32x32_bright.png"));
+		selectAipsButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"aips32x32_dark.png"));
+		selectFavoritesButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"favorites32x32_dark.png"));
 		// Set tooltip
 		selectAipsButton.setToolTipText("AIPS database");
 		selectFavoritesButton.setToolTipText("Favorites");
@@ -1415,9 +1418,9 @@ public class AMiKoDesk {
 		toolBar.add(selectFavoritesButton);
 		toolBar.setRollover(true);
 		toolBar.setFloatable(false);
-
+		// Progress indicator (not working...)
 		toolBar.addSeparator(new Dimension(32,32));
-		toolBar.add(m_progress_indicator);		
+		toolBar.add(m_progress_indicator);				
 		
 		jframe.addWindowListener(new WindowListener() {
 			// Use WindowAdapter!
@@ -1932,6 +1935,12 @@ public class AMiKoDesk {
 		//jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		jframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);	
 		
+		// Load AIPS database
+		selectAipsButton.setSelected(true);
+		med_search = m_sqldb.searchTitle("");
+		sTitle("");	// Used instead of sTitle (which is slow)
+		cardl.show(p_results, final_title);	
+		
 		// If command line options are provided start app with a particular title or eancode
 		if (commandLineOptionsProvided()) {
 			if (!CML_OPT_TITLE.isEmpty())
@@ -2032,14 +2041,11 @@ public class AMiKoDesk {
 					Matcher m_red = p_red.matcher(pack_str_line);
 					Matcher m_green = p_green.matcher(pack_str_line);
 					if (m_red.find())
-						pack_info_str += "<font color=red>" + pack_str_line
-								+ "</font><br>";
+						pack_info_str += "<font color=red>" + pack_str_line	+ "</font><br>";
 					else if (m_green.find())
-						pack_info_str += "<font color=green>" + pack_str_line
-								+ "</font><br>";
+						pack_info_str += "<font color=green>" + pack_str_line + "</font><br>";
 					else
-						pack_info_str += "<font color=gray>" + pack_str_line
-								+ "</font><br>";
+						pack_info_str += "<font color=gray>" + pack_str_line + "</font><br>";
 				}
 				pack_str_scanner.close();
 				m.add("<html><b>" + ms.getTitle() + "</b><br><font size=-1>"
@@ -2049,7 +2055,7 @@ public class AMiKoDesk {
 		} else {
 			for (int i = 0; i < med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
-				m.add("<html><b>" + ms.getTitle() + "</b></html>");
+				m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b></html>");
 				med_id.add(ms.getId());
 			}
 		}
@@ -2060,10 +2066,18 @@ public class AMiKoDesk {
 	static void sAuth(String query_str) {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
-		for (int i=0; i<med_search.size(); ++i) {
-			Medication ms = med_search.get(i);
-			m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + ms.getAuth() + "</font></html>");
-			med_id.add(ms.getId());
+		if (med_search.size()<BigCellNumber) {		
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + ms.getAuth() + "</font></html>");
+				med_id.add(ms.getId());
+			}
+		} else {
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + ms.getAuth() + "</font></html>");
+				med_id.add(ms.getId());
+			}
 		}
 		m_list_auths.update(m);
 	}
@@ -2104,7 +2118,7 @@ public class AMiKoDesk {
 					atc_code_str = m_code[0];
 					atc_title_str = m_code[1];
 				}				
-				m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
+				m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
 						+ atc_title_str + "</font></html>");
 					med_id.add(ms.getId());
 			}
@@ -2115,22 +2129,42 @@ public class AMiKoDesk {
 	static void sRegNr(String query_str) {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
-		for (int i=0; i<med_search.size(); ++i) {
-			Medication ms = med_search.get(i);
-			m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + ms.getRegnrs()+"</font></html>");
-			med_id.add(ms.getId());
-		}												
+		if (med_search.size()<BigCellNumber) {
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + ms.getRegnrs()+"</font></html>");
+				med_id.add(ms.getId());
+			}
+		} else {
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + ms.getRegnrs()+"</font></html>");
+				med_id.add(ms.getId());	
+			}
+		}
 		m_list_regnrs.update(m);
 	}
 	
+	/**
+	 * Nicely formats search for ingredient ("Wirkstoff")
+	 * @param query_str
+	 */
 	static void sIngredient(String query_str) {
 		med_id.clear();					
 		List<String> m = new ArrayList<String>();
-		for (int i=0; i<med_search.size(); ++i) {
-			Medication ms = med_search.get(i);
-			m.add("<html><b>" + ms.getSubstances() + "</b><br><font color=gray size=-1>" + ms.getTitle()+"</font></html>");
-			med_id.add(ms.getId());
-		}						
+		if (med_search.size()<BigCellNumber) {
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				m.add("<html><b>" + ms.getSubstances() + "</b><br><font color=gray size=-1>" + ms.getTitle()+"</font></html>");
+				med_id.add(ms.getId());
+			}
+		} else {
+			for (int i=0; i<med_search.size(); ++i) {
+				Medication ms = med_search.get(i);
+				m.add("<html><body style='width: 1024px;'><b>" + ms.getSubstances() + "</b><br><font color=gray size=-1>" + ms.getTitle()+"</font></html>");
+				med_id.add(ms.getId());
+			}
+		}
 		m_list_ingredients.update(m);
 	}
 	
@@ -2149,7 +2183,7 @@ public class AMiKoDesk {
 			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
 				String application_str = ms.getApplication().replaceAll(";", " / ");
-				m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
+				m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
 				med_id.add(ms.getId());		
 			}
 		}
