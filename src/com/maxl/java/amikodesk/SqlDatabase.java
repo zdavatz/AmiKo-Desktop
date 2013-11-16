@@ -19,6 +19,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Font;
+import java.awt.Image;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -26,6 +30,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.swing.ImageIcon;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 
 public class SqlDatabase {
 
@@ -76,6 +85,24 @@ public class SqlDatabase {
 		}
 	}
 	
+	public int loadDBFromPath(String db_path) {
+		try {
+			// Initialize org.sqlite.JDBC driver
+			Class.forName("org.sqlite.JDBC");
+			// Create connection to db
+			m_conn = DriverManager.getConnection("jdbc:sqlite:" + db_path);		
+			m_stat = m_conn.createStatement();
+		} catch (SQLException e ) {
+			System.err.println(">> SqlDatabase: SQLException in loadDB!");
+			return 0;
+		} catch (ClassNotFoundException e) {
+			System.err.println(">> SqlDatabase: ClassNotFoundException in loadDB!");
+			return 0;
+		}
+		return 1;
+	}
+	
+	
 	public void closeDB() {
 		try {
 			m_rs.close();
@@ -85,6 +112,49 @@ public class SqlDatabase {
 			System.err.println(">> SqlDatabase: SQLException in closeDB!");
 		}
 	}
+	
+	public int chooseDB(JFrame frame, String db_lang) {
+		JFileChooser fc = new JFileChooser();
+        recursivelySetFonts(fc, new Font("Dialog", Font.PLAIN, 12));
+        int returnVal = -1;
+        if (db_lang.equals("de"))
+        	returnVal = fc.showDialog(frame, "Datenbank wählen");
+        else if (db_lang.equals("fr"))
+        	returnVal = fc.showDialog(frame, "Choisir banque de données");
+        if (returnVal==JFileChooser.APPROVE_OPTION) {
+        	closeDB();
+        	String db_file = fc.getSelectedFile().toString();
+        	System.out.println("Selected db: " + db_file);
+        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
+        		// Setup icon
+        		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
+    	        Image img = icon.getImage();
+    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
+    		    icon = new ImageIcon(scaled_img);
+    		    // Display friendly message
+        		JOptionPane.showMessageDialog(frame, "AmiKo Datenbank mit " + getNumRecords() + " Zeilen " +
+        				"erfolgreich geladen!", "Erfolg", JOptionPane.PLAIN_MESSAGE, icon);
+        		return 1;
+        	} else {
+        		// Show message: db not kosher!
+        		JOptionPane.showMessageDialog(frame, "Fehler beim laden der Datenbank!",
+        				"Fehler", JOptionPane.ERROR_MESSAGE);        		
+        		// Load standard db
+        		loadDB(db_lang);
+        		return 0;
+        	}
+        }
+        return 0;
+	}
+	
+    private void recursivelySetFonts(Component comp, Font font) {
+        comp.setFont(font);
+        if (comp instanceof Container) {
+            Container cont = (Container) comp;
+            for(int j=0, ub=cont.getComponentCount(); j<ub; ++j)
+                recursivelySetFonts(cont.getComponent(j), font);
+        }
+    }
 	
 	public int getNumRecords() {
 		int num_rec = 0;

@@ -1377,12 +1377,15 @@ public class AMiKoDesk {
 		menu_bar.add(update_menu);
 		// Menu items
 		JMenuItem print_item = new JMenuItem("Drucken...");
+		JMenuItem choosedb_item = new JMenuItem("Datenbank wählen");
 		JMenuItem quit_item = new JMenuItem("Beenden");
 		if (appLanguage().equals("fr")) {
 			print_item.setText("Imprimer");		
 			quit_item.setText("Terminer");
 		}
 		datei_menu.add(print_item);
+		datei_menu.addSeparator();
+		datei_menu.add(choosedb_item);
 		datei_menu.addSeparator();
 		datei_menu.add(quit_item);			
 		JMenuItem ywesee_item = new JMenuItem(APP_NAME + " im Internet");
@@ -1940,6 +1943,20 @@ public class AMiKoDesk {
 		med_search = m_sqldb.searchTitle("");
 		sTitle("");	// Used instead of sTitle (which is slow)
 		cardl.show(p_results, final_title);	
+
+		// Add menu item listener
+		choosedb_item.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				if (m_sqldb.chooseDB(jframe, appLanguage())>0) {
+					// Refresh search results
+					selectAipsButton.setSelected(true);
+					med_search = m_sqldb.searchTitle("");
+					sTitle("");	// Used instead of sTitle (which is slow)
+					cardl.show(p_results, final_title);						
+				}
+			}
+		});		
 		
 		// If command line options are provided start app with a particular title or eancode
 		if (commandLineOptionsProvided()) {
@@ -1951,7 +1968,7 @@ public class AMiKoDesk {
 				startAppWithRegnr(but_regnr);
 		}
 	}	
-		
+	
 	static void startAppWithTitle(JButton but_title)
 	{
 		m_query_str = CML_OPT_TITLE;
