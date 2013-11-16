@@ -19,6 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
+import java.awt.AWTEvent;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -352,11 +353,16 @@ public class AMiKoDesk {
 	}
 	
 	public static void main(String[] args) {		
-	
+			
 		// Initialize globales
+		String application_data_folder = System.getenv("APPDATA") + "\\Ywesee\\" + APP_NAME;
        	favorite_meds_set = new HashSet<String>();		
-		favorite_data = new DataStore(System.getenv("APPDATA") + "\\Ywesee\\" + APP_NAME);
+		favorite_data = new DataStore(application_data_folder);
 		favorite_meds_set = favorite_data.load();	// HashSet containing registration numbers
+
+		// Register toolkit
+		Toolkit tk = Toolkit.getDefaultToolkit();
+        tk.addAWTEventListener(WindowSaver.getInstance(application_data_folder), AWTEvent.WINDOW_EVENT_MASK);		
 		
 		// Specify command line options
 		Options options = new Options();
@@ -1329,6 +1335,7 @@ public class AMiKoDesk {
 	private static void createAndShowFullGUI() {
 		// Create and setup window
 		final JFrame jframe = new JFrame(APP_NAME);
+		jframe.setName(APP_NAME + ".main");
         int min_width = CML_OPT_WIDTH;
         int min_height = CML_OPT_HEIGHT;
        
@@ -1454,8 +1461,14 @@ public class AMiKoDesk {
 		quit_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				m_web_panel.dispose();
-				Runtime.getRuntime().exit(0);
+				// Save settings
+				try {
+					WindowSaver.saveSettings();
+					m_web_panel.dispose();
+					Runtime.getRuntime().exit(0);
+				} catch (Exception e) {
+					System.out.println(e);
+				}				
 			}
 		});
 		update_menu.addMenuListener(new MenuListener() {
@@ -1750,6 +1763,7 @@ public class AMiKoDesk {
 		// Add JSplitPane
 		JSplitPane split_pane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left_panel, right_panel);
 		split_pane.setOneTouchExpandable(true);
+		split_pane.setDividerLocation(320);	// Sets the pane divider location
 		left_panel.setBorder(null);
 		right_panel.setBorder(null);
 		container.add(split_pane, BorderLayout.CENTER);
