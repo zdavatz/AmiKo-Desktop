@@ -132,7 +132,7 @@ public class SqlDatabase {
     		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
     		    icon = new ImageIcon(scaled_img);
     		    // Display friendly message
-        		JOptionPane.showMessageDialog(frame, "AmiKo Datenbank mit " + getNumRecords() + " Zeilen " +
+        		JOptionPane.showMessageDialog(frame, "Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
         				"erfolgreich geladen!", "Erfolg", JOptionPane.PLAIN_MESSAGE, icon);
         		return 1;
         	} else {
