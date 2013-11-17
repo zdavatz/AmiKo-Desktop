@@ -894,12 +894,14 @@ public class AMiKoDesk {
 	static class SearchField extends JTextField implements FocusListener {
 
 	    private final String hint;
-
+		private Icon icon;
+		private Insets insets;
+		
 	    public SearchField(final String hint) {
 	        super(hint);
-	        super.addFocusListener(this);
+	        super.addFocusListener(this);	        
 			this.setFont(new Font("Dialog", Font.PLAIN, 14));
-	        this.hint = hint;
+	        this.hint = hint;      
 	        /*
 	        this.setBackground(new Color(240,240,240));
 	        TitledBorder titledBorder = BorderFactory.createTitledBorder(null, "Suche", 
@@ -912,8 +914,30 @@ public class AMiKoDesk {
 	        this.setBorder(BorderFactory.createSoftBevelBorder(SoftBevelBorder.LOWERED));
 	        this.setBackground(new Color(220,250,250));
 	        this.setEditable(true);
+	        
+	        this.icon = new ImageIcon(IMG_FOLDER+"mag_glass_16x16.png");
+	        Border border = UIManager.getBorder("TextField.border");
+	        insets = border.getBorderInsets(this);
+	        
+	        Border empty = new EmptyBorder(0, 0, 0, 0);
+	        setBorder(new CompoundBorder(border, empty));	        
 	    }
 
+	    @Override
+	    protected void paintComponent(Graphics g) {
+	        super.paintComponent(g);	 
+	        int textX = 2;	 
+	        if (icon!=null) {
+	            int iconWidth = icon.getIconWidth();
+	            int iconHeight = icon.getIconHeight();
+	            int x = insets.left + 3;	// our icon's x
+	            textX = x+iconWidth+2; 		// this is the x where text should start
+	            int y = (this.getHeight() - iconHeight)/2;
+	            icon.paintIcon(this, g, x, y);
+	        }	 
+	        setMargin(new Insets(2, textX, 2, 2));		        
+	    }    
+	    
 	    @Override
 	    public void focusGained(FocusEvent e) {
 	    	if(!this.getText().isEmpty()) {
