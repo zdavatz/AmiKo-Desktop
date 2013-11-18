@@ -930,8 +930,8 @@ public class AMiKoDesk {
 	        if (icon!=null) {
 	            int iconWidth = icon.getIconWidth();
 	            int iconHeight = icon.getIconHeight();
-	            int x = insets.left + 3;	// our icon's x
-	            textX = x+iconWidth+2; 		// this is the x where text should start
+	            int x = insets.left + 3;		// icon's x coordinate
+	            textX = x + iconWidth + 2; 		// this is the x where text should start
 	            int y = (this.getHeight() - iconHeight)/2;
 	            icon.paintIcon(this, g, x, y);
 	        }	 
@@ -1822,6 +1822,7 @@ public class AMiKoDesk {
 		selectAipsButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
+				selectAipsButton.setSelected(true);
 				selectFavoritesButton.setSelected(false);
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();
@@ -1837,6 +1838,7 @@ public class AMiKoDesk {
 			@Override
 			public void actionPerformed(ActionEvent event) {
 				selectAipsButton.setSelected(false);
+				selectFavoritesButton.setSelected(true);
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();
 				
@@ -1978,6 +1980,7 @@ public class AMiKoDesk {
 		
 		// Load AIPS database
 		selectAipsButton.setSelected(true);
+		selectFavoritesButton.setSelected(false);
 		med_search = m_sqldb.searchTitle("");
 		sTitle("");	// Used instead of sTitle (which is slow)
 		cardl.show(p_results, final_title);	
@@ -1989,6 +1992,7 @@ public class AMiKoDesk {
 				if (m_sqldb.chooseDB(jframe, appLanguage())>0) {
 					// Refresh search results
 					selectAipsButton.setSelected(true);
+					selectFavoritesButton.setSelected(false);
 					med_search = m_sqldb.searchTitle("");
 					sTitle("");	// Used instead of sTitle (which is slow)
 					cardl.show(p_results, final_title);						
