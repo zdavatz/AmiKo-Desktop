@@ -193,8 +193,10 @@ public class AMiKoDesk {
 	private static List<Long> med_id = new ArrayList<Long>();
 	private static List<Medication> med_search = new ArrayList<Medication>();
 	private static List<Medication> med_title = new ArrayList<Medication>();
+	private static List<Medication> list_of_favorites = new ArrayList<Medication>();
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
+	private static String m_database_used = "aips";
 	private static ProgressIndicator m_progress_indicator = new ProgressIndicator(32);
 	
 	private static String SectionTitle_DE[] = {"Zusammensetzung", "Galenische Form", "Indikationen", "Dosierung", "Kontraindikationen",
@@ -1433,10 +1435,14 @@ public class AMiKoDesk {
 		JToolBar toolBar = new JToolBar("Database");	    
 		final JToggleButton selectAipsButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"aips32x32_bright.png"));
 		final JToggleButton selectFavoritesButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"favorites32x32_bright.png"));
+		selectAipsButton.setRolloverIcon(new ImageIcon(IMG_FOLDER+"aips32x32_dark.png"));
+		selectFavoritesButton.setRolloverIcon(new ImageIcon(IMG_FOLDER+"favorites32x32_dark.png"));
 		selectAipsButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"aips32x32_dark.png"));
 		selectFavoritesButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"favorites32x32_dark.png"));
+		selectAipsButton.setBackground(new Color(240,240,240));
+		selectFavoritesButton.setBackground(new Color(240,240,240));
 		// Set tooltip
-		selectAipsButton.setToolTipText("AIPS database");
+		selectAipsButton.setToolTipText("AIPS");
 		selectFavoritesButton.setToolTipText("Favorites");
 		// Remove border
 		Border emptyBorder = BorderFactory.createEmptyBorder();
@@ -1824,8 +1830,10 @@ public class AMiKoDesk {
 			public void actionPerformed(ActionEvent event) {
 				selectAipsButton.setSelected(true);
 				selectFavoritesButton.setSelected(false);
+				m_database_used = "aips";
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();
+				
 				med_search = m_sqldb.searchTitle("");
 				sTitle("");	// Used instead of sTitle (which is slow)
 				cardl.show(p_results, final_title);	
@@ -1839,6 +1847,7 @@ public class AMiKoDesk {
 			public void actionPerformed(ActionEvent event) {
 				selectAipsButton.setSelected(false);
 				selectFavoritesButton.setSelected(true);
+				m_database_used = "favorites";
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();
 				
@@ -1856,6 +1865,7 @@ public class AMiKoDesk {
 						return m1.getTitle().compareTo(m2.getTitle());
 					}
 				});
+				
 				sTitle("");		// "" argument unused
 				cardl.show(p_results, final_title);
 
@@ -1863,41 +1873,53 @@ public class AMiKoDesk {
 						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");				
 			}
 		});
-				
+						
 		// ------ Add keylistener to text field (type as you go feature) ------
 		searchField.addKeyListener(new KeyAdapter() {
 			@Override
-			public void keyReleased(KeyEvent e) {
+			public void keyTyped(KeyEvent e) {	// keyReleased(KeyEvent e)
 				//invokeLater potentially in the wrong place... more testing required
 				SwingUtilities.invokeLater(new Runnable() {
 					@Override
-					public void run() {
+					public void run() {							
 						m_start_time = System.currentTimeMillis();
 						m_query_str = searchField.getText();
 						// Queries for SQLite DB
 						if (!m_query_str.isEmpty()) {
 							if (m_query_type==0) {
 								med_search = m_sqldb.searchTitle(m_query_str);
+								if (m_database_used.equals("favorites"))
+									retrieveFavorites();
 								sTitle(m_query_str);
 								cardl.show(p_results, final_title);
 							} else if (m_query_type==1) {
 								med_search = m_sqldb.searchAuth(m_query_str);
+								if (m_database_used.equals("favorites"))
+									retrieveFavorites();
 								sAuth(m_query_str);
 								cardl.show(p_results, final_author);
 							} else if (m_query_type==2) {
 								med_search = m_sqldb.searchATC(m_query_str);
+								if (m_database_used.equals("favorites"))
+									retrieveFavorites();
 								sATC(m_query_str);
 								cardl.show(p_results, final_atccode);
 							} else if (m_query_type==3) {
 								med_search = m_sqldb.searchRegNr(m_query_str);
+								if (m_database_used.equals("favorites"))
+									retrieveFavorites();
 								sRegNr(m_query_str);
 								cardl.show(p_results, final_regnr);					
 							} else if (m_query_type==4) {
 								med_search = m_sqldb.searchIngredient(m_query_str);
+								if (m_database_used.equals("favorites"))
+									retrieveFavorites();
 								sIngredient(m_query_str);
 								cardl.show(p_results, final_ingredient);	
 							} else if (m_query_type==5) {
 								med_search = m_sqldb.searchApplication(m_query_str);
+								if (m_database_used.equals("favorites"))
+									retrieveFavorites();
 								sTherapy(m_query_str);
 								cardl.show(p_results, final_therapy);	
 							} else {
@@ -1981,6 +2003,7 @@ public class AMiKoDesk {
 		// Load AIPS database
 		selectAipsButton.setSelected(true);
 		selectFavoritesButton.setSelected(false);
+		m_database_used = "aips";
 		med_search = m_sqldb.searchTitle("");
 		sTitle("");	// Used instead of sTitle (which is slow)
 		cardl.show(p_results, final_title);	
@@ -1993,6 +2016,7 @@ public class AMiKoDesk {
 					// Refresh search results
 					selectAipsButton.setSelected(true);
 					selectFavoritesButton.setSelected(false);
+					m_database_used = "aips";
 					med_search = m_sqldb.searchTitle("");
 					sTitle("");	// Used instead of sTitle (which is slow)
 					cardl.show(p_results, final_title);						
@@ -2010,6 +2034,20 @@ public class AMiKoDesk {
 				startAppWithRegnr(but_regnr);
 		}
 	}	
+	
+	static void retrieveFavorites() 
+	{
+		// Select only subset, remove the rest
+		// TODO: optimize!! too slow
+		list_of_favorites.clear();
+		for (Medication m : med_search) {
+			if (favorite_meds_set.contains(m.getRegnrs()))
+				list_of_favorites.add(m);										
+		}
+		med_search.clear();
+		for (Medication f : list_of_favorites)
+			med_search.add(f);
+	}
 	
 	static void startAppWithTitle(JButton but_title)
 	{
@@ -2091,7 +2129,7 @@ public class AMiKoDesk {
 		Pattern p_red = Pattern.compile(".*O]");
 		Pattern p_green = Pattern.compile(".*G]");
 		if (med_search.size() < BigCellNumber) {
-			for (int i = 0; i < med_search.size(); ++i) {
+			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
 				String pack_info_str = "";
 				Scanner pack_str_scanner = new Scanner(ms.getPackInfo());
@@ -2112,7 +2150,7 @@ public class AMiKoDesk {
 				med_id.add(ms.getId());
 			}
 		} else {
-			for (int i = 0; i < med_search.size(); ++i) {
+			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
 				m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b></html>");
 				med_id.add(ms.getId());
