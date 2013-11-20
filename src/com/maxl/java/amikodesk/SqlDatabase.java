@@ -113,7 +113,14 @@ public class SqlDatabase {
 		}
 	}
 	
-	public int chooseDB(JFrame frame, String db_lang) {
+
+	/**
+	 * Loads DB
+	 * @param frame
+	 * @param db_lang
+	 * @return filename
+	 */
+	public String chooseDB(JFrame frame, String db_lang) {
 		JFileChooser fc = new JFileChooser();
         recursivelySetFonts(fc, new Font("Dialog", Font.PLAIN, 12));
         int returnVal = -1;
@@ -134,17 +141,17 @@ public class SqlDatabase {
     		    // Display friendly message
         		JOptionPane.showMessageDialog(frame, "Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
         				"erfolgreich geladen!", "Erfolg", JOptionPane.PLAIN_MESSAGE, icon);
-        		return 1;
+        		return db_file;
         	} else {
         		// Show message: db not kosher!
         		JOptionPane.showMessageDialog(frame, "Fehler beim laden der Datenbank!",
         				"Fehler", JOptionPane.ERROR_MESSAGE);        		
         		// Load standard db
         		loadDB(db_lang);
-        		return 0;
+        		return "";
         	}
         }
-        return 0;
+        return "";
 	}
 	
     private void recursivelySetFonts(Component comp, Font font) {

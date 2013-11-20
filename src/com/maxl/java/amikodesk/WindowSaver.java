@@ -41,7 +41,8 @@ public class WindowSaver implements AWTEventListener {
 	private final static String PropFileName = "amiko_config.props";
 	private static WindowSaver saver;
 	private static String mAppDataFolder;
-	private Map frameMap;	
+	private static String mDbPath;
+	private Map frameMap;
 	
 	private WindowSaver() {
 		frameMap = new HashMap();
@@ -67,6 +68,19 @@ public class WindowSaver implements AWTEventListener {
 		return saver;
 	}
 	
+	public static String getDbPath() {
+		return mDbPath;
+	}
+	
+	public static void setDbPath(String db_path) {
+		mDbPath = db_path;
+		try {
+			saveSettings();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
 	@Override
 	public void eventDispatched(AWTEvent evt) {
 		try {
@@ -89,16 +103,35 @@ public class WindowSaver implements AWTEventListener {
 		}
 	}
 	
+	private static int getInt(Properties props, String name, int value) {
+		String v = props.getProperty(name);
+		if (v==null) {
+			return value;
+		}
+		return Integer.parseInt(v);
+	}
+	
+	private static String getString(Properties props, String name, String value) {
+		String v = props.getProperty(name);
+		if (v==null) {
+			return value;
+		}
+		return v;
+	}
+	
 	public static void loadSettings(JFrame frame) throws IOException {
 		File prop_file = new File(mAppDataFolder + "\\" + PropFileName);
 		if (prop_file.exists()) {
 			Properties settings = new Properties();			
 			settings.load(new FileInputStream(mAppDataFolder + "\\" + PropFileName));
 			String name = frame.getName();
-	        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+	        // Default dbpath is ""
+	        mDbPath = getString(settings, name + ".db", "");
+	        saver.frameMap.put(name, mDbPath);
 	        // Calculate default screen position...
+	        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
 	        int x0 = (screen.width-1024)/2;
-	        int y0 = (screen.height-768)/2;
+	        int y0 = (screen.height-768)/2;	        
 			int x = getInt(settings, name + ".x", x0);
 			int y = getInt(settings, name + ".y", y0);
 			int w = getInt(settings, name + ".w", 1024);
@@ -110,14 +143,6 @@ public class WindowSaver implements AWTEventListener {
 		}
 	}
 	
-	private static int getInt(Properties props, String name, int value) {
-		String v = props.getProperty(name);
-		if (v==null) {
-			return value;
-		}
-		return Integer.parseInt(v);
-	}
-	
 	public static void saveSettings() throws IOException {
 		Properties settings = new Properties();
 		File prop_file = new File(mAppDataFolder + "\\" + PropFileName);
@@ -125,8 +150,9 @@ public class WindowSaver implements AWTEventListener {
 			settings.load(new FileInputStream(mAppDataFolder + "\\" + PropFileName));		
 		Iterator it = saver.frameMap.keySet().iterator();
 		while (it.hasNext()) {
-			String name = (String)it.next(); 
-            JFrame frame = (JFrame)saver.frameMap.get(name);    
+			String name = (String)it.next();
+            JFrame frame = (JFrame)saver.frameMap.get(name);            
+            settings.setProperty(name + ".db", mDbPath);            
             settings.setProperty(name + ".x", "" + frame.getX());    
             settings.setProperty(name + ".y", "" + frame.getY());    
             settings.setProperty(name + ".w", "" + frame.getWidth());    

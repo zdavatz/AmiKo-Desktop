@@ -397,7 +397,7 @@ public class AMiKoDesk {
 			m_sqldb.loadDB("de");
 		else if (appLanguage().equals("fr"))
 			m_sqldb.loadDB("fr");
-		
+
 		// UIUtils.setPreferredLookAndFeel();
 		NativeInterface.open();
 		NativeSwing.initialize();
@@ -409,7 +409,8 @@ public class AMiKoDesk {
         UIManager.put("Menu.font", new Font("Dialog", Font.PLAIN, 14));
         UIManager.put("MenuBar.font", new Font("Dialog", Font.PLAIN, 14));
         UIManager.put("MenuItem.font", new Font("Dialog", Font.PLAIN, 14));
-        UIManager.put("Toolbar.font", new Font("Dialog", Font.PLAIN, 14));
+        UIManager.put("ToolBar.font", new Font("Dialog", Font.PLAIN, 12));
+        UIManager.put("ToggleButton.font", new Font("Dialog", Font.PLAIN, 12));
         UIManager.put("ToggleButton.select", new Color(240,240,240));
         
 		// Schedule a job for the event-dispatching thread:
@@ -1362,9 +1363,9 @@ public class AMiKoDesk {
 		// Create and setup window
 		final JFrame jframe = new JFrame(APP_NAME);
 		jframe.setName(APP_NAME + ".main");
-        int min_width = CML_OPT_WIDTH;
-        int min_height = CML_OPT_HEIGHT;
-       
+				
+		int min_width = CML_OPT_WIDTH;
+        int min_height = CML_OPT_HEIGHT;       
         jframe.setPreferredSize(new Dimension(min_width, min_height));
 		jframe.setMinimumSize(new Dimension(min_width, min_height));
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
@@ -1432,17 +1433,26 @@ public class AMiKoDesk {
 		jframe.setJMenuBar(menu_bar);
 		
 		// ------ Setup toolbar ------
-		JToolBar toolBar = new JToolBar("Database");	    
+		JToolBar toolBar = new JToolBar("Database");
+		toolBar.setPreferredSize(new Dimension(jframe.getWidth(), 64));
 		final JToggleButton selectAipsButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"aips32x32_bright.png"));
 		final JToggleButton selectFavoritesButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"favorites32x32_bright.png"));
-		selectAipsButton.setRolloverIcon(new ImageIcon(IMG_FOLDER+"aips32x32_dark.png"));
-		selectFavoritesButton.setRolloverIcon(new ImageIcon(IMG_FOLDER+"favorites32x32_dark.png"));
+		
+		selectAipsButton.setVerticalTextPosition(SwingConstants.BOTTOM);
+	    selectAipsButton.setHorizontalTextPosition(SwingConstants.CENTER);
+		selectAipsButton.setText("Aips");
+		selectAipsButton.setRolloverIcon(new ImageIcon(IMG_FOLDER+"aips32x32_gray.png"));
 		selectAipsButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"aips32x32_dark.png"));
-		selectFavoritesButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"favorites32x32_dark.png"));
 		selectAipsButton.setBackground(new Color(240,240,240));
+
+		selectFavoritesButton.setVerticalTextPosition(SwingConstants.BOTTOM);
+	    selectFavoritesButton.setHorizontalTextPosition(SwingConstants.CENTER);
+		selectFavoritesButton.setText("Favorites");
+		selectFavoritesButton.setRolloverIcon(new ImageIcon(IMG_FOLDER+"favorites32x32_gray.png"));
+		selectFavoritesButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"favorites32x32_dark.png"));
 		selectFavoritesButton.setBackground(new Color(240,240,240));
 		// Set tooltip
-		selectAipsButton.setToolTipText("AIPS");
+		selectAipsButton.setToolTipText("Aips");
 		selectFavoritesButton.setToolTipText("Favorites");
 		// Remove border
 		Border emptyBorder = BorderFactory.createEmptyBorder();
@@ -1999,7 +2009,16 @@ public class AMiKoDesk {
 		jframe.setVisible(true);
 		//jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		jframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);	
-		
+
+		// Check if user has selected an alternative database
+		try {
+			WindowSaver.loadSettings(jframe);
+			String database_path = WindowSaver.getDbPath();
+			if (database_path!=null)
+				m_sqldb.loadDBFromPath(database_path);		
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
 		// Load AIPS database
 		selectAipsButton.setSelected(true);
 		selectFavoritesButton.setSelected(false);
@@ -2012,7 +2031,10 @@ public class AMiKoDesk {
 		choosedb_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				if (m_sqldb.chooseDB(jframe, appLanguage())>0) {
+				String db_file = m_sqldb.chooseDB(jframe, appLanguage());
+				if (!db_file.isEmpty()) {
+					// Save db path
+					WindowSaver.setDbPath(db_file);
 					// Refresh search results
 					selectAipsButton.setSelected(true);
 					selectFavoritesButton.setSelected(false);
