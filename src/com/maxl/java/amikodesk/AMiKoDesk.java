@@ -1440,7 +1440,7 @@ public class AMiKoDesk {
 		
 		selectAipsButton.setVerticalTextPosition(SwingConstants.BOTTOM);
 	    selectAipsButton.setHorizontalTextPosition(SwingConstants.CENTER);
-		selectAipsButton.setText("Aips");
+		selectAipsButton.setText("AIPS");
 		selectAipsButton.setRolloverIcon(new ImageIcon(IMG_FOLDER+"aips32x32_gray.png"));
 		selectAipsButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"aips32x32_dark.png"));
 		selectAipsButton.setBackground(new Color(240,240,240));
