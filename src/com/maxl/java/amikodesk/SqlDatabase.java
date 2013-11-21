@@ -23,6 +23,11 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Font;
 import java.awt.Image;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -92,6 +97,9 @@ public class SqlDatabase {
 			// Create connection to db
 			m_conn = DriverManager.getConnection("jdbc:sqlite:" + db_path);		
 			m_stat = m_conn.createStatement();
+			// Following to instructions force an exception to occur...
+			String query = "select count(*) from " + DATABASE_TABLE; 
+			m_rs = m_stat.executeQuery(query);
 		} catch (SQLException e ) {
 			System.err.println(">> SqlDatabase: SQLException in loadDB!");
 			return 0;
@@ -102,6 +110,26 @@ public class SqlDatabase {
 		return 1;
 	}
 	
+	public void copyDB(File src_file, File dst_file){
+		try {
+			if (!src_file.exists ())
+				return;
+			if (!dst_file.exists())
+				dst_file.createNewFile();
+			FileChannel source = null;
+			FileChannel destination = null;
+			source = new FileInputStream(src_file).getChannel();
+			destination = new FileOutputStream(dst_file).getChannel();
+			if (destination!=null && source!=null)
+				destination.transferFrom(source, 0, source.size());
+			if (source!=null)
+				source.close();
+			if (destination!=null)
+				destination.close();
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
 	
 	public void closeDB() {
 		try {

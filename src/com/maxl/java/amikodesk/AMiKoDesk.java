@@ -212,6 +212,7 @@ public class AMiKoDesk {
 	private static String m_query_str = null;
 	private static SqlDatabase m_sqldb = null;
 	private static List<String> m_section_str = null;
+	private static String m_application_data_folder = null;
 	
 	// Panels
 	private static ListPanel m_list_titles = null;
@@ -357,14 +358,14 @@ public class AMiKoDesk {
 	public static void main(String[] args) {		
 			
 		// Initialize globales
-		String application_data_folder = System.getenv("APPDATA") + "\\Ywesee\\" + APP_NAME;
+		m_application_data_folder = System.getenv("APPDATA") + "\\Ywesee\\" + APP_NAME;
        	favorite_meds_set = new HashSet<String>();		
-		favorite_data = new DataStore(application_data_folder);
+		favorite_data = new DataStore(m_application_data_folder);
 		favorite_meds_set = favorite_data.load();	// HashSet containing registration numbers
 
 		// Register toolkit
 		Toolkit tk = Toolkit.getDefaultToolkit();
-        tk.addAWTEventListener(WindowSaver.getInstance(application_data_folder), AWTEvent.WINDOW_EVENT_MASK);		
+        tk.addAWTEventListener(WindowSaver.getInstance(m_application_data_folder), AWTEvent.WINDOW_EVENT_MASK);		
 		
 		// Specify command line options
 		Options options = new Options();
@@ -390,14 +391,17 @@ public class AMiKoDesk {
 		}
 		// Load css style sheet
 		m_css_str = "<style>" + readFromFile(CSS_SHEET) + "</style>";
-		
-		// Load database		
-		m_sqldb = new SqlDatabase();
-		if (appLanguage().equals("de"))
-			m_sqldb.loadDB("de");
-		else if (appLanguage().equals("fr"))
-			m_sqldb.loadDB("fr");
 
+		m_sqldb = new SqlDatabase();
+		// Attempt to load alternative database
+		int retVal = m_sqldb.loadDBFromPath(m_application_data_folder + "\\amiko_db_full_idx.db");
+		// If it does not exist, load default database
+		if (retVal==0) {
+			if (appLanguage().equals("de"))
+				m_sqldb.loadDB("de");
+			else if (appLanguage().equals("fr"))
+				m_sqldb.loadDB("fr");
+		}
 		// UIUtils.setPreferredLookAndFeel();
 		NativeInterface.open();
 		NativeSwing.initialize();
@@ -2013,9 +2017,11 @@ public class AMiKoDesk {
 		// Check if user has selected an alternative database
 		try {
 			WindowSaver.loadSettings(jframe);
+			/*
 			String database_path = WindowSaver.getDbPath();
 			if (database_path!=null)
-				m_sqldb.loadDBFromPath(database_path);		
+				m_sqldb.loadDBFromPath(database_path);
+			*/
 		} catch(IOException e) {
 			e.printStackTrace();
 		}
@@ -2033,6 +2039,8 @@ public class AMiKoDesk {
 			public void actionPerformed(ActionEvent event) {
 				String db_file = m_sqldb.chooseDB(jframe, appLanguage());
 				if (!db_file.isEmpty()) {
+					// Copy database to standard path
+					m_sqldb.copyDB(new File(db_file), new File(m_application_data_folder + "\\amiko_db_full_idx.db"));
 					// Save db path
 					WindowSaver.setDbPath(db_file);
 					// Refresh search results
