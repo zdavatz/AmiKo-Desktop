@@ -186,6 +186,7 @@ public class AMiKoDesk {
 	private static AppServer mTcpServer;
 		
 	private static Long m_start_time = 0L;
+	private static final String DEFAULT_AMIKO_DB_NAME = "amiko_db_full_idx.db";
 	private static final String IMG_FOLDER = "./images/";	
 	private static final String HTML_FILES = "./fis/fi_de_html/";
 	private static final String CSS_SHEET = "./css/amiko_stylesheet.css";
@@ -393,10 +394,8 @@ public class AMiKoDesk {
 		m_css_str = "<style>" + readFromFile(CSS_SHEET) + "</style>";
 
 		m_sqldb = new SqlDatabase();
-		// Attempt to load alternative database
-		int retVal = m_sqldb.loadDBFromPath(m_application_data_folder + "\\amiko_db_full_idx.db");
-		// If it does not exist, load default database
-		if (retVal==0) {
+		// Attempt to load alternative database. if db does not exist, load default database
+		if (m_sqldb.loadDBFromPath(m_application_data_folder + "\\" + DEFAULT_AMIKO_DB_NAME)==0) {
 			if (appLanguage().equals("de"))
 				m_sqldb.loadDB("de");
 			else if (appLanguage().equals("fr"))
@@ -1448,16 +1447,15 @@ public class AMiKoDesk {
 		selectAipsButton.setRolloverIcon(new ImageIcon(IMG_FOLDER+"aips32x32_gray.png"));
 		selectAipsButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"aips32x32_dark.png"));
 		selectAipsButton.setBackground(new Color(240,240,240));
-
+		selectAipsButton.setToolTipText("AIPS");
 		selectFavoritesButton.setVerticalTextPosition(SwingConstants.BOTTOM);
 	    selectFavoritesButton.setHorizontalTextPosition(SwingConstants.CENTER);
 		selectFavoritesButton.setText("Favorites");
 		selectFavoritesButton.setRolloverIcon(new ImageIcon(IMG_FOLDER+"favorites32x32_gray.png"));
 		selectFavoritesButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"favorites32x32_dark.png"));
 		selectFavoritesButton.setBackground(new Color(240,240,240));
-		// Set tooltip
-		selectAipsButton.setToolTipText("Aips");
 		selectFavoritesButton.setToolTipText("Favorites");
+
 		// Remove border
 		Border emptyBorder = BorderFactory.createEmptyBorder();
 		selectAipsButton.setBorder(emptyBorder);
@@ -2015,16 +2013,21 @@ public class AMiKoDesk {
 		jframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);	
 
 		// Check if user has selected an alternative database
+		/*  NOTE:
+			21/11/2013: This solution is put on ice. Favored is a solution
+			where the database selected by the user is saved in a default folder
+			(see variable "m_application_data_folder")
+		*/
+		/*		
 		try {
 			WindowSaver.loadSettings(jframe);
-			/*
 			String database_path = WindowSaver.getDbPath();
 			if (database_path!=null)
 				m_sqldb.loadDBFromPath(database_path);
-			*/
 		} catch(IOException e) {
 			e.printStackTrace();
 		}
+		*/
 		// Load AIPS database
 		selectAipsButton.setSelected(true);
 		selectFavoritesButton.setSelected(false);
@@ -2041,7 +2044,7 @@ public class AMiKoDesk {
 				if (!db_file.isEmpty()) {
 					// Copy database to standard path
 					m_sqldb.copyDB(new File(db_file), new File(m_application_data_folder + "\\amiko_db_full_idx.db"));
-					// Save db path
+					// Save db path (can't hurt)
 					WindowSaver.setDbPath(db_file);
 					// Refresh search results
 					selectAipsButton.setSelected(true);

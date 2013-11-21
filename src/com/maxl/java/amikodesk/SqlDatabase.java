@@ -90,6 +90,11 @@ public class SqlDatabase {
 		}
 	}
 	
+	/**
+	 * Load database from path
+	 * @param db_path
+	 * @return 1 if success, 0 if error/exception
+	 */
 	public int loadDBFromPath(String db_path) {
 		try {
 			// Initialize org.sqlite.JDBC driver
@@ -110,6 +115,12 @@ public class SqlDatabase {
 		return 1;
 	}
 	
+	/**
+	 * Copy file from src to dst
+	 * @param src_file
+	 * @param dst_file
+	 */
+	@SuppressWarnings("resource")
 	public void copyDB(File src_file, File dst_file){
 		try {
 			if (!src_file.exists ())
@@ -120,6 +131,7 @@ public class SqlDatabase {
 			FileChannel destination = null;
 			source = new FileInputStream(src_file).getChannel();
 			destination = new FileOutputStream(dst_file).getChannel();
+			// Transfer source file to destination
 			if (destination!=null && source!=null)
 				destination.transferFrom(source, 0, source.size());
 			if (source!=null)
@@ -146,7 +158,7 @@ public class SqlDatabase {
 	 * Loads DB
 	 * @param frame
 	 * @param db_lang
-	 * @return filename
+	 * @return filename if success, empty string if error
 	 */
 	public String chooseDB(JFrame frame, String db_lang) {
 		JFileChooser fc = new JFileChooser();
