@@ -23,6 +23,8 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Font;
 import java.awt.Image;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -35,8 +37,12 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
+import java.util.zip.ZipInputStream;
 
 import javax.swing.ImageIcon;
+import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -74,6 +80,12 @@ public class SqlDatabase {
 	private Connection m_conn;
 	private Statement m_stat;
 	private ResultSet m_rs;
+	
+	private boolean m_loadedDBisZipped = false;
+	
+	public boolean dbIsZipped() {
+		return m_loadedDBisZipped;
+	}
 	
 	public void loadDB(String db_lang) {
 		try {
@@ -142,7 +154,7 @@ public class SqlDatabase {
 			e.printStackTrace();
 		}
 	}
-	
+		
 	public void closeDB() {
 		try {
 			m_rs.close();
@@ -160,8 +172,13 @@ public class SqlDatabase {
 	 * @param db_lang
 	 * @return filename if success, empty string if error
 	 */
-	public String chooseDB(JFrame frame, String db_lang) {
-		JFileChooser fc = new JFileChooser();
+	public String chooseDB(JFrame frame, String db_lang, String app_folder) {
+		JFileChooser fc = new JFileChooser();		
+
+		JCheckBox bc = new JCheckBox("Zip-Datei");
+		bc.setSelected(true);
+		fc.setAccessory(bc);		
+		
         recursivelySetFonts(fc, new Font("Dialog", Font.PLAIN, 12));
         int returnVal = -1;
         if (db_lang.equals("de"))
@@ -169,9 +186,20 @@ public class SqlDatabase {
         else if (db_lang.equals("fr"))
         	returnVal = fc.showDialog(frame, "Choisir banque de données");
         if (returnVal==JFileChooser.APPROVE_OPTION) {
+        	// Get filename
+        	String db_file = fc.getSelectedFile().toString();  	
+        	System.out.println("Selected db: " + db_file);        	
+        	// Do we have a zipped file?
+        	if (bc.isSelected()) {
+        		// Copy to temporary directory, unzip (copy is done in AmiKoDesk.java)
+        		m_loadedDBisZipped = true;
+        		String unzippedDB = app_folder + "\\amiko_db_full_idx.db";
+        		// System.out.println("Zipped db: " + unzippedDB);
+        		unzipSrcToDst(new File(db_file), new File(unzippedDB)); 
+        		db_file = unzippedDB;
+        	}     	
+        	// Close previous DB
         	closeDB();
-        	String db_file = fc.getSelectedFile().toString();
-        	System.out.println("Selected db: " + db_file);
         	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
         		// Setup icon
         		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
@@ -193,6 +221,27 @@ public class SqlDatabase {
         }
         return "";
 	}
+	
+	private void unzipSrcToDst(File src, File dst) {
+		try {
+			ZipInputStream zin = new ZipInputStream(new FileInputStream(src));
+			byte buffer[] = new byte[4096];
+		    int bytesRead;	
+		    
+			ZipEntry entry = null;		    
+	        while ((entry = zin.getNextEntry()) != null) {
+	            // Copy data from ZipEntry to file
+	            FileOutputStream fos = new FileOutputStream(dst);
+	            while ((bytesRead = zin.read(buffer)) != -1) {
+	                fos.write(buffer, 0, bytesRead);
+	            }
+	            fos.close();
+	        }
+	        zin.close();	
+		} catch (IOException e) {
+			e.printStackTrace();
+		}		
+	}	
 	
     private void recursivelySetFonts(Component comp, Font font) {
         comp.setFont(font);

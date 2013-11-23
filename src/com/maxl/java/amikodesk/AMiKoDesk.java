@@ -395,6 +395,7 @@ public class AMiKoDesk {
 
 		m_sqldb = new SqlDatabase();
 		// Attempt to load alternative database. if db does not exist, load default database
+		// These databases are NEVER zipped!
 		if (m_sqldb.loadDBFromPath(m_application_data_folder + "\\" + DEFAULT_AMIKO_DB_NAME)==0) {
 			if (appLanguage().equals("de"))
 				m_sqldb.loadDB("de");
@@ -2040,10 +2041,11 @@ public class AMiKoDesk {
 		choosedb_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				String db_file = m_sqldb.chooseDB(jframe, appLanguage());
+				String db_file = m_sqldb.chooseDB(jframe, appLanguage(), m_application_data_folder);
 				if (!db_file.isEmpty()) {
-					// Copy database to standard path
-					m_sqldb.copyDB(new File(db_file), new File(m_application_data_folder + "\\amiko_db_full_idx.db"));
+					// Copy database to application folder
+					if (!m_sqldb.dbIsZipped())
+						m_sqldb.copyDB(new File(db_file), new File(m_application_data_folder + "\\amiko_db_full_idx.db"));
 					// Save db path (can't hurt)
 					WindowSaver.setDbPath(db_file);
 					// Refresh search results
