@@ -19,12 +19,15 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
+import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Image;
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
+import java.awt.Toolkit;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -37,15 +40,22 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 
+import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.SwingWorker;
 
 public class SqlDatabase {
 
@@ -80,11 +90,24 @@ public class SqlDatabase {
 	private Connection m_conn;
 	private Statement m_stat;
 	private ResultSet m_rs;
+	private Observer m_observer;
 	
 	private boolean m_loadedDBisZipped = false;
 	
 	public boolean dbIsZipped() {
 		return m_loadedDBisZipped;
+	}
+	
+	public void addObserver(Observer observer) {
+		m_observer = observer;
+	}
+	
+	protected void notify(String str) {
+		m_observer.update(null, str);
+	}	
+	
+	protected void notifyObserver(String db) {
+		notify("Loaded database: " + db);
 	}
 	
 	public void loadDB(String db_lang) {
@@ -165,63 +188,11 @@ public class SqlDatabase {
 		}
 	}
 	
-
 	/**
-	 * Loads DB
-	 * @param frame
-	 * @param db_lang
-	 * @return filename if success, empty string if error
+	 * Unzips file src in to file dst 
+	 * @param src
+	 * @param dst
 	 */
-	public String chooseDB(JFrame frame, String db_lang, String app_folder) {
-		JFileChooser fc = new JFileChooser();		
-
-		JCheckBox bc = new JCheckBox("Zip-Datei");
-		bc.setSelected(true);
-		fc.setAccessory(bc);		
-		
-        recursivelySetFonts(fc, new Font("Dialog", Font.PLAIN, 12));
-        int returnVal = -1;
-        if (db_lang.equals("de"))
-        	returnVal = fc.showDialog(frame, "Datenbank wählen");
-        else if (db_lang.equals("fr"))
-        	returnVal = fc.showDialog(frame, "Choisir banque de données");
-        if (returnVal==JFileChooser.APPROVE_OPTION) {
-        	// Get filename
-        	String db_file = fc.getSelectedFile().toString();  	
-        	System.out.println("Selected db: " + db_file);        	
-        	// Do we have a zipped file?
-        	if (bc.isSelected()) {
-        		// Copy to temporary directory, unzip (copy is done in AmiKoDesk.java)
-        		m_loadedDBisZipped = true;
-        		String unzippedDB = app_folder + "\\amiko_db_full_idx.db";
-        		// System.out.println("Zipped db: " + unzippedDB);
-        		unzipSrcToDst(new File(db_file), new File(unzippedDB)); 
-        		db_file = unzippedDB;
-        	}     	
-        	// Close previous DB
-        	closeDB();
-        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
-        		// Setup icon
-        		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
-    	        Image img = icon.getImage();
-    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
-    		    icon = new ImageIcon(scaled_img);
-    		    // Display friendly message
-        		JOptionPane.showMessageDialog(frame, "Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
-        				"erfolgreich geladen!", "Erfolg", JOptionPane.PLAIN_MESSAGE, icon);
-        		return db_file;
-        	} else {
-        		// Show message: db not kosher!
-        		JOptionPane.showMessageDialog(frame, "Fehler beim laden der Datenbank!",
-        				"Fehler", JOptionPane.ERROR_MESSAGE);        		
-        		// Load standard db
-        		loadDB(db_lang);
-        		return "";
-        	}
-        }
-        return "";
-	}
-	
 	private void unzipSrcToDst(File src, File dst) {
 		try {
 			ZipInputStream zin = new ZipInputStream(new FileInputStream(src));
@@ -241,7 +212,231 @@ public class SqlDatabase {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}		
+	}		
+	
+	/**
+	 * Loads chosen DB
+	 * @param frame
+	 * @param db_lang
+	 * @return filename if success, empty string if error
+	 */
+	public String chooseDB(JFrame frame, String db_lang, String app_folder) {
+		JFileChooser fc = new JFileChooser();		
+		
+		// Add checkbox for zipped databases, this is the default!
+		JCheckBox bc = new JCheckBox("Zip-Datei");
+		bc.setSelected(true);
+		fc.setAccessory(bc);		
+		
+		// Adjust fonts
+        recursivelySetFonts(fc, new Font("Dialog", Font.PLAIN, 12));
+        int returnVal = -1;
+        
+        // Language settings
+        if (db_lang.equals("de"))
+        	returnVal = fc.showDialog(frame, "Datenbank wählen");
+        else if (db_lang.equals("fr"))
+        	returnVal = fc.showDialog(frame, "Choisir banque de données");
+
+        // Launch the file chooser
+        if (returnVal==JFileChooser.APPROVE_OPTION) {
+        	// Get filename
+        	String db_file = fc.getSelectedFile().toString();  	      	
+        	// Do we have a zipped file?
+        	if (bc.isSelected()) {
+        		// Copy to temporary directory, unzip (copy is done in AmiKoDesk.java)
+        		m_loadedDBisZipped = true;
+        		String unzippedDB = app_folder + "\\amiko_db_full_idx.db";
+        		final String f_db_file = db_file;
+        		final String f_unzippedDB = unzippedDB;
+        		new UnzipDialog(f_db_file, f_unzippedDB);
+        		/*
+        		SwingUtilities.invokeLater(new Runnable() {
+        			@Override
+        			public void run() {
+        				new UnzipDialog(f_db_file, f_unzippedDB);
+        			}
+        		});
+        		*/			  
+        		db_file = unzippedDB;
+        		return db_file;
+        	} else {        	
+	        	// Close previous DB
+	        	closeDB();
+	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
+	        		// Copy DB to application folder
+	        		copyDB(new File(db_file), new File(app_folder + "\\amiko_db_full_idx.db"));
+	        		// Setup icon
+	        		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
+	    	        Image img = icon.getImage();
+	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
+	    		    icon = new ImageIcon(scaled_img);
+	    		    // Display friendly message
+	        		JOptionPane.showMessageDialog(frame, "Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
+	        				"erfolgreich geladen!", "Erfolg", JOptionPane.PLAIN_MESSAGE, icon);
+	        		 // Notify to GUI, update database 		    
+	    		    notifyObserver(db_file);    		    
+	        		return db_file;
+	        	} else {
+	        		// Show message: db not kosher!
+	        		JOptionPane.showMessageDialog(frame, "Fehler beim laden der Datenbank!",
+	        				"Fehler", JOptionPane.ERROR_MESSAGE);        		
+	        		// Load standard db
+	        		loadDB(db_lang);
+	        		return "";
+	        	}
+        	}
+        }
+        return "";
+	}
+	
+	private class UnzipDialog extends JFrame implements PropertyChangeListener {
+		
+		private JDialog dialog = new JDialog(this, "Unzipping database", true);
+	    private JProgressBar progressBar = new JProgressBar(0, 100);
+	    private JOptionPane optionPane = new JOptionPane();
+	    private JPanel panel = new JPanel();
+	    private JLabel label = new JLabel();
+	    
+	    public UnzipDialog(String db_file, String unzippedDB) {
+
+	    	progressBar.setPreferredSize(new Dimension(400, 30));
+	    	progressBar.setStringPainted(true);			
+			progressBar.setValue(0);	    	
+
+			label.setText("Unzipping");
+			
+			panel = new JPanel(new BorderLayout(5, 5));
+			panel.add(label, BorderLayout.PAGE_START);
+			panel.add(progressBar, BorderLayout.CENTER);
+			panel.setBorder(BorderFactory.createEmptyBorder(11, 11, 11, 11));
+
+			dialog.getContentPane().add(panel);			
+			dialog.pack();
+			dialog.setLocationRelativeTo(null);
+			dialog.setModal(false);
+			dialog.setVisible(true);
+			
+			setLocationRelativeTo(null);    // center on screen
+	        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			
+			UnzipWorker unzipWorker = new UnzipWorker(this, new File(db_file), new File(unzippedDB)); 
+			// Attach property listener to it
+    		unzipWorker.addPropertyChangeListener(this);
+    		// Launch SwingWorker
+    		unzipWorker.execute();
+	    }
+	    
+	    public JLabel getLabel() {
+	    	return label;
+	    }
+	    
+	    /**
+	     * Update the progress bar's state whenever the unzip progress changes.
+	     */
+	    @Override
+	    public void propertyChange(PropertyChangeEvent evt) {
+	        if ("progress" == evt.getPropertyName()) {
+	            int progress = (Integer) evt.getNewValue();
+	            progressBar.setValue(progress);
+	        }
+	    }
 	}	
+	
+	private class UnzipWorker extends SwingWorker<Void, Integer> {
+		private File mSrcFile;
+		private File mDstFile;
+		private UnzipDialog mDialog;
+		private Observer mObserver;
+
+		public UnzipWorker(UnzipDialog dialog, File srcFile, File dstFile) {
+			mSrcFile = srcFile;
+			mDstFile = dstFile;
+			mDialog = dialog;
+		}
+		
+		/**
+		 * Executed in background thread
+		 */
+		@Override
+		protected Void doInBackground() throws Exception {
+			System.out.println("UnzipWorker.doInBackground");
+			//try {
+				byte buffer[] = new byte[4096];
+			    int bytesRead = -1;	
+			    long totBytesRead = 0;
+			    int percentCompleted = 0;
+
+			try {
+				ZipInputStream zin = new ZipInputStream(new FileInputStream(mSrcFile));
+				ZipEntry entry = null;
+				while ((entry = zin.getNextEntry()) != null) {
+					// Copy data from ZipEntry to file					
+					FileOutputStream fos = new FileOutputStream(mDstFile);
+					while ((bytesRead = zin.read(buffer)) != -1) {
+						fos.write(buffer, 0, bytesRead);
+						totBytesRead += bytesRead;
+						// Note: 3.9 is a magic compression ratio...
+						percentCompleted = (int)(totBytesRead*100/(3.9*mSrcFile.length()));
+						if (percentCompleted>100)
+							percentCompleted = 100;
+						setProgress(percentCompleted);
+					}
+					fos.close();
+				}
+				zin.close();
+			} catch (IOException e) {
+				mDialog.getLabel().setText("Error unzipping file: " + e.getMessage());
+	            e.printStackTrace();
+	            setProgress(0);
+	            cancel(true);
+			}
+			
+			return null;
+		}
+
+		/**
+		 * Executed in Swing's event dispatching thread
+		 */
+		@Override
+		protected void done() {
+			if (!isCancelled()) {
+				Toolkit.getDefaultToolkit().beep();
+	        	// Close previous DB
+	        	closeDB();
+	        	String db_file = mDstFile.getAbsolutePath();
+	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
+	        		// Setup icon
+	        		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
+	    	        Image img = icon.getImage();
+	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
+	    		    icon = new ImageIcon(scaled_img);
+	    		    // Display friendly message
+	    		    // TODO: add language option!!
+	    		    mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
+	        				"erfolgreich geladen!");
+	    		    // Notify to GUI, update database 		    
+	    		    notifyObserver(db_file);
+					
+	    		    /*
+	        		JOptionPane.showMessageDialog(mFrame, "Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
+	        				"erfolgreich geladen!", "Erfolg", JOptionPane.PLAIN_MESSAGE, icon);
+	        				*/
+	        	} else {
+	        		// Show message: db not kosher!
+	        		// TODO: add language option!!
+	        		mDialog.getLabel().setText("Fehler beim laden der Datenbank!");
+	        		/*
+	        		JOptionPane.showMessageDialog(mFrame, "Fehler beim laden der Datenbank!",
+	        				"Fehler", JOptionPane.ERROR_MESSAGE);        		
+	        		*/
+	        		// Load standard db
+	        		loadDB("de");
+	        	}			
+				
+			}
+		}
+	}
 	
     private void recursivelySetFonts(Component comp, Font font) {
         comp.setFont(font);

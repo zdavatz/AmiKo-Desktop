@@ -72,6 +72,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -2043,21 +2045,25 @@ public class AMiKoDesk {
 			public void actionPerformed(ActionEvent event) {
 				String db_file = m_sqldb.chooseDB(jframe, appLanguage(), m_application_data_folder);
 				if (!db_file.isEmpty()) {
-					// Copy database to application folder
-					if (!m_sqldb.dbIsZipped())
-						m_sqldb.copyDB(new File(db_file), new File(m_application_data_folder + "\\amiko_db_full_idx.db"));
 					// Save db path (can't hurt)
-					WindowSaver.setDbPath(db_file);
-					// Refresh search results
-					selectAipsButton.setSelected(true);
-					selectFavoritesButton.setSelected(false);
-					m_database_used = "aips";
-					med_search = m_sqldb.searchTitle("");
-					sTitle("");	// Used instead of sTitle (which is slow)
-					cardl.show(p_results, final_title);						
+					WindowSaver.setDbPath(db_file);				
 				}
 			}
 		});		
+		
+		// Attach observer to 'm_sqldb'
+		m_sqldb.addObserver(new Observer() {
+			public void update(Observable o, Object arg) {
+				System.out.println(arg);
+				// Refresh search results
+				selectAipsButton.setSelected(true);
+				selectFavoritesButton.setSelected(false);
+				m_database_used = "aips";
+				med_search = m_sqldb.searchTitle("");
+				sTitle("");	// Used instead of sTitle (which is slow)
+				cardl.show(p_results, final_title);						
+			}
+		});
 		
 		// If command line options are provided start app with a particular title or eancode
 		if (commandLineOptionsProvided()) {
