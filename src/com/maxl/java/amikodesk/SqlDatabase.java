@@ -224,14 +224,20 @@ public class SqlDatabase {
 	 * @return
 	 */
 	public String updateDB(JFrame frame, String db_lang, String app_folder) {
-		String url = "http://pillbox.oddb.org/amiko_db_full_idx_de.zip";
-		if (db_lang.equals("fr"))
-			url = "http://pillbox.oddb.org/amiko_db_full_idx_fr.zip";
+		String db_unzipped = app_folder + "\\amiko_db_full_idx_de.db";
+		String amiko_report = app_folder + "\\amiko_report_de.html";
+		String db_url = "http://pillbox.oddb.org/amiko_db_full_idx_de.zip";
+		String report_url = "http://pillbox.oddb.org/amiko_report_de.html";
+		if (db_lang.equals("fr")) {
+			db_unzipped = app_folder + "\\amiko_db_full_idx_fr.db";
+			amiko_report = app_folder + "\\amiko_report_fr.html";			
+			db_url = "http://pillbox.oddb.org/amiko_db_full_idx_fr.zip";
+			report_url = "http://pillbox.oddb.org/amiko_report_fr.html";
+		}
 
-		String unzippedDB = app_folder + "\\amiko_db_full_idx.db";
-		new DownloadDialog(url, unzippedDB);
+		new DownloadDialog(db_url, report_url, amiko_report, db_unzipped);
 		
-		return unzippedDB;
+		return db_unzipped;
 	}
 	
 	private class DownloadDialog extends JFrame implements PropertyChangeListener {
@@ -241,7 +247,7 @@ public class SqlDatabase {
 	    private JPanel panel = new JPanel();
 	    private JLabel label = new JLabel();
 	    
-	    public DownloadDialog(String downloadURL, String unzippedDB) {
+	    public DownloadDialog(String databaseURL, String reportURL, String amikoReport, String unzippedDB) {
 	    	progressBar.setPreferredSize(new Dimension(480, 30));
 	    	progressBar.setStringPainted(true);			
 			progressBar.setValue(0);	    	
@@ -262,7 +268,8 @@ public class SqlDatabase {
 			setLocationRelativeTo(null);    // center on screen
 	        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			
-			DownloadWorker downloadWorker = new DownloadWorker(this, downloadURL, new File(unzippedDB)); 
+			DownloadWorker downloadWorker = new DownloadWorker(this, databaseURL, reportURL, 
+					new File(amikoReport), new File(unzippedDB)); 
 			// Attach property listener to it
     		downloadWorker.addPropertyChangeListener(this);
     		// Launch SwingWorker
@@ -290,13 +297,17 @@ public class SqlDatabase {
 	}	
 	
 	private class DownloadWorker extends SwingWorker<Void, Integer> {
-		private String mSrcURL;
-		private File mDstFile;
+		private String mDatabaseURL;
+		private String mReportURL;
+		private File mAmikoDatabase;
+		private File mAmikoReport;
 		private DownloadDialog mDialog;
 
-		public DownloadWorker(DownloadDialog dialog, String srcURL, File dstFile) {
-			mSrcURL = srcURL;
-			mDstFile = dstFile;
+		public DownloadWorker(DownloadDialog dialog, String databaseURL, String reportURL, File amikoReport, File amikoDatabase) {
+			mDatabaseURL = databaseURL;
+			mReportURL = reportURL;
+			mAmikoReport = amikoReport;
+			mAmikoDatabase = amikoDatabase;
 			mDialog = dialog;
 		}
 		
@@ -311,20 +322,19 @@ public class SqlDatabase {
 			long totBytesRead = 0;
 			int percentCompleted = 0;
 
-			// Download
-			mDialog.setLabel("Downloading...");
-			URL url = new URL(mSrcURL);
+			// Download database
+			mDialog.setLabel("Downloading database file...");
+			URL url = new URL(mDatabaseURL);
 			InputStream is = url.openStream();
 			// Retrieve file length from http header
 			int sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
-			File downloadedFile = new File(mDstFile.getAbsolutePath() + ".zip");
+			File downloadedFile = new File(mAmikoDatabase.getAbsolutePath() + ".zip");
 			OutputStream os = new FileOutputStream(downloadedFile);
 
 			try {
 				while ((bytesRead = is.read(buffer)) != -1) {
 					os.write(buffer, 0, bytesRead);
 					totBytesRead += bytesRead;
-					// Note: 3.9 is a magic compression ratio...
 					percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
 					if (percentCompleted > 100)
 						percentCompleted = 100;
@@ -332,12 +342,13 @@ public class SqlDatabase {
 				}
 				os.close();
 			} catch (IOException e) {
-				mDialog.getLabel().setText("Error downloading file: " + e.getMessage());
+				mDialog.getLabel().setText("Error downloading database file: " + e.getMessage());
 				e.printStackTrace();
 				setProgress(0);
 				cancel(true);
 			}
-			// Unzip
+				
+			// Unzip database file
 			mDialog.setLabel("Unzipping...");
 
 			try {
@@ -346,7 +357,7 @@ public class SqlDatabase {
 				ZipEntry entry = null;
 				while ((entry = zin.getNextEntry()) != null) {
 					// Copy data from ZipEntry to file
-					FileOutputStream fos = new FileOutputStream(mDstFile);
+					FileOutputStream fos = new FileOutputStream(mAmikoDatabase);
 					while ((bytesRead = zin.read(buffer)) != -1) {
 						fos.write(buffer, 0, bytesRead);
 						totBytesRead += bytesRead;
@@ -365,6 +376,33 @@ public class SqlDatabase {
 				setProgress(0);
 				cancel(true);
 			}
+			
+			// Download report file
+			mDialog.setLabel("Downloading report file...");
+			url = new URL(mReportURL);
+			is = url.openStream();
+			// Retrieve file length from http header
+			sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
+			downloadedFile = new File(mAmikoReport.getAbsolutePath());
+			os = new FileOutputStream(downloadedFile);
+
+			try {
+				while ((bytesRead = is.read(buffer)) != -1) {
+					os.write(buffer, 0, bytesRead);
+					totBytesRead += bytesRead;
+					percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
+					if (percentCompleted > 100)
+						percentCompleted = 100;
+					setProgress(percentCompleted);
+				}
+				os.close();
+			} catch (IOException e) {
+				mDialog.getLabel().setText("Error downloading report file: " + e.getMessage());
+				e.printStackTrace();
+				setProgress(0);
+				cancel(true);
+			}	
+			
 			return null;
 		}
 
@@ -378,7 +416,7 @@ public class SqlDatabase {
 				Toolkit.getDefaultToolkit().beep();
 	        	// Close previous DB
 	        	closeDB();
-	        	String db_file = mDstFile.getAbsolutePath();
+	        	String db_file = mAmikoDatabase.getAbsolutePath();
 	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
 	        		// Setup icon
 	        		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
