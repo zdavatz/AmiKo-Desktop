@@ -32,6 +32,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
 import java.nio.channels.FileChannel;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -40,7 +43,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Observable;
 import java.util.Observer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -215,6 +217,192 @@ public class SqlDatabase {
 	}		
 	
 	/**
+	 * Downloads database from set URL, unzips it and transfers it to given folder
+	 * @param frame
+	 * @param db_lang
+	 * @param app_folder
+	 * @return
+	 */
+	public String updateDB(JFrame frame, String db_lang, String app_folder) {
+		String url = "http://pillbox.oddb.org/amiko_db_full_idx_de.zip";
+		if (db_lang.equals("fr"))
+			url = "http://pillbox.oddb.org/amiko_db_full_idx_fr.zip";
+
+		String unzippedDB = app_folder + "\\amiko_db_full_idx.db";
+		new DownloadDialog(url, unzippedDB);
+		
+		return unzippedDB;
+	}
+	
+	private class DownloadDialog extends JFrame implements PropertyChangeListener {
+		
+		private JDialog dialog = new JDialog(this, "Downloading database", true);
+	    private JProgressBar progressBar = new JProgressBar(0, 100);
+	    private JPanel panel = new JPanel();
+	    private JLabel label = new JLabel();
+	    
+	    public DownloadDialog(String downloadURL, String unzippedDB) {
+	    	progressBar.setPreferredSize(new Dimension(480, 30));
+	    	progressBar.setStringPainted(true);			
+			progressBar.setValue(0);	    	
+
+			label.setText("Downloading...");
+			
+			panel = new JPanel(new BorderLayout(5, 5));
+			panel.add(label, BorderLayout.PAGE_START);
+			panel.add(progressBar, BorderLayout.CENTER);
+			panel.setBorder(BorderFactory.createEmptyBorder(11, 11, 11, 11));
+
+			dialog.getContentPane().add(panel);			
+			dialog.pack();
+			dialog.setLocationRelativeTo(null);
+			dialog.setModal(false);
+			dialog.setVisible(true);
+			
+			setLocationRelativeTo(null);    // center on screen
+	        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			
+			DownloadWorker downloadWorker = new DownloadWorker(this, downloadURL, new File(unzippedDB)); 
+			// Attach property listener to it
+    		downloadWorker.addPropertyChangeListener(this);
+    		// Launch SwingWorker
+    		downloadWorker.execute();
+	    }
+	    
+	    public JLabel getLabel() {
+	    	return label;
+	    }
+	    
+	    public void setLabel(String l) {
+	    	label.setText(l);
+	    }
+	    
+	    /**
+	     * Update the progress bar's state whenever the unzip progress changes.
+	     */
+	    @Override
+	    public void propertyChange(PropertyChangeEvent evt) {
+	        if ("progress" == evt.getPropertyName()) {
+	            int progress = (Integer) evt.getNewValue();
+	            progressBar.setValue(progress);
+	        }
+	    }
+	}	
+	
+	private class DownloadWorker extends SwingWorker<Void, Integer> {
+		private String mSrcURL;
+		private File mDstFile;
+		private DownloadDialog mDialog;
+
+		public DownloadWorker(DownloadDialog dialog, String srcURL, File dstFile) {
+			mSrcURL = srcURL;
+			mDstFile = dstFile;
+			mDialog = dialog;
+		}
+		
+		/**
+		 * Executed in background thread
+		 */
+		@Override
+		protected Void doInBackground() throws Exception {
+			System.out.println("DownloadWorker.doInBackground");
+			byte buffer[] = new byte[4096];
+			int bytesRead = -1;
+			long totBytesRead = 0;
+			int percentCompleted = 0;
+
+			// Download
+			mDialog.setLabel("Downloading...");
+			URL url = new URL(mSrcURL);
+			InputStream is = url.openStream();
+			// Retrieve file length from http header
+			int sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
+			File downloadedFile = new File(mDstFile.getAbsolutePath() + ".zip");
+			OutputStream os = new FileOutputStream(downloadedFile);
+
+			try {
+				while ((bytesRead = is.read(buffer)) != -1) {
+					os.write(buffer, 0, bytesRead);
+					totBytesRead += bytesRead;
+					// Note: 3.9 is a magic compression ratio...
+					percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
+					if (percentCompleted > 100)
+						percentCompleted = 100;
+					setProgress(percentCompleted);
+				}
+				os.close();
+			} catch (IOException e) {
+				mDialog.getLabel().setText("Error downloading file: " + e.getMessage());
+				e.printStackTrace();
+				setProgress(0);
+				cancel(true);
+			}
+			// Unzip
+			mDialog.setLabel("Unzipping...");
+
+			try {
+				ZipInputStream zin = new ZipInputStream(new FileInputStream(
+						downloadedFile));
+				ZipEntry entry = null;
+				while ((entry = zin.getNextEntry()) != null) {
+					// Copy data from ZipEntry to file
+					FileOutputStream fos = new FileOutputStream(mDstFile);
+					while ((bytesRead = zin.read(buffer)) != -1) {
+						fos.write(buffer, 0, bytesRead);
+						totBytesRead += bytesRead;
+						// Note: 3.9 is a magic compression ratio...
+						percentCompleted = (int) (totBytesRead * 100 / (3.9 * downloadedFile.length()));
+						if (percentCompleted > 100)
+							percentCompleted = 100;
+						setProgress(percentCompleted);
+					}
+					fos.close();
+				}
+				zin.close();
+			} catch (IOException e) {
+				mDialog.getLabel().setText("Error unzipping file: " + e.getMessage());
+				e.printStackTrace();
+				setProgress(0);
+				cancel(true);
+			}
+			return null;
+		}
+
+		/**
+		 * Executed in Swing's event dispatching thread
+		 */
+		@Override
+		protected void done() {
+			if (!isCancelled()) {
+				setProgress(100);
+				Toolkit.getDefaultToolkit().beep();
+	        	// Close previous DB
+	        	closeDB();
+	        	String db_file = mDstFile.getAbsolutePath();
+	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
+	        		// Setup icon
+	        		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
+	    	        Image img = icon.getImage();
+	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
+	    		    icon = new ImageIcon(scaled_img);
+	    		    // Display friendly message
+	    		    // TODO: add language option!!
+	    		    mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
+	        				"erfolgreich geladen!");
+	    		    // Notify to GUI, update database 		    
+	    		    notifyObserver(db_file);
+	        	} else {
+	        		// Show message: db not kosher!
+	        		// TODO: add language option!!
+	        		mDialog.getLabel().setText("Fehler beim laden der Datenbank!");
+	        		// Load standard db
+	        		loadDB("de");
+	        	}							
+			}
+		}
+	}
+	
+	/**
 	 * Loads chosen DB
 	 * @param frame
 	 * @param db_lang
@@ -294,13 +482,12 @@ public class SqlDatabase {
 		
 		private JDialog dialog = new JDialog(this, "Unzipping database", true);
 	    private JProgressBar progressBar = new JProgressBar(0, 100);
-	    private JOptionPane optionPane = new JOptionPane();
 	    private JPanel panel = new JPanel();
 	    private JLabel label = new JLabel();
 	    
 	    public UnzipDialog(String db_file, String unzippedDB) {
 
-	    	progressBar.setPreferredSize(new Dimension(400, 30));
+	    	progressBar.setPreferredSize(new Dimension(480, 30));
 	    	progressBar.setStringPainted(true);			
 			progressBar.setValue(0);	    	
 
@@ -347,7 +534,6 @@ public class SqlDatabase {
 		private File mSrcFile;
 		private File mDstFile;
 		private UnzipDialog mDialog;
-		private Observer mObserver;
 
 		public UnzipWorker(UnzipDialog dialog, File srcFile, File dstFile) {
 			mSrcFile = srcFile;
@@ -361,11 +547,11 @@ public class SqlDatabase {
 		@Override
 		protected Void doInBackground() throws Exception {
 			System.out.println("UnzipWorker.doInBackground");
-			//try {
-				byte buffer[] = new byte[4096];
-			    int bytesRead = -1;	
-			    long totBytesRead = 0;
-			    int percentCompleted = 0;
+
+			byte buffer[] = new byte[4096];
+			int bytesRead = -1;	
+			long totBytesRead = 0;
+			int percentCompleted = 0;
 
 			try {
 				ZipInputStream zin = new ZipInputStream(new FileInputStream(mSrcFile));

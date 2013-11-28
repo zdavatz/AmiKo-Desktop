@@ -1417,7 +1417,8 @@ public class AMiKoDesk {
 		menu_bar.add(update_menu);
 		// Menu items
 		JMenuItem print_item = new JMenuItem("Drucken...");
-		JMenuItem choosedb_item = new JMenuItem("Datenbank wählen");
+		JMenuItem updatedb_item = new JMenuItem("Datenbank updaten");
+		JMenuItem choosedb_item = new JMenuItem("Datenbank laden");
 		JMenuItem quit_item = new JMenuItem("Beenden");
 		if (appLanguage().equals("fr")) {
 			print_item.setText("Imprimer");		
@@ -1425,6 +1426,7 @@ public class AMiKoDesk {
 		}
 		datei_menu.add(print_item);
 		datei_menu.addSeparator();
+		datei_menu.add(updatedb_item);
 		datei_menu.add(choosedb_item);
 		datei_menu.addSeparator();
 		datei_menu.add(quit_item);			
@@ -2039,7 +2041,18 @@ public class AMiKoDesk {
 		sTitle("");	// Used instead of sTitle (which is slow)
 		cardl.show(p_results, final_title);	
 
-		// Add menu item listener
+		// Add menu item listeners
+		updatedb_item.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				String db_file = m_sqldb.updateDB(jframe, appLanguage(), m_application_data_folder);
+				if (!db_file.isEmpty()) {
+					// Save db path (can't hurt)
+					WindowSaver.setDbPath(db_file);				
+				}
+			}
+		});
+		
 		choosedb_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
