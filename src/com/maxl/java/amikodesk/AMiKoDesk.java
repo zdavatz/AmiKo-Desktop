@@ -189,6 +189,7 @@ public class AMiKoDesk {
 		
 	private static Long m_start_time = 0L;
 	private static final String DEFAULT_AMIKO_DB_NAME = "amiko_db_full_idx.db";
+	private static final String DEFAULT_AMIKO_REPORT_BASE = "amiko_report_";
 	private static final String IMG_FOLDER = "./images/";	
 	private static final String HTML_FILES = "./fis/fi_de_html/";
 	private static final String CSS_SHEET = "./css/amiko_stylesheet.css";
@@ -1417,7 +1418,7 @@ public class AMiKoDesk {
 		menu_bar.add(update_menu);
 		// Menu items
 		JMenuItem print_item = new JMenuItem("Drucken...");
-		JMenuItem updatedb_item = new JMenuItem("Datenbank updaten");
+		JMenuItem updatedb_item = new JMenuItem("Datenbank aktualisieren");
 		JMenuItem choosedb_item = new JMenuItem("Datenbank laden");
 		JMenuItem quit_item = new JMenuItem("Beenden");
 		if (appLanguage().equals("fr")) {
@@ -1431,12 +1432,14 @@ public class AMiKoDesk {
 		datei_menu.addSeparator();
 		datei_menu.add(quit_item);			
 		JMenuItem ywesee_item = new JMenuItem(APP_NAME + " im Internet");
+		JMenuItem report_item = new JMenuItem("Error Report");
 		JMenuItem about_item = new JMenuItem("Info zu " + APP_NAME);		
 		if (appLanguage().equals("fr")) {
 			ywesee_item.setText(APP_NAME + " sur Internet");
 			about_item.setText("A propos de " + APP_NAME);
 		}
 		hilfe_menu.add(ywesee_item);
+		hilfe_menu.add(report_item);
 		hilfe_menu.add(about_item);
 		jframe.setJMenuBar(menu_bar);
 		
@@ -1574,6 +1577,23 @@ public class AMiKoDesk {
 			@Override
 			public void menuCanceled(MenuEvent event) {
 				// do nothing
+			}
+		});
+		report_item.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				// Check first m_application_folder otherwise resort to pre-installed report
+				String report_file = m_application_data_folder + "\\" + DEFAULT_AMIKO_REPORT_BASE + appLanguage() + ".html";
+				if (!(new File(report_file)).exists())
+					report_file = System.getProperty("user.dir") + "/dbs/" + DEFAULT_AMIKO_REPORT_BASE + appLanguage() + ".html";
+				// Open report file in browser
+				if (Desktop.isDesktopSupported()) {
+					try {
+						Desktop.getDesktop().browse(new File(report_file).toURI());							
+					} 	catch (IOException e) {
+						// TODO:
+					}
+				}
 			}
 		});
 		ywesee_item.addActionListener(new ActionListener() {
