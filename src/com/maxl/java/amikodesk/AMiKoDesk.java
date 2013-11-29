@@ -188,7 +188,7 @@ public class AMiKoDesk {
 	private static AppServer mTcpServer;
 		
 	private static Long m_start_time = 0L;
-	private static final String DEFAULT_AMIKO_DB_NAME = "amiko_db_full_idx.db";
+	private static final String DEFAULT_AMIKO_DB_BASE = "amiko_db_full_idx_";
 	private static final String DEFAULT_AMIKO_REPORT_BASE = "amiko_report_";
 	private static final String IMG_FOLDER = "./images/";	
 	private static final String HTML_FILES = "./fis/fi_de_html/";
@@ -399,7 +399,8 @@ public class AMiKoDesk {
 		m_sqldb = new SqlDatabase();
 		// Attempt to load alternative database. if db does not exist, load default database
 		// These databases are NEVER zipped!
-		if (m_sqldb.loadDBFromPath(m_application_data_folder + "\\" + DEFAULT_AMIKO_DB_NAME)==0) {
+		if (m_sqldb.loadDBFromPath(m_application_data_folder + "\\" + DEFAULT_AMIKO_DB_BASE + appLanguage() + ".db")==0) {
+			System.out.println("Loading default database");
 			if (appLanguage().equals("de"))
 				m_sqldb.loadDB("de");
 			else if (appLanguage().equals("fr"))

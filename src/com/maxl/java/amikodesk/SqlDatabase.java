@@ -23,9 +23,13 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
@@ -49,6 +53,7 @@ import java.util.zip.ZipInputStream;
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
@@ -95,6 +100,7 @@ public class SqlDatabase {
 	private Observer m_observer;
 	
 	private boolean m_loadedDBisZipped = false;
+	private boolean m_operationCancelled = false;
 	
 	public boolean dbIsZipped() {
 		return m_loadedDBisZipped;
@@ -224,10 +230,12 @@ public class SqlDatabase {
 	 * @return
 	 */
 	public String updateDB(JFrame frame, String db_lang, String app_folder) {
+		// Default is "de"
 		String db_unzipped = app_folder + "\\amiko_db_full_idx_de.db";
 		String amiko_report = app_folder + "\\amiko_report_de.html";
 		String db_url = "http://pillbox.oddb.org/amiko_db_full_idx_de.zip";
 		String report_url = "http://pillbox.oddb.org/amiko_report_de.html";
+		// ... works also for "fr"
 		if (db_lang.equals("fr")) {
 			db_unzipped = app_folder + "\\amiko_db_full_idx_fr.db";
 			amiko_report = app_folder + "\\amiko_report_fr.html";			
@@ -235,6 +243,7 @@ public class SqlDatabase {
 			report_url = "http://pillbox.oddb.org/amiko_report_fr.html";
 		}
 
+		m_operationCancelled = false;
 		new DownloadDialog(db_url, report_url, amiko_report, db_unzipped);
 		
 		return db_unzipped;
@@ -254,9 +263,18 @@ public class SqlDatabase {
 
 			label.setText("Downloading...");
 			
+			// Button pane
+			JPanel buttonPane = new JPanel();
+		    buttonPane.setLayout(new FlowLayout(FlowLayout.RIGHT));
+		    JButton okButton = new JButton("OK");
+		    getRootPane().setDefaultButton(okButton);
+		    okButton.setActionCommand("OK");
+		    buttonPane.add(okButton); 			    
+		    
 			panel = new JPanel(new BorderLayout(5, 5));
-			panel.add(label, BorderLayout.PAGE_START);
+			panel.add(label, BorderLayout.NORTH);
 			panel.add(progressBar, BorderLayout.CENTER);
+			panel.add(buttonPane, BorderLayout.SOUTH);
 			panel.setBorder(BorderFactory.createEmptyBorder(11, 11, 11, 11));
 
 			dialog.getContentPane().add(panel);			
@@ -268,12 +286,21 @@ public class SqlDatabase {
 			setLocationRelativeTo(null);    // center on screen
 	        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			
-			DownloadWorker downloadWorker = new DownloadWorker(this, databaseURL, reportURL, 
+			final DownloadWorker downloadWorker = new DownloadWorker(this, databaseURL, reportURL, 
 					new File(amikoReport), new File(unzippedDB)); 
 			// Attach property listener to it
     		downloadWorker.addPropertyChangeListener(this);
     		// Launch SwingWorker
     		downloadWorker.execute();
+    		
+		    okButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent event) {
+					System.out.println("Database update done.");
+					downloadWorker.cancel(true);
+					dialog.dispatchEvent(new WindowEvent(dialog, WindowEvent.WINDOW_CLOSING)); 
+				}
+			});     		
 	    }
 	    
 	    public JLabel getLabel() {
@@ -316,7 +343,6 @@ public class SqlDatabase {
 		 */
 		@Override
 		protected Void doInBackground() throws Exception {
-			System.out.println("DownloadWorker.doInBackground");
 			byte buffer[] = new byte[4096];
 			int bytesRead = -1;
 			long totBytesRead = 0;
@@ -332,13 +358,14 @@ public class SqlDatabase {
 			OutputStream os = new FileOutputStream(downloadedFile);
 
 			try {
-				while ((bytesRead = is.read(buffer)) != -1) {
+				while (!isCancelled() && (bytesRead = is.read(buffer)) != -1) {
 					os.write(buffer, 0, bytesRead);
 					totBytesRead += bytesRead;
 					percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
 					if (percentCompleted > 100)
 						percentCompleted = 100;
 					setProgress(percentCompleted);
+					mDialog.setLabel("Downloading... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
 				}
 				os.close();
 			} catch (IOException e) {
@@ -352,13 +379,13 @@ public class SqlDatabase {
 			mDialog.setLabel("Unzipping...");
 
 			try {
-				ZipInputStream zin = new ZipInputStream(new FileInputStream(
-						downloadedFile));
+				ZipInputStream zin = new ZipInputStream(new FileInputStream(downloadedFile));
 				ZipEntry entry = null;
-				while ((entry = zin.getNextEntry()) != null) {
+				while (!isCancelled() && (entry = zin.getNextEntry()) != null) {
 					// Copy data from ZipEntry to file
 					FileOutputStream fos = new FileOutputStream(mAmikoDatabase);
-					while ((bytesRead = zin.read(buffer)) != -1) {
+					totBytesRead = 0;
+					while (!isCancelled() && (bytesRead = zin.read(buffer)) != -1) {
 						fos.write(buffer, 0, bytesRead);
 						totBytesRead += bytesRead;
 						// Note: 3.9 is a magic compression ratio...
@@ -366,6 +393,7 @@ public class SqlDatabase {
 						if (percentCompleted > 100)
 							percentCompleted = 100;
 						setProgress(percentCompleted);
+						mDialog.setLabel("Unzipping... " + totBytesRead/1000 + "kB out of " + (int)(3.9 * downloadedFile.length()/1000) + "kB");
 					}
 					fos.close();
 				}
@@ -385,9 +413,9 @@ public class SqlDatabase {
 			sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
 			downloadedFile = new File(mAmikoReport.getAbsolutePath());
 			os = new FileOutputStream(downloadedFile);
-
+			totBytesRead = 0;
 			try {
-				while ((bytesRead = is.read(buffer)) != -1) {
+				while (!isCancelled() && (bytesRead = is.read(buffer)) != -1) {
 					os.write(buffer, 0, bytesRead);
 					totBytesRead += bytesRead;
 					percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
@@ -472,7 +500,7 @@ public class SqlDatabase {
         	if (bc.isSelected()) {
         		// Copy to temporary directory, unzip (copy is done in AmiKoDesk.java)
         		m_loadedDBisZipped = true;
-        		String unzippedDB = app_folder + "\\amiko_db_full_idx.db";
+        		String unzippedDB = app_folder + "\\amiko_db_full_idx_" + db_lang +".db";
         		final String f_db_file = db_file;
         		final String f_unzippedDB = unzippedDB;
         		new UnzipDialog(f_db_file, f_unzippedDB);
@@ -491,7 +519,7 @@ public class SqlDatabase {
 	        	closeDB();
 	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
 	        		// Copy DB to application folder
-	        		copyDB(new File(db_file), new File(app_folder + "\\amiko_db_full_idx.db"));
+	        		copyDB(new File(db_file), new File(app_folder + "\\amiko_db_full_idx_" + db_lang + ".db"));
 	        		// Setup icon
 	        		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
 	    	        Image img = icon.getImage();
@@ -524,7 +552,6 @@ public class SqlDatabase {
 	    private JLabel label = new JLabel();
 	    
 	    public UnzipDialog(String db_file, String unzippedDB) {
-
 	    	progressBar.setPreferredSize(new Dimension(480, 30));
 	    	progressBar.setStringPainted(true);			
 			progressBar.setValue(0);	    	
@@ -532,7 +559,7 @@ public class SqlDatabase {
 			label.setText("Unzipping");
 			
 			panel = new JPanel(new BorderLayout(5, 5));
-			panel.add(label, BorderLayout.PAGE_START);
+			panel.add(label, BorderLayout.NORTH);
 			panel.add(progressBar, BorderLayout.CENTER);
 			panel.setBorder(BorderFactory.createEmptyBorder(11, 11, 11, 11));
 
@@ -584,8 +611,6 @@ public class SqlDatabase {
 		 */
 		@Override
 		protected Void doInBackground() throws Exception {
-			System.out.println("UnzipWorker.doInBackground");
-
 			byte buffer[] = new byte[4096];
 			int bytesRead = -1;	
 			long totBytesRead = 0;
