@@ -60,8 +60,6 @@ public class AmiKoDialogs extends JDialog {
 
 		add(Box.createRigidArea(new Dimension(0, 10)));
 
-		DateFormat df = new SimpleDateFormat("dd.MM.yy");
-
 		try {
 			final URI uri = new URI("https://play.google.com/store/apps/details?id=com.ywesee.amiko.de&hl=en");
 			class OpenUrlAction implements ActionListener {

@@ -46,9 +46,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Observer;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 import javax.swing.BorderFactory;
@@ -98,7 +100,7 @@ public class SqlDatabase {
 	private Statement m_stat;
 	private ResultSet m_rs;
 	private Observer m_observer;
-	
+	private String m_app_lang;
 	private boolean m_loadedDBisZipped = false;
 	private boolean m_operationCancelled = false;
 	
@@ -242,7 +244,8 @@ public class SqlDatabase {
 			db_url = "http://pillbox.oddb.org/amiko_db_full_idx_fr.zip";
 			report_url = "http://pillbox.oddb.org/amiko_report_fr.html";
 		}
-
+		
+		m_app_lang = db_lang;
 		m_operationCancelled = false;
 		new DownloadDialog(db_url, report_url, amiko_report, db_unzipped);
 		
@@ -251,7 +254,7 @@ public class SqlDatabase {
 	
 	private class DownloadDialog extends JFrame implements PropertyChangeListener {
 		
-		private JDialog dialog = new JDialog(this, "Downloading database", true);
+		private JDialog dialog = new JDialog(this, "Updating database", true);
 	    private JProgressBar progressBar = new JProgressBar(0, 100);
 	    private JPanel panel = new JPanel();
 	    private JLabel label = new JLabel();
@@ -280,7 +283,9 @@ public class SqlDatabase {
 			dialog.getContentPane().add(panel);			
 			dialog.pack();
 			dialog.setLocationRelativeTo(null);
-			dialog.setModal(false);
+			dialog.setModal(false);			
+			ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
+			dialog.setIconImage(icon.getImage());			
 			dialog.setVisible(true);
 			
 			setLocationRelativeTo(null);    // center on screen
@@ -377,11 +382,16 @@ public class SqlDatabase {
 				
 			// Unzip database file
 			mDialog.setLabel("Unzipping...");
-
+			
 			try {
-				ZipInputStream zin = new ZipInputStream(new FileInputStream(downloadedFile));
-				ZipEntry entry = null;
-				while (!isCancelled() && (entry = zin.getNextEntry()) != null) {
+				ZipFile zipFile = new ZipFile(downloadedFile);
+				Enumeration<?> enu = zipFile.entries();
+				while (enu.hasMoreElements()) {
+					ZipEntry zipEntry = (ZipEntry) enu.nextElement();
+					// String name = zipEntry.getName();
+					long unzippedSize = zipEntry.getSize();
+					// Zip file inputstream
+					InputStream zin = zipFile.getInputStream(zipEntry);
 					// Copy data from ZipEntry to file
 					FileOutputStream fos = new FileOutputStream(mAmikoDatabase);
 					totBytesRead = 0;
@@ -389,15 +399,16 @@ public class SqlDatabase {
 						fos.write(buffer, 0, bytesRead);
 						totBytesRead += bytesRead;
 						// Note: 3.9 is a magic compression ratio...
-						percentCompleted = (int) (totBytesRead * 100 / (3.9 * downloadedFile.length()));
+						percentCompleted = (int) (totBytesRead * 100 / unzippedSize);
 						if (percentCompleted > 100)
 							percentCompleted = 100;
 						setProgress(percentCompleted);
-						mDialog.setLabel("Unzipping... " + totBytesRead/1000 + "kB out of " + (int)(3.9 * downloadedFile.length()/1000) + "kB");
+						mDialog.setLabel("Unzipping... " + totBytesRead/1000 + "kB out of " + (int)(unzippedSize/1000) + "kB");
 					}
 					fos.close();
+					zin.close();					
 				}
-				zin.close();
+				zipFile.close();
 			} catch (IOException e) {
 				mDialog.getLabel().setText("Error unzipping file: " + e.getMessage());
 				e.printStackTrace();
@@ -447,20 +458,26 @@ public class SqlDatabase {
 	        	String db_file = mAmikoDatabase.getAbsolutePath();
 	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
 	        		// Setup icon
-	        		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
+	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
 	    	        Image img = icon.getImage();
 	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
 	    		    icon = new ImageIcon(scaled_img);
 	    		    // Display friendly message
-	    		    // TODO: add language option!!
-	    		    mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
-	        				"erfolgreich geladen!");
+	    		    if (m_app_lang.equals("de")) {
+	    		    	mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
+	    		    			"erfolgreich geladen!");
+	    		    } else if (m_app_lang.equals("fr")) {
+	    		    	mDialog.getLabel().setText("Nouvelle base de données avec " + getNumRecords() + " notice infopro " +
+	    		    			"chargée avec succès!");
+	    		    }
 	    		    // Notify to GUI, update database 		    
 	    		    notifyObserver(db_file);
 	        	} else {
 	        		// Show message: db not kosher!
-	        		// TODO: add language option!!
-	        		mDialog.getLabel().setText("Fehler beim laden der Datenbank!");
+	        		if (m_app_lang.equals("de")) 
+	        			mDialog.getLabel().setText("Fehler beim laden der Datenbank!");
+	        		else if (m_app_lang.equals("fr"))
+	        			mDialog.getLabel().setText("Erreurs lors du chargement de la base de données!");	        		
 	        		// Load standard db
 	        		loadDB("de");
 	        	}							
@@ -474,7 +491,7 @@ public class SqlDatabase {
 	 * @param db_lang
 	 * @return filename if success, empty string if error
 	 */
-	public String chooseDB(JFrame frame, String db_lang, String app_folder) {
+	public String chooseDB(JFrame frame, String db_lang, String app_folder) {			
 		JFileChooser fc = new JFileChooser();		
 		
 		// Add checkbox for zipped databases, this is the default!
@@ -494,6 +511,8 @@ public class SqlDatabase {
 
         // Launch the file chooser
         if (returnVal==JFileChooser.APPROVE_OPTION) {
+        	// Set db language
+    		m_app_lang = db_lang;
         	// Get filename
         	String db_file = fc.getSelectedFile().toString();  	      	
         	// Do we have a zipped file?
@@ -521,20 +540,30 @@ public class SqlDatabase {
 	        		// Copy DB to application folder
 	        		copyDB(new File(db_file), new File(app_folder + "\\amiko_db_full_idx_" + db_lang + ".db"));
 	        		// Setup icon
-	        		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
+	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
 	    	        Image img = icon.getImage();
 	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
 	    		    icon = new ImageIcon(scaled_img);
 	    		    // Display friendly message
-	        		JOptionPane.showMessageDialog(frame, "Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
-	        				"erfolgreich geladen!", "Erfolg", JOptionPane.PLAIN_MESSAGE, icon);
+	    		    if (db_lang.equals("de")) {
+	    		    	JOptionPane.showMessageDialog(frame, "Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
+	    		    			"erfolgreich geladen!", "Erfolg", JOptionPane.PLAIN_MESSAGE, icon);
+	    		    } else if (db_lang.equals("fr")) {
+	    		    	JOptionPane.showMessageDialog(frame, "Nouvelle base de données avec " + getNumRecords() + " notice infopro " +
+	    		    			"chargée avec succès!", "Erfolg", JOptionPane.PLAIN_MESSAGE, icon);	
+	    		    }
 	        		 // Notify to GUI, update database 		    
 	    		    notifyObserver(db_file);    		    
 	        		return db_file;
 	        	} else {
 	        		// Show message: db not kosher!
-	        		JOptionPane.showMessageDialog(frame, "Fehler beim laden der Datenbank!",
-	        				"Fehler", JOptionPane.ERROR_MESSAGE);        		
+	        		if (db_lang.equals("de")) {
+	        			JOptionPane.showMessageDialog(frame, "Fehler beim laden der Datenbank!",
+	        					"Fehler", JOptionPane.ERROR_MESSAGE);
+	        		} else if (db_lang.equals("fr")) {
+	        			JOptionPane.showMessageDialog(frame, "Fehler beim laden der Datenbank!",
+	        					"Fehler", JOptionPane.ERROR_MESSAGE);
+	        		}
 	        		// Load standard db
 	        		loadDB(db_lang);
 	        		return "";
@@ -546,7 +575,7 @@ public class SqlDatabase {
 	
 	private class UnzipDialog extends JFrame implements PropertyChangeListener {
 		
-		private JDialog dialog = new JDialog(this, "Unzipping database", true);
+		private JDialog dialog = new JDialog(this, "Updating database", true);
 	    private JProgressBar progressBar = new JProgressBar(0, 100);
 	    private JPanel panel = new JPanel();
 	    private JLabel label = new JLabel();
@@ -556,32 +585,56 @@ public class SqlDatabase {
 	    	progressBar.setStringPainted(true);			
 			progressBar.setValue(0);	    	
 
-			label.setText("Unzipping");
+			label.setText("Unzipping...");
+			
+			// Button pane
+			JPanel buttonPane = new JPanel();
+		    buttonPane.setLayout(new FlowLayout(FlowLayout.RIGHT));
+		    JButton okButton = new JButton("OK");
+		    getRootPane().setDefaultButton(okButton);
+		    okButton.setActionCommand("OK");
+		    buttonPane.add(okButton); 				
 			
 			panel = new JPanel(new BorderLayout(5, 5));
 			panel.add(label, BorderLayout.NORTH);
 			panel.add(progressBar, BorderLayout.CENTER);
+			panel.add(buttonPane, BorderLayout.SOUTH);
 			panel.setBorder(BorderFactory.createEmptyBorder(11, 11, 11, 11));
 
 			dialog.getContentPane().add(panel);			
 			dialog.pack();
 			dialog.setLocationRelativeTo(null);
-			dialog.setModal(false);
+			dialog.setModal(false);			
+			ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
+			dialog.setIconImage(icon.getImage());			
 			dialog.setVisible(true);
 			
 			setLocationRelativeTo(null);    // center on screen
 	        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-			
-			UnzipWorker unzipWorker = new UnzipWorker(this, new File(db_file), new File(unzippedDB)); 
+	        
+			final UnzipWorker unzipWorker = new UnzipWorker(this, new File(db_file), new File(unzippedDB)); 
 			// Attach property listener to it
     		unzipWorker.addPropertyChangeListener(this);
     		// Launch SwingWorker
     		unzipWorker.execute();
+    		
+		    okButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent event) {
+					System.out.println("Database update done.");
+					unzipWorker.cancel(true);
+					dialog.dispatchEvent(new WindowEvent(dialog, WindowEvent.WINDOW_CLOSING)); 
+				}
+			});     		
 	    }
 	    
 	    public JLabel getLabel() {
 	    	return label;
 	    }
+	    
+	    public void setLabel(String l) {
+	    	label.setText(l);
+	    }	    
 	    
 	    /**
 	     * Update the progress bar's state whenever the unzip progress changes.
@@ -622,20 +675,20 @@ public class SqlDatabase {
 				while ((entry = zin.getNextEntry()) != null) {
 					// Copy data from ZipEntry to file					
 					FileOutputStream fos = new FileOutputStream(mDstFile);
-					while ((bytesRead = zin.read(buffer)) != -1) {
+					while (!isCancelled() && (bytesRead = zin.read(buffer)) != -1) {
 						fos.write(buffer, 0, bytesRead);
 						totBytesRead += bytesRead;
-						// Note: 3.9 is a magic compression ratio...
-						percentCompleted = (int)(totBytesRead*100/(3.9*mSrcFile.length()));
+						percentCompleted = (int)(totBytesRead*100/(entry.getSize()));
 						if (percentCompleted>100)
 							percentCompleted = 100;
 						setProgress(percentCompleted);
+						mDialog.setLabel("Unzipping... " + totBytesRead/1000 + "kB out of " + (int)(entry.getSize()/1000) + "kB");
 					}
 					fos.close();
 				}
 				zin.close();
 			} catch (IOException e) {
-				mDialog.getLabel().setText("Error unzipping file: " + e.getMessage());
+				mDialog.setLabel("Error unzipping file: " + e.getMessage());
 	            e.printStackTrace();
 	            setProgress(0);
 	            cancel(true);
@@ -650,35 +703,33 @@ public class SqlDatabase {
 		@Override
 		protected void done() {
 			if (!isCancelled()) {
+				setProgress(100);
 				Toolkit.getDefaultToolkit().beep();
 	        	// Close previous DB
 	        	closeDB();
 	        	String db_file = mDstFile.getAbsolutePath();
 	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
 	        		// Setup icon
-	        		ImageIcon icon = new ImageIcon("./icons/amiko_icon.png");
+	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
 	    	        Image img = icon.getImage();
 	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
 	    		    icon = new ImageIcon(scaled_img);
 	    		    // Display friendly message
-	    		    // TODO: add language option!!
-	    		    mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
-	        				"erfolgreich geladen!");
+	    		    if (m_app_lang.equals("de")) {
+	    		    	mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
+	    		    			"erfolgreich geladen!");
+	    		    } else if (m_app_lang.equals("fr")) {
+	    		    	mDialog.getLabel().setText("Nouvelle base de données avec " + getNumRecords() + " notice infopro " +
+	    		    			"chargée avec succès!");
+	    		    }
 	    		    // Notify to GUI, update database 		    
 	    		    notifyObserver(db_file);
-					
-	    		    /*
-	        		JOptionPane.showMessageDialog(mFrame, "Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
-	        				"erfolgreich geladen!", "Erfolg", JOptionPane.PLAIN_MESSAGE, icon);
-	        				*/
 	        	} else {
 	        		// Show message: db not kosher!
-	        		// TODO: add language option!!
-	        		mDialog.getLabel().setText("Fehler beim laden der Datenbank!");
-	        		/*
-	        		JOptionPane.showMessageDialog(mFrame, "Fehler beim laden der Datenbank!",
-	        				"Fehler", JOptionPane.ERROR_MESSAGE);        		
-	        		*/
+	        		if (m_app_lang.equals("de"))
+	        			mDialog.setLabel("Fehler beim laden der Datenbank!");
+	        		else if (m_app_lang.equals("fr"))
+	        			mDialog.setLabel("Erreurs lors du chargement de la base de données!");	        			
 	        		// Load standard db
 	        		loadDB("de");
 	        	}			

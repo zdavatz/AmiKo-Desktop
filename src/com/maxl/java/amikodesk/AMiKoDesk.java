@@ -1122,16 +1122,16 @@ public class AMiKoDesk {
         
 		// Set application icon
         if (appCustomization().equals("ywesee")) {
-			ImageIcon img = new ImageIcon("./icons/amiko_icon.png");
+			ImageIcon img = new ImageIcon(Constants.AMIKO_ICON);
 			jframe.setIconImage(img.getImage());
         } else if (appCustomization().equals("desitin")) {
-			ImageIcon img = new ImageIcon("./icons/desitin_icon.png");
+			ImageIcon img = new ImageIcon(Constants.DESITIN_ICON);
 			jframe.setIconImage(img.getImage());
         } else if (appCustomization().equals("meddrugs")) {
-			ImageIcon img = new ImageIcon("./icons/meddrugs_icon.png");
+			ImageIcon img = new ImageIcon(Constants.MEDDRUGS_ICON);
 			jframe.setIconImage(img.getImage());        	
         } else if (appCustomization().equals("zurrose")) {
-			ImageIcon img = new ImageIcon("./icons/amiko_icon.png");
+			ImageIcon img = new ImageIcon(Constants.DESITIN_ICON);
 			jframe.setIconImage(img.getImage());        	
         }
 
@@ -1179,6 +1179,7 @@ public class AMiKoDesk {
 			about_item.setText("A propos de " + Constants.APP_NAME);
 		}
 		hilfe_menu.add(report_item);
+		hilfe_menu.addSeparator();
 		hilfe_menu.add(about_item);
 		hilfe_menu.add(ywesee_item);		
 		jframe.setJMenuBar(menu_bar);
