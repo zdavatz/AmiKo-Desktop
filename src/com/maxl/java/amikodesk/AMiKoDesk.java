@@ -139,36 +139,6 @@ import chrriis.dj.nativeswing.swtimpl.NativeInterface;
 import chrriis.dj.nativeswing.swtimpl.components.JWebBrowser;
 
 public class AMiKoDesk {
-
-	private static final boolean DEBUG = true;
-	
-	private static final String AMIKO_NAME = "AmiKo Desktop";
-	private static final String COMED_NAME = "CoMed Desktop";	
-	private static final String AMIKO_DESITIN_NAME = "AmiKo Desktop Desitin";
-	private static final String COMED_DESITIN_NAME = "CoMed Desktop Desitin";
-	private static final String AMIKO_MEDDRUGS_NAME = "med-drugs desktop";
-	private static final String COMED_MEDDRUGS_NAME = "med-drugs-fr desktop";
-	private static final String AMIKO_ZURROSE_NAME = "AmiKo Desktop ZR";
-	private static final String COMED_ZURROSE_NAME = "CoMed Desktop ZR";
-	
-	private static final String AMIKO_ICON = "./icons/amiko_icon.png";
-	private static final String DESITIN_ICON = "./icons/desitin_icon.png";
-	private static final String DESITIN_LOGO = "./images/desitin_logo.png";
-	private static final String MEDDRUGS_ICON = "./icons/meddrugs_icon.png";
-	private static final String MEDDRUGS_LOGO = "./images/meddrugs_logo.png";
-	private static final String ZURROSE_ICON = "./icons/amiko_icon.png";
-	
-	// -->> Note: uncomment name of app to compile!
-	private static final String APP_NAME = AMIKO_NAME;
-	// private static final String APP_NAME = COMED_NAME;
-	// private static final String APP_NAME = AMIKO_DESITIN_NAME;
-	// private static final String APP_NAME = COMED_DESITIN_NAME;
-	// private static final String APP_NAME = AMIKO_MEDDRUGS_NAME;
-	// private static final String APP_NAME = COMED_MEDDRUGS_NAME;
-	// private static final String APP_NAME = AMIKO_ZURROSE_NAME;
-	// private static final String APP_NAME = COMED_ZURROSE_NAME;
-	private static final String VERSION = "1.1.2 (32-bit)";	
-	private static final String GEN_DATE = "14.11.2013";
 	
 	// Important Constants
 	private static final int BigCellNumber = 512;	
@@ -262,7 +232,7 @@ public class AMiKoDesk {
 				System.exit(0);
 			}
 			if (cmd.hasOption("version")) {
-				System.out.println("Version of amikodesk: " + VERSION);
+				System.out.println("Version of amikodesk: " + Constants.APP_VERSION);
 			}
 			if (cmd.hasOption("port")) {
 				int port = Integer.parseInt(cmd.getOptionValue("port"));
@@ -336,24 +306,24 @@ public class AMiKoDesk {
 			return "de";
 		else if (DB_LANGUAGE.equals("FR"))
 			return "fr";
-		else if (APP_NAME.equals(AMIKO_NAME) || APP_NAME.equals(AMIKO_DESITIN_NAME) 
-				|| APP_NAME.equals(AMIKO_MEDDRUGS_NAME) || APP_NAME.equals(AMIKO_ZURROSE_NAME)) {
+		else if (Constants.APP_NAME.equals(Constants.AMIKO_NAME) || Constants.APP_NAME.equals(Constants.AMIKO_DESITIN_NAME) 
+				|| Constants.APP_NAME.equals(Constants.AMIKO_MEDDRUGS_NAME) || Constants.APP_NAME.equals(Constants.AMIKO_ZURROSE_NAME)) {
 			return "de";
-		} else if (APP_NAME.equals(COMED_NAME) || APP_NAME.equals(COMED_DESITIN_NAME) 
-				|| APP_NAME.equals(COMED_MEDDRUGS_NAME) || APP_NAME.equals(COMED_ZURROSE_NAME)) {
+		} else if (Constants.APP_NAME.equals(Constants.COMED_NAME) || Constants.APP_NAME.equals(Constants.COMED_DESITIN_NAME) 
+				|| Constants.APP_NAME.equals(Constants.COMED_MEDDRUGS_NAME) || Constants.APP_NAME.equals(Constants.COMED_ZURROSE_NAME)) {
 			return "fr";
 		}
 		return "";
 	}
 
 	private static String appCustomization() {		
-		if (APP_NAME.equals(AMIKO_NAME) || APP_NAME.equals(COMED_NAME)) {
+		if (Constants.APP_NAME.equals(Constants.AMIKO_NAME) || Constants.APP_NAME.equals(Constants.COMED_NAME)) {
 			return "ywesee";
-		} else if (APP_NAME.equals(AMIKO_DESITIN_NAME) || APP_NAME.equals(COMED_DESITIN_NAME)) {
+		} else if (Constants.APP_NAME.equals(Constants.AMIKO_DESITIN_NAME) || Constants.APP_NAME.equals(Constants.COMED_DESITIN_NAME)) {
 			return "desitin";
-		} else if (APP_NAME.equals(AMIKO_MEDDRUGS_NAME) || APP_NAME.equals(COMED_MEDDRUGS_NAME)) {
+		} else if (Constants.APP_NAME.equals(Constants.AMIKO_MEDDRUGS_NAME) || Constants.APP_NAME.equals(Constants.COMED_MEDDRUGS_NAME)) {
 			return "meddrugs";
-		} else if (APP_NAME.equals(AMIKO_ZURROSE_NAME) || APP_NAME.equals(COMED_ZURROSE_NAME)) {
+		} else if (Constants.APP_NAME.equals(Constants.AMIKO_ZURROSE_NAME) || Constants.APP_NAME.equals(Constants.COMED_ZURROSE_NAME)) {
 			return "zurrose";
 		}
 		return "";
@@ -362,7 +332,7 @@ public class AMiKoDesk {
 	public static void main(String[] args) {		
 			
 		// Initialize globales
-		m_application_data_folder = System.getenv("APPDATA") + "\\Ywesee\\" + APP_NAME;
+		m_application_data_folder = System.getenv("APPDATA") + "\\Ywesee\\" + Constants.APP_NAME;
        	favorite_meds_set = new HashSet<String>();		
 		favorite_data = new DataStore(m_application_data_folder);
 		favorite_meds_set = favorite_data.load();	// HashSet containing registration numbers
@@ -387,11 +357,11 @@ public class AMiKoDesk {
 		commandLineParse(options, args);		
 		
 		if (appCustomization().equals("desitin")) {
-			new SplashWindow(APP_NAME, 7500);
+			new SplashWindow(Constants.APP_NAME, 7500);
 		} else if (appCustomization().equals("meddrugs")) {
-			new SplashWindow(APP_NAME, 7500);
+			new SplashWindow(Constants.APP_NAME, 7500);
 		} else if (appCustomization().equals("zurrose")) {
-			new SplashWindow(APP_NAME, 5000);
+			new SplashWindow(Constants.APP_NAME, 5000);
 		}
 		// Load css style sheet
 		m_css_str = "<style>" + readFromFile(CSS_SHEET) + "</style>";
@@ -773,7 +743,7 @@ public class AMiKoDesk {
 				content_str = new StringBuffer(m.getContent());
 				
 				// DateFormat df = new SimpleDateFormat("dd.MM.yy");
-				String _amiko_str = APP_NAME + " - Datenstand AIPS Swissmedic " + GEN_DATE;
+				String _amiko_str = Constants.APP_NAME + " - Datenstand AIPS Swissmedic " + Constants.GEN_DATE;
 				content_str = content_str.insert(content_str.indexOf("<head>"), "<title>" + _amiko_str + "</title>");
 				content_str = content_str.insert(content_str.indexOf("</head>"), m_css_str);
 				jWeb.setJavascriptEnabled(true);
@@ -781,7 +751,7 @@ public class AMiKoDesk {
 				if (CML_OPT_SERVER==false) {
 					try {
 						// Currently preferred solution, html saved in C:/Users/ ... folder
-						String path_html = System.getProperty ("user.home") + "/" + APP_NAME +"/htmls/";
+						String path_html = System.getProperty ("user.home") + "/" + Constants.APP_NAME +"/htmls/";
 						String _title = m.getTitle();					
 						String file_name = _title.replaceAll("[®,/;.]","_") + ".html";
 						writeToFile(content_str.toString(), path_html, file_name);
@@ -977,240 +947,9 @@ public class AMiKoDesk {
 	    }
 	}	
 	
-	static class AboutDialog extends JDialog {
-
-	    public AboutDialog() {
-	        initUI();
-	    }
-
-	    public final void initUI() {
-
-	        setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
-
-	        add(Box.createRigidArea(new Dimension(0, 10)));
-
-	        ImageIcon icon = null;
-	        if (appCustomization().equals("ywesee")) {
-	        	icon = new ImageIcon(AMIKO_ICON);
-	        } else if (appCustomization().equals("desitin")) {
-		        icon = new ImageIcon(DESITIN_ICON);
-	        } else if (appCustomization().equals("meddrugs")) {
-	        	icon = new ImageIcon(MEDDRUGS_ICON);
-	        } else if (appCustomization().equals("zurrose")) {
-	        	icon = new ImageIcon(ZURROSE_ICON);
-	        }
-	        Image img = icon.getImage();
-		    Image scaled_img = img.getScaledInstance(64, 64, java.awt.Image.SCALE_SMOOTH);
-		    if (appCustomization().equals("meddrugs"))
-		    	scaled_img = img.getScaledInstance(128, 128,  java.awt.Image.SCALE_SMOOTH);
-		    icon = new ImageIcon(scaled_img);
-		    JLabel label = new JLabel(icon);
-		    label.setAlignmentX(0.5f);
-		    label.setBorder(new EmptyBorder(5,5,5,5));
-		    add(label);
-	        
-	        add(Box.createRigidArea(new Dimension(0, 10)));
-
-			DateFormat df = new SimpleDateFormat("dd.MM.yy");
-			String date_str = GEN_DATE; // df.format(new Date());
-			
-			try {
-				final URI uri = new URI("https://play.google.com/store/apps/details?id=com.ywesee.amiko.de&hl=en");
-				class OpenUrlAction implements ActionListener {
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						open(uri);
-					}
-					private void open(URI uri) {
-						if (Desktop.isDesktopSupported()) {
-							try {
-								Desktop.getDesktop().browse(uri);	
-							} catch (IOException e) {
-								// TODO:
-							}
-						}
-					}
-				}
-				
-		        JButton info = new JButton();
-		        String sponsoring = "";
-		        if (appLanguage().equals("de")) {
-		        	if (appCustomization().equals("ywesee")) {
-		        		sponsoring = "<br>" +
-		        				"<br><a href=\"\">AMiKo / CoMed</a>" +
-		        				"<br>Arzneimittel-Kompendium für Android" +
-		        				"<br>";
-		        	} else if (appCustomization().equals("desitin")) {
-			        	sponsoring = "<br>" +
-			        			"<br>Unterstützt durch Desitin Pharma GmbH" +
-			        			"<br>";
-			        } else if (appCustomization().equals("meddrugs")) {
-			        	//
-			        } else if (appCustomization().equals("zurrose")) {
-			        	//
-			        }
-		        	
-			        info.setText(
-				        "<html><center><b>" + APP_NAME + "</b><br><br>" +
-		        		"Arzneimittel-Kompendium für Windows PC<br>" +
-		        		"Version " + VERSION + "<br>" + 
-		        		date_str + "<br>" +
-		        		"Lizenz: GPLv3.0<br><br>" +
-		        		"Konzept: Zeno R.R. Davatz<br>" +
-		        		"Entwicklung: Dr. Max Lungarella<br>" +
-		        		sponsoring +
-				        "</center></html>");
-		        } else if (appLanguage().equals("fr")) {
-		        	if (appCustomization().equals("ywesee")) {
-		        		sponsoring = "<br>" +
-		        				"<br><a href=\"\">AMiKo / CoMed</a>" +
-		        				"<br>Compedium des Médicaments pour Android" +
-		        				"<br>";
-		        	} else if (appCustomization().equals("desitin")) {
-			        	sponsoring = "<br>" +
-			        			"<br>Supporteé par Desitin Pharma GmbH" +
-			        			"<br>";
-			        } else if (appCustomization().equals("meddrugs")) {
-			        	//
-			        } else if (appCustomization().equals("zurrose")) {
-			        	//
-			        }
-		        	info.setText(
-					        "<html><center><br>" + APP_NAME + "</b><br><br>" +
-			        		"Compendium des Médicaments Suisse pour Windows<br>" +
-			        		"Version " + VERSION + "<br>" + 
-			        		date_str + "<br>" +
-			        		"Licence: GPLv3.0<br><br>" +
-			        		"Concept: Zeno R.R. Davatz<br>" +
-			        		"Développement: Dr. Max Lungarella<br>" +
-			        		sponsoring +
-					        "</center></html>");
-		        }
-		        info.setFont(new Font("Dialog", Font.PLAIN, 14));
-		        info.setAlignmentX(0.5f);
-		        info.setBackground(Color.WHITE);
-		        info.setOpaque(false);
-		        info.setBorder(BorderFactory.createEmptyBorder(2,2,2,2));
-		        info.setBorderPainted(false);
-		        info.setFocusPainted(false);
-		        info.setContentAreaFilled(false);
-		        info.setToolTipText(uri.toString());
-		        info.addActionListener(new OpenUrlAction());
-		        add(info);		        
-			} catch(URISyntaxException r) {
-				// TODO:
-			}
-			
-	        if (appCustomization().equals("desitin")) {
-		        add(Box.createRigidArea(new Dimension(0, 10)));
-	        	icon = new ImageIcon(DESITIN_LOGO);
-	        	img = icon.getImage();
-	        	scaled_img = img.getScaledInstance(128, 64, java.awt.Image.SCALE_SMOOTH);
-	        	icon = new ImageIcon(scaled_img);
-	        	label = new JLabel(icon);
-	        	label.setAlignmentX(0.5f);
-	        	label.setBorder(new EmptyBorder(5,5,5,5));
-	        	add(label);
-	        } 
-			
-	        add(Box.createRigidArea(new Dimension(0, 40)));
-
-	        JButton but_close = new JButton("OK");
-	        but_close.addActionListener(new ActionListener() {
-	            public void actionPerformed(ActionEvent event) {
-	                dispose();
-	            }
-	        });
-	        but_close.setAlignmentX(0.5f);
-	        add(but_close);
-
-	        this.setModalityType(ModalityType.APPLICATION_MODAL);
-        	this.setTitle("About " + APP_NAME);
-	        this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-	        this.setLocationRelativeTo(null);
-	        this.setSize(360,400);
-	        if (appCustomization().equals("desitin"))
-	        	this.setSize(360, 500);
-	        else if (appCustomization().equals("meddrugs"))
-	        	this.setSize(360, 450);
-	        this.setResizable(false);
-	    }
-	}	
-	
-	static class ContactDialog extends JDialog {
-		
-		ContactDialog() {
-	        setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
-
-	        add(Box.createRigidArea(new Dimension(0, 10)));
-
-	        ImageIcon icon = null;
-	        if (appCustomization().equals("ywesee")) {
-	        	icon = new ImageIcon(AMIKO_ICON);
-	        } else if (appCustomization().equals("desitin")) {
-		        icon = new ImageIcon(DESITIN_ICON);
-	        } else if (appCustomization().equals("meddrugs")) {
-	        	icon = new ImageIcon(MEDDRUGS_ICON);
-	        } else if (appCustomization().equals("zurrose")) {
-	        	icon = new ImageIcon(ZURROSE_ICON);
-	        }
-	        Image img = icon.getImage();
-		    Image scaled_img = img.getScaledInstance(64, 64, java.awt.Image.SCALE_SMOOTH);
-		    icon = new ImageIcon(scaled_img);
-		    JLabel label = new JLabel(icon);
-		    label.setAlignmentX(0.5f);
-		    label.setBorder(new EmptyBorder(5,5,5,5));
-		    add(label);
-	        
-	        add(Box.createRigidArea(new Dimension(0, 10)));
-
-			JButton info = new JButton();
-			if (appLanguage().equals("de")) {
-				info.setText(
-						"<html><center>" +
-				        "Kontaktieren Sie bitte Zeno Davatz<br>" +
-				        "E-Mail-Adresse: zdavatz@ywesee.com<br>" +
-				        "</center></html>");
-			} else if (appLanguage().equals("fr")) {
-				info.setText(
-						"<html><center>" +
-				        " S'il vous plait nous contacter au<br>" +
-				        "zdavatz@ywesee.com<br>" +
-				        "</center></html>");
-			}
-			info.setFont(new Font("Dialog", Font.PLAIN, 14));
-		    info.setAlignmentX(0.5f);
-		    info.setBackground(Color.WHITE);
-		    info.setOpaque(false);
-		    info.setBorder(BorderFactory.createEmptyBorder(2,2,2,2));
-		    info.setBorderPainted(false);
-		    info.setFocusPainted(false);
-		    info.setContentAreaFilled(false);
-		    add(info);
-			
-	        add(Box.createRigidArea(new Dimension(0, 30)));
-		    
-			JButton but_close = new JButton("OK");
-			but_close.setSize(new Dimension(48,12));
-			but_close.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent event) {
-					dispose();
-				}
-			});
-	        but_close.setAlignmentX(0.5f);
-			add(but_close);
-        
-			this.setModalityType(ModalityType.APPLICATION_MODAL);
-			this.setTitle("Update");
-			this.setLocationRelativeTo(null);
-			this.setSize(320, 240);
-			this.setResizable(false);
-		}
-	}
-	
 	private static void createAndShowLightGUI() {
 		// Create and setup window
-		final JFrame jframe = new JFrame(APP_NAME);
+		final JFrame jframe = new JFrame(Constants.APP_NAME);
         int min_width = CML_OPT_WIDTH;
         int min_height = CML_OPT_HEIGHT;
        
@@ -1369,8 +1108,8 @@ public class AMiKoDesk {
 		
 	private static void createAndShowFullGUI() {
 		// Create and setup window
-		final JFrame jframe = new JFrame(APP_NAME);
-		jframe.setName(APP_NAME + ".main");
+		final JFrame jframe = new JFrame(Constants.APP_NAME);
+		jframe.setName(Constants.APP_NAME + ".main");
 				
 		int min_width = CML_OPT_WIDTH;
         int min_height = CML_OPT_HEIGHT;       
@@ -1432,16 +1171,16 @@ public class AMiKoDesk {
 		datei_menu.add(choosedb_item);
 		datei_menu.addSeparator();
 		datei_menu.add(quit_item);			
-		JMenuItem ywesee_item = new JMenuItem(APP_NAME + " im Internet");
+		JMenuItem ywesee_item = new JMenuItem(Constants.APP_NAME + " im Internet");
 		JMenuItem report_item = new JMenuItem("Error Report");
-		JMenuItem about_item = new JMenuItem("Info zu " + APP_NAME);		
+		JMenuItem about_item = new JMenuItem("Info zu " + Constants.APP_NAME);		
 		if (appLanguage().equals("fr")) {
-			ywesee_item.setText(APP_NAME + " sur Internet");
-			about_item.setText("A propos de " + APP_NAME);
+			ywesee_item.setText(Constants.APP_NAME + " sur Internet");
+			about_item.setText("A propos de " + Constants.APP_NAME);
 		}
-		hilfe_menu.add(ywesee_item);
 		hilfe_menu.add(report_item);
 		hilfe_menu.add(about_item);
+		hilfe_menu.add(ywesee_item);		
 		jframe.setJMenuBar(menu_bar);
 		
 		// ------ Setup toolbar ------
@@ -1544,8 +1283,8 @@ public class AMiKoDesk {
 							// TODO:
 						}
 					} else {
-						ContactDialog cd = new ContactDialog();
-						cd.setVisible(true);
+						AmiKoDialogs cd = new AmiKoDialogs(appLanguage(), appCustomization());
+						cd.ContactDialog();
 					}
 				} else if (appCustomization().equals("meddrugs")) {
 					if (Desktop.isDesktopSupported()) {
@@ -1556,8 +1295,8 @@ public class AMiKoDesk {
 							// TODO:
 						}
 					} else {
-						ContactDialog cd = new ContactDialog();
-						cd.setVisible(true);
+						AmiKoDialogs cd = new AmiKoDialogs(appLanguage(), appCustomization());
+						cd.ContactDialog();
 					}
 				} else if (appCustomization().equals("zurrose")) {
 					if (Desktop.isDesktopSupported()) {				
@@ -1632,12 +1371,12 @@ public class AMiKoDesk {
 					}					
 				}
 			}
-		});
+		});	
 		about_item.addActionListener(new ActionListener() {
 			@Override			
 			public void actionPerformed(ActionEvent event) {
-				AboutDialog ad = new AboutDialog();
-				ad.setVisible(true);
+				AmiKoDialogs ad = new AmiKoDialogs(appLanguage(), appCustomization());
+				ad.AboutDialog();
 			}
 		});
 		
