@@ -258,6 +258,7 @@ public class SqlDatabase {
 	    private JProgressBar progressBar = new JProgressBar(0, 100);
 	    private JPanel panel = new JPanel();
 	    private JLabel label = new JLabel();
+	    private JButton okButton = new JButton();
 	    
 	    public DownloadDialog(String databaseURL, String reportURL, String amikoReport, String unzippedDB) {
 	    	progressBar.setPreferredSize(new Dimension(480, 30));
@@ -269,9 +270,9 @@ public class SqlDatabase {
 			// Button pane
 			JPanel buttonPane = new JPanel();
 		    buttonPane.setLayout(new FlowLayout(FlowLayout.RIGHT));
-		    JButton okButton = new JButton("OK");
+		    okButton.setText("Cancel");
+		    okButton.setActionCommand("Cancel");
 		    getRootPane().setDefaultButton(okButton);
-		    okButton.setActionCommand("OK");
 		    buttonPane.add(okButton); 			    
 		    
 			panel = new JPanel(new BorderLayout(5, 5));
@@ -314,6 +315,10 @@ public class SqlDatabase {
 	    
 	    public void setLabel(String l) {
 	    	label.setText(l);
+	    }
+	    
+	    public void setOKButton(String s) {
+	    	okButton.setText(s);
 	    }
 	    
 	    /**
@@ -456,6 +461,8 @@ public class SqlDatabase {
 	        	// Close previous DB
 	        	closeDB();
 	        	String db_file = mAmikoDatabase.getAbsolutePath();
+			    mDialog.setOKButton("OK");
+			    mDialog.setOKButton("OK");
 	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
 	        		// Setup icon
 	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
