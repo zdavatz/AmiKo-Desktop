@@ -357,11 +357,11 @@ public class AMiKoDesk {
 		commandLineParse(options, args);		
 		
 		if (appCustomization().equals("desitin")) {
-			new SplashWindow(Constants.APP_NAME, 7500);
-		} else if (appCustomization().equals("meddrugs")) {
-			new SplashWindow(Constants.APP_NAME, 7500);
-		} else if (appCustomization().equals("zurrose")) {
 			new SplashWindow(Constants.APP_NAME, 5000);
+		} else if (appCustomization().equals("meddrugs")) {
+			new SplashWindow(Constants.APP_NAME, 5000);
+		} else if (appCustomization().equals("zurrose")) {
+			new SplashWindow(Constants.APP_NAME, 3000);
 		}
 		// Load css style sheet
 		m_css_str = "<style>" + readFromFile(CSS_SHEET) + "</style>";
@@ -1162,7 +1162,9 @@ public class AMiKoDesk {
 		JMenuItem choosedb_item = new JMenuItem("Datenbank laden");
 		JMenuItem quit_item = new JMenuItem("Beenden");
 		if (appLanguage().equals("fr")) {
-			print_item.setText("Imprimer");		
+			print_item.setText("Imprimer");
+			updatedb_item.setText("Ajourner la banque de données");
+			choosedb_item.setText("Télécharger la banque de données");
 			quit_item.setText("Terminer");
 		}
 		datei_menu.add(print_item);
@@ -1806,7 +1808,7 @@ public class AMiKoDesk {
 		updatedb_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				String db_file = m_sqldb.updateDB(jframe, appLanguage(), m_application_data_folder);
+				String db_file = m_sqldb.updateDB(jframe, appLanguage(), appCustomization(), m_application_data_folder);
 				if (!db_file.isEmpty()) {
 					// Save db path (can't hurt)
 					WindowSaver.setDbPath(db_file);				

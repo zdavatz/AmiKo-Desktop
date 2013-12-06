@@ -1,4 +1,4 @@
-1. In File "AmiKoDesk.java":
+1. In File "Constants.java":
 	select APP_NAME 
 	change VERSION 
 	change GEN_DATE

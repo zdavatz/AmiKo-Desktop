@@ -101,6 +101,7 @@ public class SqlDatabase {
 	private ResultSet m_rs;
 	private Observer m_observer;
 	private String m_app_lang;
+	private String m_customization;
 	private boolean m_loadedDBisZipped = false;
 	private boolean m_operationCancelled = false;
 	
@@ -231,7 +232,7 @@ public class SqlDatabase {
 	 * @param app_folder
 	 * @return
 	 */
-	public String updateDB(JFrame frame, String db_lang, String app_folder) {
+	public String updateDB(JFrame frame, String db_lang, String custom, String app_folder) {
 		// Default is "de"
 		String db_unzipped = app_folder + "\\amiko_db_full_idx_de.db";
 		String amiko_report = app_folder + "\\amiko_report_de.html";
@@ -246,6 +247,7 @@ public class SqlDatabase {
 		}
 		
 		m_app_lang = db_lang;
+		m_customization = custom;
 		m_operationCancelled = false;
 		new DownloadDialog(db_url, report_url, amiko_report, db_unzipped);
 		
@@ -286,6 +288,8 @@ public class SqlDatabase {
 			dialog.setLocationRelativeTo(null);
 			dialog.setModal(false);			
 			ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
+			if (m_customization.equals("desitin"))
+				icon = new ImageIcon(Constants.DESITIN_ICON);
 			dialog.setIconImage(icon.getImage());			
 			dialog.setVisible(true);
 			
@@ -389,31 +393,33 @@ public class SqlDatabase {
 			mDialog.setLabel("Unzipping...");
 			
 			try {
-				ZipFile zipFile = new ZipFile(downloadedFile);
-				Enumeration<?> enu = zipFile.entries();
-				while (enu.hasMoreElements()) {
-					ZipEntry zipEntry = (ZipEntry) enu.nextElement();
-					// String name = zipEntry.getName();
-					long unzippedSize = zipEntry.getSize();
-					// Zip file inputstream
-					InputStream zin = zipFile.getInputStream(zipEntry);
-					// Copy data from ZipEntry to file
-					FileOutputStream fos = new FileOutputStream(mAmikoDatabase);
-					totBytesRead = 0;
-					while (!isCancelled() && (bytesRead = zin.read(buffer)) != -1) {
-						fos.write(buffer, 0, bytesRead);
-						totBytesRead += bytesRead;
-						// Note: 3.9 is a magic compression ratio...
-						percentCompleted = (int) (totBytesRead * 100 / unzippedSize);
-						if (percentCompleted > 100)
-							percentCompleted = 100;
-						setProgress(percentCompleted);
-						mDialog.setLabel("Unzipping... " + totBytesRead/1000 + "kB out of " + (int)(unzippedSize/1000) + "kB");
+				if (!isCancelled()) {
+					ZipFile zipFile = new ZipFile(downloadedFile);
+					Enumeration<?> enu = zipFile.entries();
+					while (enu.hasMoreElements()) {
+						ZipEntry zipEntry = (ZipEntry) enu.nextElement();
+						// String name = zipEntry.getName();
+						long unzippedSize = zipEntry.getSize();
+						// Zip file inputstream
+						InputStream zin = zipFile.getInputStream(zipEntry);
+						// Copy data from ZipEntry to file
+						FileOutputStream fos = new FileOutputStream(mAmikoDatabase);
+						totBytesRead = 0;
+						while (!isCancelled() && (bytesRead = zin.read(buffer)) != -1) {
+							fos.write(buffer, 0, bytesRead);
+							totBytesRead += bytesRead;
+							// Note: 3.9 is a magic compression ratio...
+							percentCompleted = (int) (totBytesRead * 100 / unzippedSize);
+							if (percentCompleted > 100)
+								percentCompleted = 100;
+							setProgress(percentCompleted);
+							mDialog.setLabel("Unzipping... " + totBytesRead/1000 + "kB out of " + (int)(unzippedSize/1000) + "kB");
+						}
+						fos.close();
+						zin.close();					
 					}
-					fos.close();
-					zin.close();					
+					zipFile.close();
 				}
-				zipFile.close();
 			} catch (IOException e) {
 				mDialog.getLabel().setText("Error unzipping file: " + e.getMessage());
 				e.printStackTrace();
@@ -422,30 +428,33 @@ public class SqlDatabase {
 			}
 			
 			// Download report file
-			mDialog.setLabel("Downloading report file...");
-			url = new URL(mReportURL);
-			is = url.openStream();
-			// Retrieve file length from http header
-			sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
-			downloadedFile = new File(mAmikoReport.getAbsolutePath());
-			os = new FileOutputStream(downloadedFile);
-			totBytesRead = 0;
-			try {
-				while (!isCancelled() && (bytesRead = is.read(buffer)) != -1) {
-					os.write(buffer, 0, bytesRead);
-					totBytesRead += bytesRead;
-					percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
-					if (percentCompleted > 100)
-						percentCompleted = 100;
-					setProgress(percentCompleted);
+			if (!isCancelled()) {
+				mDialog.setLabel("Downloading report file...");
+				url = new URL(mReportURL);
+				is = url.openStream();
+				// Retrieve file length from http header
+				sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
+				downloadedFile = new File(mAmikoReport.getAbsolutePath());
+				os = new FileOutputStream(downloadedFile);
+				totBytesRead = 0;
+				try {
+					while (!isCancelled() && (bytesRead = is.read(buffer)) != -1) {
+						os.write(buffer, 0, bytesRead);
+						totBytesRead += bytesRead;
+						percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
+						if (percentCompleted > 100)
+							percentCompleted = 100;
+						setProgress(percentCompleted);
+					}
+					os.close();
+				} catch (IOException e) {
+					mDialog.getLabel().setText("Error downloading report file: " + e.getMessage());
+					e.printStackTrace();
+					setProgress(0);
+					cancel(true);
 				}
-				os.close();
-			} catch (IOException e) {
-				mDialog.getLabel().setText("Error downloading report file: " + e.getMessage());
-				e.printStackTrace();
-				setProgress(0);
-				cancel(true);
-			}	
+				is.close();
+			}
 			
 			return null;
 		}
@@ -466,6 +475,8 @@ public class SqlDatabase {
 	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
 	        		// Setup icon
 	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
+	    			if (m_customization.equals("desitin"))
+	    				icon = new ImageIcon(Constants.DESITIN_ICON);	        		
 	    	        Image img = icon.getImage();
 	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
 	    		    icon = new ImageIcon(scaled_img);
@@ -488,6 +499,9 @@ public class SqlDatabase {
 	        		// Load standard db
 	        		loadDB("de");
 	        	}							
+			} else {
+        		// Load standard db
+        		loadDB("de");	
 			}
 		}
 	}
@@ -548,6 +562,8 @@ public class SqlDatabase {
 	        		copyDB(new File(db_file), new File(app_folder + "\\amiko_db_full_idx_" + db_lang + ".db"));
 	        		// Setup icon
 	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
+	    			if (m_customization.equals("desitin"))
+	    				icon = new ImageIcon(Constants.DESITIN_ICON);
 	    	        Image img = icon.getImage();
 	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
 	    		    icon = new ImageIcon(scaled_img);
@@ -613,6 +629,8 @@ public class SqlDatabase {
 			dialog.setLocationRelativeTo(null);
 			dialog.setModal(false);			
 			ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
+			if (m_customization.equals("desitin"))
+				icon = new ImageIcon(Constants.DESITIN_ICON);
 			dialog.setIconImage(icon.getImage());			
 			dialog.setVisible(true);
 			
@@ -718,6 +736,8 @@ public class SqlDatabase {
 	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
 	        		// Setup icon
 	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
+	    			if (m_customization.equals("desitin"))
+	    				icon = new ImageIcon(Constants.DESITIN_ICON);
 	    	        Image img = icon.getImage();
 	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
 	    		    icon = new ImageIcon(scaled_img);
@@ -739,8 +759,10 @@ public class SqlDatabase {
 	        			mDialog.setLabel("Erreurs lors du chargement de la base de données!");	        			
 	        		// Load standard db
 	        		loadDB("de");
-	        	}			
-				
+	        	}							
+			} else {
+        		// Load standard db
+        		loadDB("de");
 			}
 		}
 	}

@@ -44,36 +44,40 @@ public class SplashWindow extends JWindow {
 	
 	public void showSplash() {
         JPanel content = (JPanel)getContentPane();
-        Color color = new Color(255,200,200,255);
-        content.setBackground(color);
-        
+        Color color = new Color(225,225,225,255);
+                
         // Set the window's bounds, centering the window
         int width = 512;
         int height = 550;
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
         int x = (screen.width-width)/2;
         int y = (screen.height-height)/2;
-        setBounds(x,y,width,height);
         
         // Build the splash screen
         if (m_app_name.equals("AmiKo Desktop Desitin") || m_app_name.equals("CoMed Desktop Desitin")) {
-            JLabel image = new JLabel(new ImageIcon("./images/desitin.jpg"));
+            JLabel image = new JLabel(new ImageIcon("./images/desitin_new.jpg"));
             JLabel copyrt = new JLabel
             		("<html><center><br>" + m_app_name + "<br>" +
-            				"Copyright © 2013 ywesee GmbH<br>" +
-            				"-" +
-            				"</center></html>", JLabel.CENTER);
+            				"Copyright @ 2013 ywesee GmbH<br>" +
+            				"" +
+            				"</center><br></html>", JLabel.CENTER);
             copyrt.setFont(new Font("Dialog", Font.PLAIN, 14));
-            content.add(copyrt, BorderLayout.SOUTH);
             content.add(image, BorderLayout.CENTER);
+            content.add(copyrt, BorderLayout.SOUTH);
+            color = new Color(200,200,255,255);
+            setBounds(x,y,width,height+38);
 		} else if (m_app_name.equals("med-drugs desktop") || m_app_name.equals("med-drugs-fr desktop")) {
             JLabel image = new JLabel(new ImageIcon("./images/meddrugs.png"));
             content.add(image, BorderLayout.CENTER);
+            setBounds(x,y,width,height);
 		} else if (m_app_name.equals("AmiKo Desktop ZR") || m_app_name.equals("CoMed Desktop ZR")) {
             JLabel image = new JLabel(new ImageIcon("./images/zurrose.png"));
-            content.add(image, BorderLayout.CENTER);			
+            content.add(image, BorderLayout.CENTER);
+            color = new Color(255,200,200,255);
+            setBounds(x,y,width,height);
 		}
 
+        content.setBackground(color);
         content.setBorder(BorderFactory.createLineBorder(color));
         this.toFront();
         

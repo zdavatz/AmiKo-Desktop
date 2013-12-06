@@ -3,9 +3,11 @@
 
 #define MyAppFolder "02_comeddesk_exe32"
 #define MyAppName "CoMed Desktop"
-#define MyVersion "1.1.0"
+#define MyVersion "1.1.4"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "comeddesk.exe"
+#define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"
+#define MyWorkingDir = "E:\Projects\Pharmax\AmiKoWindows"
 
 [Code]
 function IsRegularUser(): Boolean;
@@ -35,9 +37,9 @@ AppUpdatesURL=http://www.ywesee.com
 PrivilegesRequired=none
 DefaultDirName={code:DefDirRoot}\{#MyAppName}
 DefaultGroupName={#MyAppName}
-OutputDir=E:\Projects\Android\workspace\AMiKoDesk\output
+OutputDir={#MyWorkingDir}\output
 OutputBaseFilename=comeddesk_setup_32bit
-SetupIconFile=E:\Projects\Android\workspace\AMiKoDesk\icons\amiko_icon.ico
+SetupIconFile={#MyWorkingDir}\icons\amiko_icon.ico
 Compression=lzma
 SolidCompression=yes
 VersionInfoDescription={#MyAppName} Setup
@@ -51,12 +53,13 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "E:\Projects\Android\workspace\AMiKoDesk\{#MyAppFolder}\{#MyAppExe}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Projects\Android\workspace\AMiKoDesk\{#MyAppFolder}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#MyWorkingDir}\exes\{#MyAppFolder}\{#MyAppExe}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyWorkingDir}\exes\{#MyAppFolder}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
-[Icons]
+[Icons]      
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\icons\amiko_icon.ico"
+Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\icons\amiko_icon.ico"; Tasks: desktopicon
 
