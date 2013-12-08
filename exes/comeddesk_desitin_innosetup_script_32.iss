@@ -3,7 +3,7 @@
 
 #define MyAppFolder "04_comeddesk_desitin_exe32"
 #define MyAppName "CoMed Desktop Desitin"
-#define MyVersion "1.1.4"
+#define MyVersion "1.1.5"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "comeddeskdesitin.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"
@@ -45,6 +45,7 @@ SolidCompression=yes
 VersionInfoDescription={#MyAppName} Setup
 VersionInfoVersion={#MyVersion}
 VersionInfoCompany={#MyPublisher}
+CloseApplications=yes
 
 [Languages]
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
