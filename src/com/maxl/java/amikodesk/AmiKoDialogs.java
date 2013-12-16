@@ -176,7 +176,7 @@ public class AmiKoDialogs extends JDialog {
 		this.setLocationRelativeTo(null);
 		this.setSize(360,400);
 		if (mAppCustom.equals("desitin"))
-			this.setSize(360, 500);
+			this.setSize(360, 540);
 		else if (mAppCustom.equals("meddrugs"))
 			this.setSize(360, 450);
 		this.setResizable(false);

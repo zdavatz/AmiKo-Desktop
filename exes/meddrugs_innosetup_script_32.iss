@@ -3,9 +3,11 @@
 
 #define MyAppFolder "05_meddrugs_exe32"
 #define MyAppName "med-drugs desktop"
-#define MyVersion "1.1.0"
+#define MyVersion "1.1.6"
 #define MyPublisher "dr-ouwerkerk ag"
 #define MyAppExe "meddrugsdesk.exe"
+#define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"
+#define MyWorkingDir = "E:\Projects\Pharmax\AmiKoWindows"
 
 [Code]
 function IsRegularUser(): Boolean;
@@ -35,14 +37,15 @@ AppUpdatesURL=http://www.med-drugs.ch
 PrivilegesRequired=none
 DefaultDirName={code:DefDirRoot}\{#MyAppName}
 DefaultGroupName={#MyAppName}
-OutputDir=E:\Projects\Android\workspace\AMiKoDesk\output
+OutputDir={#MyWorkingDir}\output
 OutputBaseFilename=meddrugs_setup_32bit
-SetupIconFile=E:\Projects\Android\workspace\AMiKoDesk\icons\meddrugs_icon.ico
+SetupIconFile={#MyWorkingDir}\icons\meddrugs_icon.ico
 Compression=lzma
 SolidCompression=yes
 VersionInfoDescription={#MyAppName} Setup
 VersionInfoVersion={#MyVersion}
 VersionInfoCompany={#MyPublisher}
+CloseApplications=yes
 
 [Languages]
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
@@ -51,12 +54,13 @@ Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "E:\Projects\Android\workspace\AMiKoDesk\{#MyAppFolder}\{#MyAppExe}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Projects\Android\workspace\AMiKoDesk\{#MyAppFolder}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#MyWorkingDir}\exes\{#MyAppFolder}\{#MyAppExe}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyWorkingDir}\exes\{#MyAppFolder}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\icons\meddrugs_icon.ico"
+Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\icons\meddrugs_icon.ico"; Tasks: desktopicon
 

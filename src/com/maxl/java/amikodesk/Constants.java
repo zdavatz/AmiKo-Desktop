@@ -28,6 +28,6 @@ public class Constants {
 	// public static final String APP_NAME = COMED_MEDDRUGS_NAME;
 	// public static final String APP_NAME = AMIKO_ZURROSE_NAME;
 	// public static final String APP_NAME = COMED_ZURROSE_NAME;
-	public static final String APP_VERSION = "1.1.5 (32-bit)";	
-	public static final String GEN_DATE = "06.12.2013";	
+	public static final String APP_VERSION = "1.1.6 (32-bit)";	
+	public static final String GEN_DATE = "10.12.2013";	
 }

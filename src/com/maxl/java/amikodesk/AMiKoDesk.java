@@ -31,7 +31,6 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Shape;
 import java.awt.Toolkit;
@@ -64,8 +63,6 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -80,14 +77,12 @@ import java.util.regex.Pattern;
 
 import javax.swing.AbstractListModel;
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -1138,52 +1133,62 @@ public class AMiKoDesk {
 		// ------ Setup menubar ------
 		JMenuBar menu_bar = new JMenuBar();	
 		// menu_bar.add(Box.createHorizontalGlue());	// --> aligns menu items to the right!
-		// Main menus
+		// -- Menu "Datei" --
 		JMenu datei_menu = new JMenu("Datei");
 		if (appLanguage().equals("fr"))
 			datei_menu.setText("Fichier");
-		menu_bar.add(datei_menu);		
-		JMenu hilfe_menu = new JMenu("Hilfe");
-		if (appLanguage().equals("fr"))
-			hilfe_menu.setText("Aide");
-		menu_bar.add(hilfe_menu);
-		JMenu update_menu = new JMenu("Abonnieren");
-		if (appLanguage().equals("fr"))
-			update_menu.setText("Abonnement");
-		if (appCustomization().equals("desitin")) {
-			update_menu.setText("Update");
-			if (appLanguage().equals("fr"))
-				update_menu.setText("Mise à jour");
-		}
-		menu_bar.add(update_menu);
-		// Menu items
+		menu_bar.add(datei_menu);			
 		JMenuItem print_item = new JMenuItem("Drucken...");
-		JMenuItem updatedb_item = new JMenuItem("Datenbank aktualisieren");
-		JMenuItem choosedb_item = new JMenuItem("Datenbank laden");
 		JMenuItem quit_item = new JMenuItem("Beenden");
 		if (appLanguage().equals("fr")) {
 			print_item.setText("Imprimer");
-			updatedb_item.setText("Ajourner la banque de données");
-			choosedb_item.setText("Télécharger la banque de données");
 			quit_item.setText("Terminer");
 		}
 		datei_menu.add(print_item);
 		datei_menu.addSeparator();
-		datei_menu.add(updatedb_item);
-		datei_menu.add(choosedb_item);
-		datei_menu.addSeparator();
-		datei_menu.add(quit_item);			
+		datei_menu.add(quit_item);		
+		// -- Menu "Hilfe" --
+		JMenu hilfe_menu = new JMenu("Support");
+		if (appLanguage().equals("fr"))
+			hilfe_menu.setText("Aide");
+		menu_bar.add(hilfe_menu);
 		JMenuItem ywesee_item = new JMenuItem(Constants.APP_NAME + " im Internet");
 		JMenuItem report_item = new JMenuItem("Error Report");
 		JMenuItem about_item = new JMenuItem("Info zu " + Constants.APP_NAME);		
+		JMenuItem contact_item = new JMenuItem("Kontakt");
 		if (appLanguage().equals("fr")) {
 			ywesee_item.setText(Constants.APP_NAME + " sur Internet");
+			report_item.setText("Error Report");
 			about_item.setText("A propos de " + Constants.APP_NAME);
-		}
+			contact_item.setText("Contact");			
+		}		
 		hilfe_menu.add(report_item);
 		hilfe_menu.addSeparator();
 		hilfe_menu.add(about_item);
 		hilfe_menu.add(ywesee_item);		
+		hilfe_menu.addSeparator();
+		hilfe_menu.add(contact_item);
+		// -- Menu "Aktualisieren" --
+		JMenu update_menu = new JMenu("Update");
+		if (appLanguage().equals("fr"))
+			update_menu.setText("Mise à jour");
+		menu_bar.add(update_menu);
+		JMenuItem updatedb_item = new JMenuItem("Update via Internet");
+		JMenuItem choosedb_item = new JMenuItem("Update via Datei");
+		update_menu.add(updatedb_item);
+		update_menu.add(choosedb_item);
+		if (appLanguage().equals("fr")) {
+			updatedb_item.setText("Télécharger la banque de données");
+			choosedb_item.setText("Ajourner la banque de données");			
+		}
+		// Menu "Abonnieren" (only for ywesee)
+		JMenu subscribe_menu = new JMenu("Abonnieren");
+		if (appLanguage().equals("fr"))
+			subscribe_menu.setText("Abonnement");		
+		if (appCustomization().equals("ywesee")) {
+			menu_bar.add(subscribe_menu);
+		}		
+		
 		jframe.setJMenuBar(menu_bar);
 		
 		// ------ Setup toolbar ------
@@ -1264,8 +1269,8 @@ public class AMiKoDesk {
 				}				
 			}
 		});
-		update_menu.addMenuListener(new MenuListener() {
-			@Override			
+		subscribe_menu.addMenuListener(new MenuListener() {
+			@Override
 			public void menuSelected(MenuEvent event) {
 				if (appCustomization().equals("ywesee")) {
 					if (Desktop.isDesktopSupported()) {				
@@ -1276,6 +1281,32 @@ public class AMiKoDesk {
 						} catch (URISyntaxException r) {
 							// TODO:
 						}
+					}
+				}
+			}
+			@Override
+			public void menuDeselected(MenuEvent event) {
+				// do nothing
+			}
+			@Override
+			public void menuCanceled(MenuEvent event) {
+				// do nothing
+			}
+		});
+		contact_item.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {			
+				if (appCustomization().equals("ywesee")) {
+					if (Desktop.isDesktopSupported()) {
+						try {
+							URI mail_to_uri = URI.create("mailto:zdavatz@ywesee.com?subject=AmiKo%20Desktop%20Update");
+							Desktop.getDesktop().mail(mail_to_uri);
+						} catch (IOException e) {
+							// TODO:
+						}
+					} else {
+						AmiKoDialogs cd = new AmiKoDialogs(appLanguage(), appCustomization());
+						cd.ContactDialog();
 					}
 				} else if (appCustomization().equals("desitin")) {
 					if (Desktop.isDesktopSupported()) {
@@ -1313,14 +1344,6 @@ public class AMiKoDesk {
 					}
 				}
 			}
-			@Override
-			public void menuDeselected(MenuEvent event) {
-				// do nothing
-			}
-			@Override
-			public void menuCanceled(MenuEvent event) {
-				// do nothing
-			}
 		});
 		report_item.addActionListener(new ActionListener() {
 			@Override
@@ -1352,6 +1375,16 @@ public class AMiKoDesk {
 						// TODO:
 						}
 					}
+				} else if (appCustomization().equals("desitin")) {
+					if (Desktop.isDesktopSupported()) {
+						try {
+							Desktop.getDesktop().browse(new URI("http://www.desitin.ch/produkte/arzneimittel-kompendium-apps/"));							
+						} 	catch (IOException e) {
+							// TODO:
+						} catch (URISyntaxException r) {
+						// TODO:
+						}
+					}				
 				} else if (appCustomization().equals("meddrugs")) {
 					if (Desktop.isDesktopSupported()) {
 						try {
@@ -1804,7 +1837,7 @@ public class AMiKoDesk {
 		sTitle("");	// Used instead of sTitle (which is slow)
 		cardl.show(p_results, final_title);	
 
-		// Add menu item listeners
+		// Add menu item listeners	
 		updatedb_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
