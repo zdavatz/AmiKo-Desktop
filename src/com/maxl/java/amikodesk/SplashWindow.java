@@ -54,11 +54,11 @@ public class SplashWindow extends JWindow {
         int y = (screen.height-height)/2;
         
         // Build the splash screen
-        if (m_app_name.equals("AmiKo Desktop Desitin") || m_app_name.equals("CoMed Desktop Desitin")) {
+        if (m_app_name.equals(Constants.AMIKO_DESITIN_NAME) || m_app_name.equals(Constants.COMED_DESITIN_NAME)) {
             JLabel image = new JLabel(new ImageIcon("./images/desitin_new.jpg"));
             JLabel copyrt = new JLabel
             		("<html><center><br>" + m_app_name + "<br>" +
-            				"Copyright @ 2013 ywesee GmbH<br>" +
+            				"Copyright @ 2014 ywesee GmbH<br>" +
             				"" +
             				"</center><br></html>", JLabel.CENTER);
             copyrt.setFont(new Font("Dialog", Font.PLAIN, 14));
@@ -66,11 +66,11 @@ public class SplashWindow extends JWindow {
             content.add(copyrt, BorderLayout.SOUTH);
             color = new Color(200,200,255,255);
             setBounds(x,y,width,height+38);
-		} else if (m_app_name.equals("med-drugs desktop") || m_app_name.equals("med-drugs-fr desktop")) {
+		} else if (m_app_name.equals(Constants.AMIKO_MEDDRUGS_NAME) || m_app_name.equals(Constants.COMED_MEDDRUGS_NAME)) {
             JLabel image = new JLabel(new ImageIcon("./images/meddrugs.png"));
             content.add(image, BorderLayout.CENTER);
             setBounds(x,y,width,height);
-		} else if (m_app_name.equals("AmiKo Desktop ZR") || m_app_name.equals("CoMed Desktop ZR")) {
+		} else if (m_app_name.equals(Constants.AMIKO_ZURROSE_NAME) || m_app_name.equals(Constants.COMED_ZURROSE_NAME)) {
             JLabel image = new JLabel(new ImageIcon("./images/zurrose.png"));
             content.add(image, BorderLayout.CENTER);
             color = new Color(255,200,200,255);

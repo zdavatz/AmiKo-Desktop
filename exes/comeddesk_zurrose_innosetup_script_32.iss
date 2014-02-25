@@ -3,7 +3,7 @@
 
 #define MyAppFolder "08_comeddesk_zurrose_exe32"
 #define MyAppName "CoMed Desktop ZR"
-#define MyVersion "1.1.6"
+#define MyVersion "1.1.8"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "comeddeskzr.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"
@@ -63,6 +63,8 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app
 Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\icons\amiko_icon.ico"; Tasks: desktopicon
+Name: "{commonstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\icons\amiko_icon.ico"; 
+Name: "{commonprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\icons\amiko_icon.ico";
 
 [Run]
 Filename: "{app}\{#MyAppExe}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent

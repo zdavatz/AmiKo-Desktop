@@ -38,7 +38,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.channels.FileChannel;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -126,7 +128,7 @@ public class SqlDatabase {
 			// Initialize org.sqlite.JDBC driver
 			Class.forName("org.sqlite.JDBC");
 			// Create connection to db
-			String db_path = System.getProperty("user.dir") + "/dbs/amiko_db_full_idx_" + db_lang + ".db";
+			String db_path = "./dbs/amiko_db_full_idx_" + db_lang + ".db";
 			m_conn = DriverManager.getConnection("jdbc:sqlite:" + db_path);		
 			m_stat = m_conn.createStatement();
 		} catch (SQLException e ) {
@@ -143,14 +145,22 @@ public class SqlDatabase {
 	 */
 	public int loadDBFromPath(String db_path) {
 		try {
-			// Initialize org.sqlite.JDBC driver
-			Class.forName("org.sqlite.JDBC");
-			// Create connection to db
-			m_conn = DriverManager.getConnection("jdbc:sqlite:" + db_path);		
-			m_stat = m_conn.createStatement();
-			// Following to instructions force an exception to occur...
-			String query = "select count(*) from " + DATABASE_TABLE; 
-			m_rs = m_stat.executeQuery(query);
+			// Check if file exists
+			File f = new File(db_path);
+			if (f.exists() && f.length()>0) {
+				System.out.println("Loading alternative database");
+				// Initialize org.sqlite.JDBC driver
+				Class.forName("org.sqlite.JDBC");
+				// Create connection to db
+				m_conn = DriverManager.getConnection("jdbc:sqlite:" + db_path);		
+				m_stat = m_conn.createStatement();
+				// Trick: check if following two instructions force an exception to occur...
+				String query = "select count(*) from " + DATABASE_TABLE; 
+				m_rs = m_stat.executeQuery(query);
+			} else {
+				System.out.println("No alternative database found");
+				return 0;
+			}
 		} catch (SQLException e ) {
 			System.err.println(">> SqlDatabase: SQLException in loadDB!");
 			return 0;
@@ -249,11 +259,36 @@ public class SqlDatabase {
 		m_app_lang = db_lang;
 		m_customization = custom;
 		m_operationCancelled = false;
-		new DownloadDialog(db_url, report_url, amiko_report, db_unzipped);
-		
+		if (isInternetReachable())
+			new DownloadDialog(db_url, report_url, amiko_report, db_unzipped);
+		else {
+			AmiKoDialogs cd = new AmiKoDialogs(db_lang, custom);
+			cd.NoInternetDialog();
+			return "";
+		}	
 		return db_unzipped;
 	}
 	
+	private static boolean isInternetReachable() {
+        try {
+            // Make a URL to a known source
+            URL url = new URL("http://www.google.com");
+            // Open a connection to that source
+            HttpURLConnection urlConnect = (HttpURLConnection)url.openConnection();
+            // Try to retrieve data from source. If no connection, this line will fail
+            Object objData = urlConnect.getContent();
+        } catch (UnknownHostException e) {
+            // TODO Auto-generated catch block
+            // e.printStackTrace();
+            return false;
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            // e.printStackTrace();
+            return false;
+        }
+        return true;
+    }	
+		
 	private class DownloadDialog extends JFrame implements PropertyChangeListener {
 		
 		private JDialog dialog = new JDialog(this, "Updating database", true);
@@ -290,6 +325,8 @@ public class SqlDatabase {
 			ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
 			if (m_customization.equals("desitin"))
 				icon = new ImageIcon(Constants.DESITIN_ICON);
+			else if (m_customization.equals("meddrugs"))
+				icon = new ImageIcon(Constants.MEDDRUGS_ICON);
 			dialog.setIconImage(icon.getImage());			
 			dialog.setVisible(true);
 			

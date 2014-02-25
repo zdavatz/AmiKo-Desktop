@@ -1,8 +1,10 @@
 package com.maxl.java.amikodesk;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Image;
 import java.awt.Dialog.ModalityType;
@@ -20,7 +22,9 @@ import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
 public class AmiKoDialogs extends JDialog {
@@ -79,9 +83,12 @@ public class AmiKoDialogs extends JDialog {
 			}
 
 			JButton info = new JButton();
+			String app_text = "";
 			String sponsoring = "";
 			if (mAppLang.equals("de")) {
+				app_text = "Arzneimittel-Kompendium für Windows<br>";
 				if (mAppCustom.equals("ywesee")) {
+					app_text = 
 					sponsoring = "<br>" +
 							"<br><a href=\"\">AmiKo / CoMed</a>" +
 							"<br>Arzneimittel-Kompendium für Android" +
@@ -91,14 +98,14 @@ public class AmiKoDialogs extends JDialog {
 							"<br>Unterstützt durch Desitin Pharma GmbH" +
 							"<br>";
 				} else if (mAppCustom.equals("meddrugs")) {
-					//
+					app_text = "Schweizer Medikamenten-Enzyklopädie für Windows<br>";
 				} else if (mAppCustom.equals("zurrose")) {
 					//
 				}
 
 				info.setText(
 						"<html><center><b>" + Constants.APP_NAME + "</b><br><br>" +
-								"Arzneimittel-Kompendium für Windows PC<br>" +
+								app_text +
 								"Version " + Constants.APP_VERSION + "<br>" + 
 								Constants.GEN_DATE + "<br>" +
 								"Lizenz: GPLv3.0<br><br>" +
@@ -107,6 +114,7 @@ public class AmiKoDialogs extends JDialog {
 								sponsoring +
 						"</center></html>");
 			} else if (mAppLang.equals("fr")) {
+				app_text = "Compendium des Médicaments Suisse pour Windows<br>";
 				if (mAppCustom.equals("ywesee")) {
 					sponsoring = "<br>" +
 							"<br><a href=\"\">AmiKo / CoMed</a>" +
@@ -117,13 +125,13 @@ public class AmiKoDialogs extends JDialog {
 							"<br>Supporteé par Desitin Pharma GmbH" +
 							"<br>";
 				} else if (mAppCustom.equals("meddrugs")) {
-					//
+					app_text = "Encyclopédie des médicaments de la Suisse<br>";
 				} else if (mAppCustom.equals("zurrose")) {
 					//
 				}
 				info.setText(
 						"<html><center><br>" + Constants.APP_NAME + "</b><br><br>" +
-								"Compendium des Médicaments Suisse pour Windows<br>" +
+								app_text +
 								"Version " + Constants.APP_VERSION + "<br>" + 
 								Constants.GEN_DATE + "<br>" +
 								"Licence: GPLv3.0<br><br>" +
@@ -251,4 +259,73 @@ public class AmiKoDialogs extends JDialog {
 		
 		this.setVisible(true);
 	}
+	
+	public void NoInternetDialog() {
+		setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
+
+		add(Box.createRigidArea(new Dimension(0, 10)));
+
+		ImageIcon icon = null;
+		if (mAppCustom.equals("ywesee")) {
+			icon = new ImageIcon(Constants.AMIKO_ICON);
+		} else if (mAppCustom.equals("desitin")) {
+			icon = new ImageIcon(Constants.DESITIN_ICON);
+		} else if (mAppCustom.equals("meddrugs")) {
+			icon = new ImageIcon(Constants.MEDDRUGS_ICON);
+		} else if (mAppCustom.equals("zurrose")) {
+			icon = new ImageIcon(Constants.ZURROSE_ICON);
+		}
+		Image img = icon.getImage();
+		Image scaled_img = img.getScaledInstance(64, 64, java.awt.Image.SCALE_SMOOTH);
+		icon = new ImageIcon(scaled_img);
+		JLabel label = new JLabel(icon);
+		label.setAlignmentX(0.5f);
+		label.setBorder(new EmptyBorder(5, 5, 5, 5));
+		add(label);
+
+		add(Box.createRigidArea(new Dimension(0, 10)));
+
+		JButton info = new JButton();
+		if (mAppLang.equals("de")) {
+			info.setText("<html><center>"
+					+ "Für die Aktualisierung brauchen Sie<br>"
+					+ "eine aktive Internetverbindung.<br>"
+					+ "</center></html>");
+		} else if (mAppLang.equals("fr")) {
+			info.setText("<html><center>"
+					+ "Pour la mise à jour vous devez disposer<br>"
+					+ "d’une connexion Internet active.<br>" 
+					+ "</center></html>");
+		}
+		info.setFont(new Font("Dialog", Font.PLAIN, 14));
+		info.setAlignmentX(0.5f);
+		info.setBackground(Color.WHITE);
+		info.setOpaque(false);
+		info.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+		info.setBorderPainted(false);
+		info.setFocusPainted(false);
+		info.setContentAreaFilled(false);
+		add(info);
+
+		add(Box.createRigidArea(new Dimension(0, 30)));
+
+		JButton but_close = new JButton("OK");
+		but_close.setSize(new Dimension(48, 12));
+		but_close.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				dispose();
+			}
+		});
+		but_close.setAlignmentX(0.5f);
+		add(but_close);
+
+		this.setModalityType(ModalityType.APPLICATION_MODAL);
+		this.setTitle("Keine Internetverbindung");
+		this.setLocationRelativeTo(null);
+		this.setSize(320, 240);
+		this.setResizable(false);
+		
+		this.setVisible(true);
+	}
+		
 }

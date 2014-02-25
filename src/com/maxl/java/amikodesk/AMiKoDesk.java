@@ -505,8 +505,7 @@ public class AMiKoDesk {
 			list.setSelectionForeground(Color.BLACK);
 			list.setFont(new Font("Dialog", Font.PLAIN, 14));
 			list.addListSelectionListener(this);
-			
-						
+					
 		    MouseListener mouseListener = new MouseAdapter() {
 		        public void mouseClicked(MouseEvent mouseEvent) {
 		        	// JList theList = (JList) mouseEvent.getSource();
@@ -534,7 +533,7 @@ public class AMiKoDesk {
 		        		new Font("Dialog", Font.PLAIN, 14));
 				listPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));
 			} else if (appLanguage().equals("fr")) {
-		        TitledBorder titledBorder = BorderFactory.createTitledBorder(null, "Résultat de la Recherche", 
+		        TitledBorder titledBorder = BorderFactory.createTitledBorder(null, "Résultat de la recherche", 
 		        		TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, 
 		        		new Font("Dialog", Font.PLAIN, 14));
 				listPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));			
@@ -1126,7 +1125,7 @@ public class AMiKoDesk {
 			ImageIcon img = new ImageIcon(Constants.MEDDRUGS_ICON);
 			jframe.setIconImage(img.getImage());        	
         } else if (appCustomization().equals("zurrose")) {
-			ImageIcon img = new ImageIcon(Constants.DESITIN_ICON);
+			ImageIcon img = new ImageIcon(Constants.AMIKO_ICON);
 			jframe.setIconImage(img.getImage());        	
         }
 
@@ -1152,14 +1151,25 @@ public class AMiKoDesk {
 		if (appLanguage().equals("fr"))
 			hilfe_menu.setText("Aide");
 		menu_bar.add(hilfe_menu);
+		
 		JMenuItem ywesee_item = new JMenuItem(Constants.APP_NAME + " im Internet");
+		if (appCustomization().equals("meddrugs"))
+			ywesee_item.setText("med-drugs im Internet");
 		JMenuItem report_item = new JMenuItem("Error Report");
 		JMenuItem about_item = new JMenuItem("Info zu " + Constants.APP_NAME);		
 		JMenuItem contact_item = new JMenuItem("Kontakt");
-		if (appLanguage().equals("fr")) {
-			ywesee_item.setText(Constants.APP_NAME + " sur Internet");
+		
+		if (appLanguage().equals("fr")) {			
+			if (appCustomization().equals("meddrugs"))
+				ywesee_item.setText("med-drugs sur Internet");
+			else
+				ywesee_item.setText(Constants.APP_NAME + " sur Internet");
 			report_item.setText("Error Report");
-			about_item.setText("A propos de " + Constants.APP_NAME);
+			// Extrawunsch med-drugs
+			if (appCustomization().equals("meddrugs"))
+				about_item.setText(Constants.APP_NAME);
+			else
+				about_item.setText("A propos de " + Constants.APP_NAME);
 			contact_item.setText("Contact");			
 		}		
 		hilfe_menu.add(report_item);
@@ -1299,7 +1309,7 @@ public class AMiKoDesk {
 				if (appCustomization().equals("ywesee")) {
 					if (Desktop.isDesktopSupported()) {
 						try {
-							URI mail_to_uri = URI.create("mailto:zdavatz@ywesee.com?subject=AmiKo%20Desktop%20Update");
+							URI mail_to_uri = URI.create("mailto:zdavatz@ywesee.com?subject=AmiKo%20Desktop%20Feedback");
 							Desktop.getDesktop().mail(mail_to_uri);
 						} catch (IOException e) {
 							// TODO:
@@ -1311,7 +1321,7 @@ public class AMiKoDesk {
 				} else if (appCustomization().equals("desitin")) {
 					if (Desktop.isDesktopSupported()) {
 						try {
-							URI mail_to_uri = URI.create("mailto:info@desitin.ch?subject=AmiKo%20Desktop%20Desitin%20Update");
+							URI mail_to_uri = URI.create("mailto:info@desitin.ch?subject=AmiKo%20Desktop%20Desitin%20Feedback");
 							Desktop.getDesktop().mail(mail_to_uri);
 						} catch (IOException e) {
 							// TODO:
@@ -1323,7 +1333,7 @@ public class AMiKoDesk {
 				} else if (appCustomization().equals("meddrugs")) {
 					if (Desktop.isDesktopSupported()) {
 						try {
-							URI mail_to_uri = URI.create("mailto:mo@just-medical.com?subject=med-drugs%20desktop%20Update");
+							URI mail_to_uri = URI.create("mailto:med-drugs@just-medical.com?subject=med-drugs%20desktop%20Feedback");
 							Desktop.getDesktop().mail(mail_to_uri);
 						} catch (IOException e) {
 							// TODO:
@@ -1388,7 +1398,10 @@ public class AMiKoDesk {
 				} else if (appCustomization().equals("meddrugs")) {
 					if (Desktop.isDesktopSupported()) {
 						try {
-							Desktop.getDesktop().browse(new URI("http://www.med-drugs.ch"));							
+							if (appLanguage().equals("de"))
+								Desktop.getDesktop().browse(new URI("http://www.med-drugs.ch"));
+							else if (appLanguage().equals("fr"))
+								Desktop.getDesktop().browse(new URI("http://www.med-drugs.ch/index.cfm?&newlang=fr"));
 						} 	catch (IOException e) {
 							// TODO:
 						} catch (URISyntaxException r) {

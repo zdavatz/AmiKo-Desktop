@@ -20,14 +20,14 @@ public class Constants {
 	public static final String ZURROSE_ICON = "./icons/amiko_icon.png";
 	
 	// -->> Note: uncomment name of app to compile!
-	public static final String APP_NAME = AMIKO_NAME;
+	// public static final String APP_NAME = AMIKO_NAME;
 	// public static final String APP_NAME = COMED_NAME;
 	// public static final String APP_NAME = AMIKO_DESITIN_NAME;
 	// public static final String APP_NAME = COMED_DESITIN_NAME;
-	// public static final String APP_NAME = AMIKO_MEDDRUGS_NAME;
+	public static final String APP_NAME = AMIKO_MEDDRUGS_NAME;
 	// public static final String APP_NAME = COMED_MEDDRUGS_NAME;
 	// public static final String APP_NAME = AMIKO_ZURROSE_NAME;
 	// public static final String APP_NAME = COMED_ZURROSE_NAME;
-	public static final String APP_VERSION = "1.1.6 (32-bit)";	
-	public static final String GEN_DATE = "10.12.2013";	
+	public static final String APP_VERSION = "1.1.8 (32-bit)";	
+	public static final String GEN_DATE = "24.02.2014";	
 }

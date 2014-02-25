@@ -3,7 +3,7 @@
 
 #define MyAppFolder "05_meddrugs_exe32"
 #define MyAppName "med-drugs desktop"
-#define MyVersion "1.1.6"
+#define MyVersion "1.1.8"
 #define MyPublisher "dr-ouwerkerk ag"
 #define MyAppExe "meddrugsdesk.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"
