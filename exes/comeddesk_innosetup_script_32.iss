@@ -3,7 +3,7 @@
 
 #define MyAppFolder "02_comeddesk_exe32"
 #define MyAppName "CoMed Desktop"
-#define MyVersion "1.1.6"
+#define MyVersion "1.1.9"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "comeddesk.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"

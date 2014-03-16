@@ -69,6 +69,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Scanner;
@@ -168,14 +169,19 @@ public class AMiKoDesk {
 	private static String m_database_used = "aips";
 	private static ProgressIndicator m_progress_indicator = new ProgressIndicator(32);
 	
-	private static String SectionTitle_DE[] = {"Zusammensetzung", "Galenische Form", "Indikationen", "Dosierung", "Kontraindikationen",
-		"Vorsichtmass.", "Interaktionen", "Schwangerschaft", "Fahrtüchtigkeit", "UAW", "Überdosierung", 
-		"Eig./Wirkung", "Kinetik", "Präklinik", "Sonstige Hinweise", "Zulassungsnummer", "Packungen", "Firma", "Stand"};
-	private static String SectionTitle_FR[] = {"Composition", "Forme galénique", "Indications", "Posologie", "Contre-indic.", 
-		"Précautions", "Interactions", "Grossesse/All.", "Conduite", "Effets indésir.",	"Surdosage", 
-		"Propriétés/Effets", "Cinétique", "Préclinique", "Remarques", "Numéro d'autor", "Présentation", "Titulaire", "Mise à jour"};
+	// German section title abbreviations
+	private static final String[] SectionTitle_DE = {"Zusammensetzung", "Galenische Form", "Kontraindikationen", 
+		"Indikationen", "Dosierung/Anwendung", "Vorsichtsmassnahmen", "Interaktionen", "Schwangerschaft", 
+		"Fahrtüchtigkeit", "Unerwünschte Wirk.", "Überdosierung", "Eig./Wirkung", "Kinetik", "Präklinik", 
+		"Sonstige Hinweise", "Zulassungsnummer", "Packungen", "Inhaberin", "Stand der Information"};	
+	// French section title abbrevations
+	private static final String[] SectionTitle_FR = {"Composition", "Forme galénique", "Contre-indications", 
+		"Indications", "Posologie", "Précautions", "Interactions", "Grossesse/All.", 
+		"Conduite", "Effets indésir.", "Surdosage", "Propriétés/Effets", "Cinétique", "Préclinique", 
+		"Remarques", "Numéro d'autorisation", "Présentation", "Titulaire", "Mise à jour"};	
 	
 	private static int med_index = 0;
+	private static IndexPanel m_section_titles = null;
 	private static WebPanel2 m_web_panel = null;
 	private static String m_css_str = null;
 	private static String m_query_str = null;
@@ -612,10 +618,24 @@ public class AMiKoDesk {
 			add(indexPanel, BorderLayout.CENTER);
 		}	
 		
+		public void updatePanel(String[] sec_titles) {
+			final String[] titles = sec_titles;
+			SwingUtilities.invokeLater(new Runnable() {
+				@Override
+				public void run() {	
+					if (titles!=null) {
+						list.removeAll();
+						list.setListData(titles);
+					}
+				}
+			});
+		}
+		
 		public void valueChanged(ListSelectionEvent e) {
 			if (!e.getValueIsAdjusting()) {
 				int sel_index = list.getSelectedIndex();
-				m_web_panel.moveToAnchor(m_section_str.get(sel_index));
+				if (sel_index>=0)
+					m_web_panel.moveToAnchor(m_section_str.get(sel_index));
 			}
 		}
 	}
@@ -729,12 +749,50 @@ public class AMiKoDesk {
 			jWeb.executeJavascript("document.getElementById('" + anchor + "').scrollIntoView(true);");
 		}
 		
+		public void updateSectionTitles(Medication m) {
+			// Get section titles
+			String[] titles = m.getSectionTitles().split(";");
+			// Use abbreviations...
+			Locale locale = null;
+			String[] section_titles = null;
+			if (appLanguage().equals("de")) {
+				locale = Locale.GERMAN;
+				section_titles = SectionTitle_DE;
+			} else if (appLanguage().equals("fr")) {
+				locale = Locale.FRENCH;
+				section_titles = SectionTitle_FR;
+			}
+			for (int i=0; i<titles.length; ++i) {					
+	    		for (String s : section_titles) {
+	    			String titleA = titles[i].replaceAll(" ", "");
+	    			String titleB = m.getTitle().replaceAll(" ", "");
+	    			if (titleA.toLowerCase(locale).contains(titleB.toLowerCase(locale))) {
+	    				if (titles[i].contains("®"))
+	    					titles[i] = titles[i].substring(0,titles[i].indexOf("®")+1);
+	    				else
+	    					titles[i] = titles[i].split(" ")[0].replaceAll("/-", "");
+	    				break;
+	    			}
+	    			else if (titles[i].toLowerCase(locale).contains(s.toLowerCase(locale))) {
+	    				titles[i] = s;
+	    				break;
+	    			}
+	    		}
+			}
+			m_section_titles.updatePanel(titles);
+		}
+		
 		public void updateText() {
 			if (med_index>=0) {
 				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
+				// Get section ids
 				String[] sections = m.getSectionIds().split(",");
-	    		m_section_str = Arrays.asList(sections);
+				m_section_str = Arrays.asList(sections);
+				// Get FI content
 				content_str = new StringBuffer(m.getContent());
+
+				// Update section titles		
+				updateSectionTitles(m);				
 				
 				// DateFormat df = new SimpleDateFormat("dd.MM.yy");
 				String _amiko_str = Constants.APP_NAME + " - Datenstand AIPS Swissmedic " + Constants.GEN_DATE;
@@ -768,6 +826,7 @@ public class AMiKoDesk {
 			jWeb.disposeNativePeer();
 			// Close socket connection
 			SwingUtilities.invokeLater(new Runnable() {
+				@Override
 				public void run() {									
 					mTcpServer.stop();					
 				}
@@ -992,7 +1051,7 @@ public class AMiKoDesk {
 		gbc.insets = new Insets(2,2,2,2);		
 		
 		// ---- Section titles ----
-		IndexPanel m_section_titles = null;
+		m_section_titles = null;
 		if (appLanguage().equals("de")) {
 			m_section_titles = new IndexPanel(SectionTitle_DE);	
 		} else if (appLanguage().equals("fr")) {
@@ -1587,7 +1646,7 @@ public class AMiKoDesk {
 		right_panel.setLayout(new GridBagLayout());
 		
 		// ---- Section titles ----
-		IndexPanel m_section_titles = null;
+		m_section_titles = null;
 		if (appLanguage().equals("de")) {
 			m_section_titles = new IndexPanel(SectionTitle_DE);	
 		} else if (appLanguage().equals("fr")) {
