@@ -156,6 +156,7 @@ public class AMiKoDesk {
 	private static Long m_start_time = 0L;
 	private static final String DEFAULT_AMIKO_DB_BASE = "amiko_db_full_idx_";
 	private static final String DEFAULT_AMIKO_REPORT_BASE = "amiko_report_";
+	private static final String DEFAULT_INTERACTION_DB_BASE = "drug_interactions_idx_";
 	private static final String IMG_FOLDER = "./images/";	
 	private static final String HTML_FILES = "./fis/fi_de_html/";
 	private static final String CSS_SHEET = "./css/amiko_stylesheet.css";
@@ -167,6 +168,7 @@ public class AMiKoDesk {
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
 	private static String m_database_used = "aips";
+	private static boolean m_seek_interactions = false;
 	private static ProgressIndicator m_progress_indicator = new ProgressIndicator(32);
 	
 	// German section title abbreviations
@@ -186,6 +188,7 @@ public class AMiKoDesk {
 	private static String m_css_str = null;
 	private static String m_query_str = null;
 	private static SqlDatabase m_sqldb = null;
+	private static InteractionsDb m_interdb = null;
 	private static List<String> m_section_str = null;
 	private static String m_application_data_folder = null;
 	
@@ -377,6 +380,15 @@ public class AMiKoDesk {
 			else if (appLanguage().equals("fr"))
 				m_sqldb.loadDB("fr");
 		}
+		m_interdb = new InteractionsDb();
+		if (m_interdb.loadDBFromPath(m_application_data_folder + "\\" + DEFAULT_INTERACTION_DB_BASE + appLanguage() + ".db")==0) {
+			System.out.println("Loading default interactions database");
+			if (appLanguage().equals("de"))
+				m_interdb.loadDB("de");
+			else if (appLanguage().equals("fr"))
+				m_interdb.loadDB("fr");
+		}
+		
 		// UIUtils.setPreferredLookAndFeel();
 		NativeInterface.open();
 		NativeSwing.initialize();
@@ -517,7 +529,7 @@ public class AMiKoDesk {
 		        	// JList theList = (JList) mouseEvent.getSource();
 		        	if (mouseEvent.getClickCount() == 1) {
 		        		int index = list.locationToIndex(mouseEvent.getPoint());
-		        		if (index >= 0 && mouseEvent.getX()<32) {
+		        		if (index>=0 && mouseEvent.getX()<32) {
 		        			// Note: extracts a String... could be optimized to an array of ints in the future!
 		        			String regnrs = med_search.get(index).getRegnrs();
 		        			if (favorite_meds_set.contains(regnrs))
@@ -580,7 +592,13 @@ public class AMiKoDesk {
 		public void valueChanged(ListSelectionEvent e) {
 			if (!e.getValueIsAdjusting()) {
 				med_index = list.getSelectedIndex();
-				m_web_panel.updateText();
+				if (!m_seek_interactions) {
+					// Display Fachinfos in the web panel
+					m_web_panel.updateText();
+				} else {
+					// Display interactions in the web panel
+					
+				}
 			}
 		}
 		
@@ -1265,6 +1283,7 @@ public class AMiKoDesk {
 		toolBar.setPreferredSize(new Dimension(jframe.getWidth(), 64));
 		final JToggleButton selectAipsButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"aips32x32_bright.png"));
 		final JToggleButton selectFavoritesButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"favorites32x32_bright.png"));
+		final JToggleButton selectInteractionsButton = new JToggleButton(new ImageIcon(IMG_FOLDER+"interactions32x32_bright.png"));
 		
 		selectAipsButton.setVerticalTextPosition(SwingConstants.BOTTOM);
 	    selectAipsButton.setHorizontalTextPosition(SwingConstants.CENTER);
@@ -1280,19 +1299,30 @@ public class AMiKoDesk {
 		selectFavoritesButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"favorites32x32_dark.png"));
 		selectFavoritesButton.setBackground(new Color(240,240,240));
 		selectFavoritesButton.setToolTipText("Favorites");
+		selectInteractionsButton.setVerticalTextPosition(SwingConstants.BOTTOM);
+	    selectInteractionsButton.setHorizontalTextPosition(SwingConstants.CENTER);
+		selectInteractionsButton.setText("Interactions");
+		selectInteractionsButton.setRolloverIcon(new ImageIcon(IMG_FOLDER+"interactions32x32_gray.png"));
+		selectInteractionsButton.setSelectedIcon(new ImageIcon(IMG_FOLDER+"interactions32x32_dark.png"));
+		selectInteractionsButton.setBackground(new Color(240,240,240));
+		selectInteractionsButton.setToolTipText("Interactions");
 
 		// Remove border
 		Border emptyBorder = BorderFactory.createEmptyBorder();
 		selectAipsButton.setBorder(emptyBorder);
 		selectFavoritesButton.setBorder(emptyBorder);
+		selectInteractionsButton.setBorder(emptyBorder);
 		// Set adequate size
 		selectAipsButton.setPreferredSize(new Dimension(32,32));
 		selectFavoritesButton.setPreferredSize(new Dimension(32,32));
+		selectInteractionsButton.setPreferredSize(new Dimension(32,32));
 		// Add to toolbar and set up
 		toolBar.setBackground(new Color(240,240,240));
 		toolBar.add(selectAipsButton);
 		toolBar.addSeparator();
 		toolBar.add(selectFavoritesButton);
+		toolBar.addSeparator();
+		toolBar.add(selectInteractionsButton);
 		toolBar.setRollover(true);
 		toolBar.setFloatable(false);
 		// Progress indicator (not working...)
@@ -1715,7 +1745,9 @@ public class AMiKoDesk {
 			public void actionPerformed(ActionEvent event) {
 				selectAipsButton.setSelected(true);
 				selectFavoritesButton.setSelected(false);
+				selectInteractionsButton.setSelected(false);
 				m_database_used = "aips";
+				m_seek_interactions = false;
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();
 				
@@ -1732,7 +1764,9 @@ public class AMiKoDesk {
 			public void actionPerformed(ActionEvent event) {
 				selectAipsButton.setSelected(false);
 				selectFavoritesButton.setSelected(true);
+				selectInteractionsButton.setSelected(false);
 				m_database_used = "favorites";
+				m_seek_interactions = false;
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();
 				
@@ -1758,7 +1792,26 @@ public class AMiKoDesk {
 						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");				
 			}
 		});
-						
+		selectInteractionsButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				selectAipsButton.setSelected(false);
+				selectFavoritesButton.setSelected(false);
+				selectInteractionsButton.setSelected(true);
+				m_database_used = "aips";
+				m_seek_interactions = true;
+				m_start_time = System.currentTimeMillis();
+				// m_query_str = searchField.getText();
+				
+				med_search = m_sqldb.searchTitle("");
+				sTitle("");	// Used instead of sTitle (which is slow)
+				cardl.show(p_results, final_title);	
+
+				m_status_label.setText(med_search.size() + " Suchresultate in " + 
+						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
+			}
+		});
+		
 		// ------ Add keylistener to text field (type as you go feature) ------
 		searchField.addKeyListener(new KeyAdapter() {
 			@Override

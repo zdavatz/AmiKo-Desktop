@@ -162,15 +162,15 @@ public class SqlDatabase {
 				return 0;
 			}
 		} catch (SQLException e ) {
-			System.err.println(">> SqlDatabase: SQLException in loadDB!");
+			System.err.println(">> SqlDatabase: SQLException in loadDBFromPath!");
 			return 0;
 		} catch (ClassNotFoundException e) {
-			System.err.println(">> SqlDatabase: ClassNotFoundException in loadDB!");
+			System.err.println(">> SqlDatabase: ClassNotFoundException in loadDBFromPath!");
 			return 0;
 		}
 		return 1;
 	}
-	
+		
 	/**
 	 * Copy file from src to dst
 	 * @param src_file
