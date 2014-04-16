@@ -70,9 +70,11 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Scanner;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -165,6 +167,7 @@ public class AMiKoDesk {
 	private static List<Medication> med_search = new ArrayList<Medication>();
 	private static List<Medication> med_title = new ArrayList<Medication>();
 	private static List<Medication> list_of_favorites = new ArrayList<Medication>();
+	private static Map<String, Medication> m_med_basket = new TreeMap<String, Medication>();
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
 	private static String m_database_used = "aips";
@@ -596,8 +599,7 @@ public class AMiKoDesk {
 					// Display Fachinfos in the web panel
 					m_web_panel.updateText();
 				} else {
-					// Display interactions in the web panel
-					
+					m_web_panel.updateInteractions();
 				}
 			}
 		}
@@ -836,6 +838,49 @@ public class AMiKoDesk {
 				}
 				
 				jWeb.setVisible(true);
+			}
+		}
+		
+		public void updateInteractions() {
+			// Display interactions in the web panel
+			if (med_index>=0) {
+				// Get medication which was clicked on...
+				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
+				// Add med to basket if not already in basket 
+				if (!m_med_basket.containsKey(m.getTitle()))
+					m_med_basket.put(m.getTitle(), m);				
+				// Redisplay selected meds
+				String basket_html_str = "";
+				String interactions_html_str = "";
+				String atc_code1 = "";
+				String atc_code2 = "";
+				String[] m_code = null;
+				int med_counter = 1;
+				for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
+					m_code = entry1.getValue().getAtcCode().split(";");
+					if (m_code.length>1) {
+						atc_code1 = m_code[0];
+					}
+					basket_html_str += ( med_counter + " - " + entry1.getKey() + " / " + entry1.getValue().getAtcCode() + "<br>");
+					if (med_counter>1) {
+						for (Map.Entry<String, Medication> entry2 : m_med_basket.entrySet()) {
+							m_code = entry2.getValue().getAtcCode().split(";");
+							if (m_code.length>1) {
+								atc_code2 = m_code[0];
+								if (atc_code1!=null && atc_code2!=null && atc_code1!=atc_code2) {				
+									// Get html interaction content from interaction database
+									List<String> interactions = m_interdb.searchATC(atc_code1, atc_code2);
+									for (String inter : interactions) {
+										interactions_html_str += (inter + "<br><br>");
+									}
+								}
+							}
+						}
+					}
+					med_counter++;					
+				}
+				
+				jWeb.setHTMLContent(basket_html_str + "<br>" + interactions_html_str);
 			}
 		}
 		
