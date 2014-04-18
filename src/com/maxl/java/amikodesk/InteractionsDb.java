@@ -101,7 +101,6 @@ public class InteractionsDb {
 			String query = "select " + SHORT_TABLE + " from " + INTERACTIONS_DB_TABLE + " where " 
 					+ KEY_ATC1 + " like " + "'%" + atccode1 + "%' and "
 					+ KEY_ATC2 + " like " + "'%" + atccode2 + "%'";
-			System.out.println(query);
 			m_rs = m_stat.executeQuery(query);
 			while (m_rs.next()) {
 				// Adds content strings to list

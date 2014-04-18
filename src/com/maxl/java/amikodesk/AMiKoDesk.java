@@ -135,6 +135,7 @@ import chrriis.dj.nativeswing.NSComponentOptions;
 import chrriis.dj.nativeswing.NativeSwing;
 import chrriis.dj.nativeswing.swtimpl.NativeInterface;
 import chrriis.dj.nativeswing.swtimpl.components.JWebBrowser;
+import chrriis.dj.nativeswing.swtimpl.components.WebBrowserFunction;
 
 public class AMiKoDesk {
 	
@@ -162,6 +163,8 @@ public class AMiKoDesk {
 	private static final String IMG_FOLDER = "./images/";	
 	private static final String HTML_FILES = "./fis/fi_de_html/";
 	private static final String CSS_SHEET = "./css/amiko_stylesheet.css";
+	private static final String INTERACTIONS_SHEET = "./css/interactions_css.css";
+	private static final String JS_FOLDER = "./jscripts/";
 	private static List<String> med_content = new ArrayList<String>();
 	private static List<Long> med_id = new ArrayList<Long>();
 	private static List<Medication> med_search = new ArrayList<Medication>();
@@ -189,6 +192,8 @@ public class AMiKoDesk {
 	private static IndexPanel m_section_titles = null;
 	private static WebPanel2 m_web_panel = null;
 	private static String m_css_str = null;
+	private static String m_css_interactions_str = null;
+	private static String m_js_deleterow_str = null;
 	private static String m_query_str = null;
 	private static SqlDatabase m_sqldb = null;
 	private static InteractionsDb m_interdb = null;
@@ -372,7 +377,11 @@ public class AMiKoDesk {
 		}
 		// Load css style sheet
 		m_css_str = "<style>" + readFromFile(CSS_SHEET) + "</style>";
-
+		// Load interactions css style sheet
+		m_css_interactions_str = "<style>" + readFromFile(INTERACTIONS_SHEET) + "</style>";
+		// Load delete row javascript
+		m_js_deleterow_str = readFromFile(JS_FOLDER + "deleterow.js");
+		
 		m_sqldb = new SqlDatabase();
 		// Attempt to load alternative database. if db does not exist, load default database
 		// These databases are NEVER zipped!
@@ -599,7 +608,7 @@ public class AMiKoDesk {
 					// Display Fachinfos in the web panel
 					m_web_panel.updateText();
 				} else {
-					m_web_panel.updateInteractions();
+					m_web_panel.doInteractions();
 				}
 			}
 		}
@@ -736,23 +745,42 @@ public class AMiKoDesk {
 		
 		private JWebBrowser jWeb = null;
 		private StringBuffer content_str = null;
+		private TitledBorder titledBorder = null;
+		private JPanel webBrowserPanel = null;
 		
 		public WebPanel2() {
 			// YET another mega-hack ;)
 			super(new BorderLayout());
-			JPanel webBrowserPanel = new JPanel(new BorderLayout());
+			webBrowserPanel = new JPanel(new BorderLayout());
 			if (appLanguage().equals("de")) {				
-		        TitledBorder titledBorder = BorderFactory.createTitledBorder(null, "Fachinformation", 
+		        titledBorder = BorderFactory.createTitledBorder(null, "Fachinformation", 
 		        		TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, 
 		        		new Font("Dialog", Font.PLAIN, 14));
 				webBrowserPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));			
 			} else if (appLanguage().equals("fr")) {
-		        TitledBorder titledBorder = BorderFactory.createTitledBorder(null, "Notice Infopro", 
+		        titledBorder = BorderFactory.createTitledBorder(null, "Notice Infopro", 
 		        		TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, 
 		        		new Font("Dialog", Font.PLAIN, 14));
 				webBrowserPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));
 			}
 			jWeb = new JWebBrowser(NSComponentOptions.destroyOnFinalization());
+			
+			/**
+			 * Add function called by javascript
+			 * This trick fools JWebBrowser lack of javascript return values (kinda cumbersome...)
+			 */
+			jWeb.registerFunction(new WebBrowserFunction("invokeJava") {
+				@Override
+				public Object invoke(JWebBrowser webBrowser, Object... args) {
+					// int row = (int)Float.parseFloat(args[0].toString());
+					String row_key = args[0].toString().trim();
+					System.out.println(getName() + " -> key = " + row_key + " / num rows = " + args[1]);
+					m_med_basket.remove(row_key);
+					m_web_panel.updateInteractionHtml();
+					return "true";
+				}
+			});
+
 			/*
 			JWebBrowserWindow jWebWindow = WebBrowserWindowFactory.create(jWeb);
 			jWebWindow.setBarsVisible(false);
@@ -763,6 +791,11 @@ public class AMiKoDesk {
 			// ---> jWeb.setPreferredSize(new Dimension(640, 600));
 			// jWeb.setBorder(BorderFactory.createLineBorder(Color.GRAY));			
 			add(webBrowserPanel, BorderLayout.CENTER);
+		}
+		
+		public void setTitle(String title) {
+			titledBorder.setTitle(title);
+			webBrowserPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));				
 		}
 		
 		public void moveToAnchor(String anchor) {	
@@ -841,46 +874,79 @@ public class AMiKoDesk {
 			}
 		}
 		
-		public void updateInteractions() {
-			// Display interactions in the web panel
-			if (med_index>=0) {
-				// Get medication which was clicked on...
-				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
-				// Add med to basket if not already in basket 
-				if (!m_med_basket.containsKey(m.getTitle()))
-					m_med_basket.put(m.getTitle(), m);				
-				// Redisplay selected meds
-				String basket_html_str = "";
-				String interactions_html_str = "";
-				String atc_code1 = "";
-				String atc_code2 = "";
-				String[] m_code = null;
-				int med_counter = 1;
+		public void updateInteractionHtml() {
+			// Redisplay selected meds
+			String basket_html_str = "<table id=\"dataTable\" width=\"100%25\">";
+			String interactions_html_str = "";
+			String atc_code1 = "";
+			String atc_code2 = "";
+			String name1 = "";
+			String[] m_code1 = null;
+			String[] m_code2 = null;
+			int med_counter = 1;
+			
+			// Build interaction basket table
+			for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
+				m_code1 = entry1.getValue().getAtcCode().split(";");
+				atc_code1 = "k.A.";
+				name1 = "k.A.";
+				if (m_code1.length>1) {
+					atc_code1 = m_code1[0];
+					name1 = m_code1[1];
+				}
+				basket_html_str += "<tr>";
+				basket_html_str += "<td>" + med_counter + "</td>"
+						+ "<td>" + entry1.getKey() + " </td> " 
+						+ "<td>" + atc_code1 + "</td>"
+						+ "<td>" + name1 + "</td>"
+						+ "<td>" + "<input type=\"button\" value=\"löschen\" onclick=\"deleteRow('dataTable',this)\" />" + "</td>";
+				basket_html_str += "</tr>";
+				med_counter++;					
+			}								
+			basket_html_str += "</table>";
+			
+			// Build list of interactions 
+			if (med_counter>1) {
 				for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
-					m_code = entry1.getValue().getAtcCode().split(";");
-					if (m_code.length>1) {
-						atc_code1 = m_code[0];
-					}
-					basket_html_str += ( med_counter + " - " + entry1.getKey() + " / " + entry1.getValue().getAtcCode() + "<br>");
-					if (med_counter>1) {
+					m_code1 = entry1.getValue().getAtcCode().split(";");
+					if (m_code1.length>1) {
+						atc_code1 = m_code1[0];
 						for (Map.Entry<String, Medication> entry2 : m_med_basket.entrySet()) {
-							m_code = entry2.getValue().getAtcCode().split(";");
-							if (m_code.length>1) {
-								atc_code2 = m_code[0];
-								if (atc_code1!=null && atc_code2!=null && atc_code1!=atc_code2) {				
+							m_code2 = entry2.getValue().getAtcCode().split(";");
+							if (m_code2.length>1) {
+								atc_code2 = m_code2[0];
+								if (atc_code1!=null && atc_code2!=null && !atc_code1.equals(atc_code2)) {				
 									// Get html interaction content from interaction database
 									List<String> interactions = m_interdb.searchATC(atc_code1, atc_code2);
 									for (String inter : interactions) {
-										interactions_html_str += (inter + "<br><br>");
+										interactions_html_str += (inter + "");
 									}
 								}
 							}
 						}
 					}
-					med_counter++;					
 				}
-				
-				jWeb.setHTMLContent(basket_html_str + "<br>" + interactions_html_str);
+			}				
+			
+			String jscript_str = "<script> language=\"javascript\">" + m_js_deleterow_str + "</script>";
+			String html_str = "<html><head>" + jscript_str + m_css_interactions_str + "</head><body><div id=\"interactions\">" 
+					+ basket_html_str + "<br>"	+ interactions_html_str + "</body></div></html>";
+			
+			jWeb.setJavascriptEnabled(true);
+			jWeb.setHTMLContent(html_str);
+			jWeb.setVisible(true);
+		}
+		
+		public void doInteractions() {
+			// Display interactions in the web panel
+			if (med_index>=0) {
+				// Get medication which was clicked on...
+				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
+				// Add med to basket if not already in basket 
+				String title = m.getTitle().trim();
+				if (!m_med_basket.containsKey(title));
+					m_med_basket.put(title, m);
+				updateInteractionHtml();
 			}
 		}
 		
@@ -1793,9 +1859,14 @@ public class AMiKoDesk {
 				selectInteractionsButton.setSelected(false);
 				m_database_used = "aips";
 				m_seek_interactions = false;
-				m_start_time = System.currentTimeMillis();
-				// m_query_str = searchField.getText();
+				// Set right panel title
+				if (appLanguage().equals("de"))
+					m_web_panel.setTitle("Fachinformation");
+				else if (appLanguage().equals("fr"))
+					m_web_panel.setTitle("Notice Infopro");
 				
+				m_start_time = System.currentTimeMillis();
+				// m_query_str = searchField.getText();				
 				med_search = m_sqldb.searchTitle("");
 				sTitle("");	// Used instead of sTitle (which is slow)
 				cardl.show(p_results, final_title);	
@@ -1812,9 +1883,14 @@ public class AMiKoDesk {
 				selectInteractionsButton.setSelected(false);
 				m_database_used = "favorites";
 				m_seek_interactions = false;
-				m_start_time = System.currentTimeMillis();
-				// m_query_str = searchField.getText();
+				// Set right panel title
+				if (appLanguage().equals("de"))
+					m_web_panel.setTitle("Fachinformation");
+				else if (appLanguage().equals("fr"))
+					m_web_panel.setTitle("Notice Infopro");
 				
+				m_start_time = System.currentTimeMillis();
+				// m_query_str = searchField.getText();				
 				// Clear the search container
 				med_search.clear();
 				for (String regnr : favorite_meds_set) {
@@ -1845,9 +1921,14 @@ public class AMiKoDesk {
 				selectInteractionsButton.setSelected(true);
 				m_database_used = "aips";
 				m_seek_interactions = true;
-				m_start_time = System.currentTimeMillis();
-				// m_query_str = searchField.getText();
+				// Set right panel title
+				if (appLanguage().equals("de"))
+					m_web_panel.setTitle("Interaktionen");
+				else if (appLanguage().equals("fr"))
+					m_web_panel.setTitle("Interactions");
 				
+				m_start_time = System.currentTimeMillis();
+				// m_query_str = searchField.getText();				
 				med_search = m_sqldb.searchTitle("");
 				sTitle("");	// Used instead of sTitle (which is slow)
 				cardl.show(p_results, final_title);	
