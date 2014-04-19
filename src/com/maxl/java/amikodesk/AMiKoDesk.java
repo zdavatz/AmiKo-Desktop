@@ -798,7 +798,9 @@ public class AMiKoDesk {
 			webBrowserPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));				
 		}
 		
-		public void moveToAnchor(String anchor) {	
+		public void moveToAnchor(String anchor) {
+			anchor = anchor.replaceAll("<html>", "").replaceAll("</html>", "").replaceAll("&rarr;", "-");
+			System.out.println(anchor);
 			jWeb.executeJavascript("document.getElementById('" + anchor + "').scrollIntoView(true);");
 		}
 		
@@ -899,13 +901,14 @@ public class AMiKoDesk {
 						+ "<td>" + entry1.getKey() + " </td> " 
 						+ "<td>" + atc_code1 + "</td>"
 						+ "<td>" + name1 + "</td>"
-						+ "<td>" + "<input type=\"button\" value=\"löschen\" onclick=\"deleteRow('dataTable',this)\" />" + "</td>";
+						+ "<td align=\"right\">" + "<input type=\"button\" value=\"löschen\" onclick=\"deleteRow('dataTable',this)\" />" + "</td>";
 				basket_html_str += "</tr>";
 				med_counter++;					
 			}								
 			basket_html_str += "</table>";
 			
-			// Build list of interactions 
+			// Build list of interactions
+			m_section_str = new ArrayList<String>();
 			if (med_counter>1) {
 				for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
 					m_code1 = entry1.getValue().getAtcCode().split(";");
@@ -917,9 +920,14 @@ public class AMiKoDesk {
 								atc_code2 = m_code2[0];
 								if (atc_code1!=null && atc_code2!=null && !atc_code1.equals(atc_code2)) {				
 									// Get html interaction content from interaction database
-									List<String> interactions = m_interdb.searchATC(atc_code1, atc_code2);
+									List<String> interactions = m_interdb.searchATC(atc_code1, atc_code2);									
 									for (String inter : interactions) {
+										inter = inter.replaceAll(atc_code1, entry1.getKey());
+										inter = inter.replaceAll(atc_code2, entry2.getKey());
 										interactions_html_str += (inter + "");
+										// Add title to section title list
+										if (!inter.isEmpty())
+											m_section_str.add("<html>" + entry1.getKey() + " &rarr; " + entry2.getKey() + "</html>");
 									}
 								}
 							}
@@ -932,6 +940,11 @@ public class AMiKoDesk {
 			String html_str = "<html><head>" + jscript_str + m_css_interactions_str + "</head><body><div id=\"interactions\">" 
 					+ basket_html_str + "<br>"	+ interactions_html_str + "</body></div></html>";
 			
+			// Update section titles
+			String[] titles = m_section_str.toArray(new String[m_section_str.size()]);
+			m_section_titles.updatePanel(titles);
+
+			// Update html
 			jWeb.setJavascriptEnabled(true);
 			jWeb.setHTMLContent(html_str);
 			jWeb.setVisible(true);
@@ -944,9 +957,12 @@ public class AMiKoDesk {
 				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
 				// Add med to basket if not already in basket 
 				String title = m.getTitle().trim();
-				if (!m_med_basket.containsKey(title));
+				if (title.length()>40)
+					title = title.substring(0, 40) +"...";
+				if (!m_med_basket.containsKey(title)) {
 					m_med_basket.put(title, m);
-				updateInteractionHtml();
+					updateInteractionHtml();
+				}
 			}
 		}
 		
@@ -1926,6 +1942,7 @@ public class AMiKoDesk {
 					m_web_panel.setTitle("Interaktionen");
 				else if (appLanguage().equals("fr"))
 					m_web_panel.setTitle("Interactions");
+				m_web_panel.doInteractions();
 				
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();				
