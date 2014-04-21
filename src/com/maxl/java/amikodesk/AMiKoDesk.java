@@ -774,8 +774,11 @@ public class AMiKoDesk {
 				public Object invoke(JWebBrowser webBrowser, Object... args) {
 					// int row = (int)Float.parseFloat(args[0].toString());
 					String row_key = args[0].toString().trim();
-					System.out.println(getName() + " -> key = " + row_key + " / num rows = " + args[1]);
-					m_med_basket.remove(row_key);
+					// System.out.println(getName() + " -> key = " + row_key + " / num rows = " + args[1]);
+					if (row_key.equals("Delete all"))
+						m_med_basket.clear();
+					else
+						m_med_basket.remove(row_key);
 					m_web_panel.updateInteractionHtml();
 					return "true";
 				}
@@ -878,8 +881,10 @@ public class AMiKoDesk {
 		
 		public void updateInteractionHtml() {
 			// Redisplay selected meds
-			String basket_html_str = "<table id=\"dataTable\" width=\"100%25\">";
+			String basket_html_str = "<table id=\"Medikamentenkorb\" width=\"100%25\">";
+			String delete_all_button_str = "";
 			String interactions_html_str = "";
+			String note_html_str = "";
 			String atc_code1 = "";
 			String atc_code2 = "";
 			String name1 = "";
@@ -888,36 +893,47 @@ public class AMiKoDesk {
 			int med_counter = 1;
 			
 			// Build interaction basket table
-			for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
-				m_code1 = entry1.getValue().getAtcCode().split(";");
-				atc_code1 = "k.A.";
-				name1 = "k.A.";
-				if (m_code1.length>1) {
-					atc_code1 = m_code1[0];
-					name1 = m_code1[1];
+			if (m_med_basket.size()>0) {
+				for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
+					m_code1 = entry1.getValue().getAtcCode().split(";");
+					atc_code1 = "k.A.";
+					name1 = "k.A.";
+					if (m_code1.length>1) {
+						atc_code1 = m_code1[0];
+						name1 = m_code1[1];
+					}
+					basket_html_str += "<tr>";
+					basket_html_str += "<td>" + med_counter + "</td>"
+							+ "<td>" + entry1.getKey() + " </td> " 
+							+ "<td>" + atc_code1 + "</td>"
+							+ "<td>" + name1 + "</td>"
+							+ "<td align=\"right\">" + "<input type=\"button\" value=\"löschen\" onclick=\"deleteRow('Medikamentenkorb',this)\" />" + "</td>";
+					basket_html_str += "</tr>";
+					med_counter++;					
 				}
-				basket_html_str += "<tr>";
-				basket_html_str += "<td>" + med_counter + "</td>"
-						+ "<td>" + entry1.getKey() + " </td> " 
-						+ "<td>" + atc_code1 + "</td>"
-						+ "<td>" + name1 + "</td>"
-						+ "<td align=\"right\">" + "<input type=\"button\" value=\"löschen\" onclick=\"deleteRow('dataTable',this)\" />" + "</td>";
-				basket_html_str += "</tr>";
-				med_counter++;					
-			}								
-			basket_html_str += "</table>";
+				basket_html_str += "</table>";
+				// Medikamentenkorb löschen
+				delete_all_button_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"alle löschen\" onclick=\"deleteRow('Delete_all',this)\" /></div>";				
+			} else {
+				// Medikamentenkorb ist leer
+				basket_html_str = "<div>Medikamentenkorb ist leer.<br><br></div>";
+			}
 			
 			// Build list of interactions
 			m_section_str = new ArrayList<String>();
+			// Add table to section titles
+			m_section_str.add("Medikamentenkorb");
 			if (med_counter>1) {
 				for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
 					m_code1 = entry1.getValue().getAtcCode().split(";");
 					if (m_code1.length>1) {
-						atc_code1 = m_code1[0];
+						// Get ATC code of first drug, make sure to get the first in the list (the second one is not used)
+						atc_code1 = m_code1[0].split(",")[0];
 						for (Map.Entry<String, Medication> entry2 : m_med_basket.entrySet()) {
 							m_code2 = entry2.getValue().getAtcCode().split(";");
 							if (m_code2.length>1) {
-								atc_code2 = m_code2[0];
+								// Get ATC code of second drug
+								atc_code2 = m_code2[0];						
 								if (atc_code1!=null && atc_code2!=null && !atc_code1.equals(atc_code2)) {				
 									// Get html interaction content from interaction database
 									List<String> interactions = m_interdb.searchATC(atc_code1, atc_code2);									
@@ -934,11 +950,17 @@ public class AMiKoDesk {
 						}
 					}
 				}
-			}				
+			}
+			
+			// Add note
+			note_html_str += "<p class=\"footnote\">1. Werden keine Interaktionen angezeigt, sind z.Z. keine Interaktionen bekannt.</p> " +
+					"<p class=\"footnote\">2. Datenquelle: Public Domain Daten von EPha.ch.</p> " +
+					"<p class=\"footnote\">3. Unterstützt durch:  IBSA Institut Biochimique SA.</p>";
 			
 			String jscript_str = "<script> language=\"javascript\">" + m_js_deleterow_str + "</script>";
 			String html_str = "<html><head>" + jscript_str + m_css_interactions_str + "</head><body><div id=\"interactions\">" 
-					+ basket_html_str + "<br>"	+ interactions_html_str + "</body></div></html>";
+					+ basket_html_str + delete_all_button_str + "<br><br>" 
+					+ interactions_html_str + "<br>"	+ note_html_str + "</body></div></html>";
 			
 			// Update section titles
 			String[] titles = m_section_str.toArray(new String[m_section_str.size()]);
@@ -959,10 +981,9 @@ public class AMiKoDesk {
 				String title = m.getTitle().trim();
 				if (title.length()>40)
 					title = title.substring(0, 40) +"...";
-				if (!m_med_basket.containsKey(title)) {
+				if (!m_med_basket.containsKey(title))
 					m_med_basket.put(title, m);
-					updateInteractionHtml();
-				}
+				updateInteractionHtml();
 			}
 		}
 		
