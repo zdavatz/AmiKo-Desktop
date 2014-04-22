@@ -188,7 +188,7 @@ public class AMiKoDesk {
 		"Conduite", "Effets indésir.", "Surdosage", "Propriétés/Effets", "Cinétique", "Préclinique", 
 		"Remarques", "Numéro d'autorisation", "Présentation", "Titulaire", "Mise à jour"};	
 	
-	private static int med_index = 0;
+	private static int med_index = -1;
 	private static IndexPanel m_section_titles = null;
 	private static WebPanel2 m_web_panel = null;
 	private static String m_css_str = null;
@@ -916,7 +916,7 @@ public class AMiKoDesk {
 				delete_all_button_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"alle löschen\" onclick=\"deleteRow('Delete_all',this)\" /></div>";				
 			} else {
 				// Medikamentenkorb ist leer
-				basket_html_str = "<div>Medikamentenkorb ist leer.<br><br></div>";
+				basket_html_str = "<div>Ihr Medikamentenkorb ist leer.<br><br></div>";
 			}
 			
 			// Build list of interactions
@@ -976,14 +976,17 @@ public class AMiKoDesk {
 			// Display interactions in the web panel
 			if (med_index>=0) {
 				// Get medication which was clicked on...
-				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
+				Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
 				// Add med to basket if not already in basket 
 				String title = m.getTitle().trim();
-				if (title.length()>40)
-					title = title.substring(0, 40) +"...";
+				if (title.length()>30)
+					title = title.substring(0, 30) +"...";
 				if (!m_med_basket.containsKey(title))
 					m_med_basket.put(title, m);
 				updateInteractionHtml();
+			} else {
+				// Medikamentenkorb ist leer
+				updateInteractionHtml();				
 			}
 		}
 		
@@ -1020,8 +1023,10 @@ public class AMiKoDesk {
 		}
 		
 		public void updateText() {
-			jText.setText(med_content.get(med_index));
-			jText.setCaretPosition(0);
+			if (med_index>=0) {
+				jText.setText(med_content.get(med_index));
+				jText.setCaretPosition(0);
+			}
 		}
 	}	
 	
@@ -1057,8 +1062,10 @@ public class AMiKoDesk {
 		}
 		
 		public void updateText() {
-			jep.setText(med_content.get(med_index));
-			jep.setCaretPosition(0);
+			if (med_index>=0) {
+				jep.setText(med_content.get(med_index));
+				jep.setCaretPosition(0);
+			}
 		}
 	}
 	
@@ -1903,13 +1910,15 @@ public class AMiKoDesk {
 					m_web_panel.setTitle("Notice Infopro");
 				
 				m_start_time = System.currentTimeMillis();
-				// m_query_str = searchField.getText();				
-				med_search = m_sqldb.searchTitle("");
+				m_query_str = searchField.getText();				
+				med_search = m_sqldb.searchTitle(m_query_str);
 				sTitle("");	// Used instead of sTitle (which is slow)
 				cardl.show(p_results, final_title);	
 
 				m_status_label.setText(med_search.size() + " Suchresultate in " + 
 						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
+
+				m_web_panel.updateText();
 			}
 		});
 		selectFavoritesButton.addActionListener(new ActionListener() {
@@ -1945,9 +1954,9 @@ public class AMiKoDesk {
 				
 				sTitle("");		// "" argument unused
 				cardl.show(p_results, final_title);
-
+			
 				m_status_label.setText(med_search.size() + " Suchresultate in " + 
-						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");				
+						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
 			}
 		});
 		selectInteractionsButton.addActionListener(new ActionListener() {
@@ -1963,16 +1972,8 @@ public class AMiKoDesk {
 					m_web_panel.setTitle("Interaktionen");
 				else if (appLanguage().equals("fr"))
 					m_web_panel.setTitle("Interactions");
+				// Switch to interaction mode
 				m_web_panel.doInteractions();
-				
-				m_start_time = System.currentTimeMillis();
-				// m_query_str = searchField.getText();				
-				med_search = m_sqldb.searchTitle("");
-				sTitle("");	// Used instead of sTitle (which is slow)
-				cardl.show(p_results, final_title);	
-
-				m_status_label.setText(med_search.size() + " Suchresultate in " + 
-						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
 			}
 		});
 		
