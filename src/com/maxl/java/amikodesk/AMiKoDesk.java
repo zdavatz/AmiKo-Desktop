@@ -160,6 +160,7 @@ public class AMiKoDesk {
 	private static final String DEFAULT_AMIKO_DB_BASE = "amiko_db_full_idx_";
 	private static final String DEFAULT_AMIKO_REPORT_BASE = "amiko_report_";
 	private static final String DEFAULT_INTERACTION_DB_BASE = "drug_interactions_idx_";
+	private static final String DEFAULT_INTERACTION_CSV_BASE = "drug_interactions_csv_";
 	private static final String IMG_FOLDER = "./images/";	
 	private static final String HTML_FILES = "./fis/fi_de_html/";
 	private static final String CSS_SHEET = "./css/amiko_stylesheet.css";
@@ -196,7 +197,8 @@ public class AMiKoDesk {
 	private static String m_js_deleterow_str = null;
 	private static String m_query_str = null;
 	private static SqlDatabase m_sqldb = null;
-	private static InteractionsDb m_interdb = null;
+	// private static InteractionsDb m_interdb = null;
+	private static Map<String, String> m_interactions_map = null;
 	private static List<String> m_section_str = null;
 	private static String m_application_data_folder = null;
 	
@@ -382,6 +384,7 @@ public class AMiKoDesk {
 		// Load delete row javascript
 		m_js_deleterow_str = readFromFile(JS_FOLDER + "deleterow.js");
 		
+		// Load main database
 		m_sqldb = new SqlDatabase();
 		// Attempt to load alternative database. if db does not exist, load default database
 		// These databases are NEVER zipped!
@@ -392,6 +395,8 @@ public class AMiKoDesk {
 			else if (appLanguage().equals("fr"))
 				m_sqldb.loadDB("fr");
 		}
+		// Load drug interaction sqlite database
+		/*
 		m_interdb = new InteractionsDb();
 		if (m_interdb.loadDBFromPath(m_application_data_folder + "\\" + DEFAULT_INTERACTION_DB_BASE + appLanguage() + ".db")==0) {
 			System.out.println("Loading default interactions database");
@@ -400,7 +405,13 @@ public class AMiKoDesk {
 			else if (appLanguage().equals("fr"))
 				m_interdb.loadDB("fr");
 		}
-		
+		*/
+		// Load drug interactions csv file 
+		m_interactions_map = readFromCsvToMap(m_application_data_folder + "\\" + DEFAULT_INTERACTION_CSV_BASE + appLanguage() + ".csv");
+		if (m_interactions_map==null) {
+			System.out.println("Loading default drug interactions csv file");
+			m_interactions_map = readFromCsvToMap("./dbs/" + DEFAULT_INTERACTION_CSV_BASE + appLanguage() + ".csv");
+		}
 		// UIUtils.setPreferredLookAndFeel();
 		NativeInterface.open();
 		NativeSwing.initialize();
@@ -803,7 +814,7 @@ public class AMiKoDesk {
 		
 		public void moveToAnchor(String anchor) {
 			anchor = anchor.replaceAll("<html>", "").replaceAll("</html>", "").replaceAll("&rarr;", "-");
-			System.out.println(anchor);
+			// System.out.println(anchor);
 			jWeb.executeJavascript("document.getElementById('" + anchor + "').scrollIntoView(true);");
 		}
 		
@@ -881,17 +892,18 @@ public class AMiKoDesk {
 		
 		public void updateInteractionHtml() {
 			// Redisplay selected meds
-			String basket_html_str = "<table id=\"Medikamentenkorb\" width=\"100%25\">";
+			String basket_html_str = "<table id=\"Interaktionen\" width=\"100%25\">";
 			String delete_all_button_str = "";
 			String interactions_html_str = "";
-			String note_html_str = "";
+			String top_note_html_str = "";
+			String bottom_note_html_str = "";
 			String atc_code1 = "";
 			String atc_code2 = "";
 			String name1 = "";
 			String[] m_code1 = null;
 			String[] m_code2 = null;
 			int med_counter = 1;
-			
+						
 			// Build interaction basket table
 			if (m_med_basket.size()>0) {
 				for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
@@ -907,7 +919,7 @@ public class AMiKoDesk {
 							+ "<td>" + entry1.getKey() + " </td> " 
 							+ "<td>" + atc_code1 + "</td>"
 							+ "<td>" + name1 + "</td>"
-							+ "<td align=\"right\">" + "<input type=\"button\" value=\"löschen\" onclick=\"deleteRow('Medikamentenkorb',this)\" />" + "</td>";
+							+ "<td align=\"right\">" + "<input type=\"button\" value=\"löschen\" onclick=\"deleteRow('Interaktionen',this)\" />" + "</td>";
 					basket_html_str += "</tr>";
 					med_counter++;					
 				}
@@ -919,10 +931,12 @@ public class AMiKoDesk {
 				basket_html_str = "<div>Ihr Medikamentenkorb ist leer.<br><br></div>";
 			}
 			
+			m_start_time = System.currentTimeMillis();
+			
 			// Build list of interactions
 			m_section_str = new ArrayList<String>();
 			// Add table to section titles
-			m_section_str.add("Medikamentenkorb");
+			m_section_str.add("Interaktionen");
 			if (med_counter>1) {
 				for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
 					m_code1 = entry1.getValue().getAtcCode().split(";");
@@ -934,9 +948,20 @@ public class AMiKoDesk {
 							if (m_code2.length>1) {
 								// Get ATC code of second drug
 								atc_code2 = m_code2[0];						
-								if (atc_code1!=null && atc_code2!=null && !atc_code1.equals(atc_code2)) {				
+								if (atc_code1!=null && atc_code2!=null && !atc_code1.equals(atc_code2)) {
+									// Get html interaction content from drug interactions map
+									String inter = m_interactions_map.get(atc_code1 + "-" + atc_code2);
+									if (inter!=null) {
+										inter = inter.replaceAll(atc_code1, entry1.getKey());
+										inter = inter.replaceAll(atc_code2, entry2.getKey());
+										interactions_html_str += (inter + "");
+										// Add title to section title list
+										if (!inter.isEmpty())
+											m_section_str.add("<html>" + entry1.getKey() + " &rarr; " + entry2.getKey() + "</html>");
+									}
+									/*
 									// Get html interaction content from interaction database
-									List<String> interactions = m_interdb.searchATC(atc_code1, atc_code2);									
+									List<String> interactions = m_interdb.searchATC(atc_code1, atc_code2);
 									for (String inter : interactions) {
 										inter = inter.replaceAll(atc_code1, entry1.getKey());
 										inter = inter.replaceAll(atc_code2, entry2.getKey());
@@ -945,6 +970,7 @@ public class AMiKoDesk {
 										if (!inter.isEmpty())
 											m_section_str.add("<html>" + entry1.getKey() + " &rarr; " + entry2.getKey() + "</html>");
 									}
+									*/
 								}
 							}
 						}
@@ -952,15 +978,18 @@ public class AMiKoDesk {
 				}
 			}
 			
+			// System.out.println("Search time = " + (System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
+			
 			// Add note
-			note_html_str += "<p class=\"footnote\">1. Werden keine Interaktionen angezeigt, sind z.Z. keine Interaktionen bekannt.</p> " +
-					"<p class=\"footnote\">2. Datenquelle: Public Domain Daten von EPha.ch.</p> " +
-					"<p class=\"footnote\">3. Unterstützt durch:  IBSA Institut Biochimique SA.</p>";
+			if (m_med_basket.size()>0 && m_section_str.size()<2)
+				top_note_html_str = "<p class=\"paragraph0\">Werden keine Interaktionen angezeigt, sind z.Z. keine Interaktionen bekannt.</p><br><br>";
+			bottom_note_html_str += "<p class=\"footnote\">1. Datenquelle: Public Domain Daten von EPha.ch.</p> " +
+					"<p class=\"footnote\">2. Unterstützt durch:  IBSA Institut Biochimique SA.</p>";
 			
 			String jscript_str = "<script> language=\"javascript\">" + m_js_deleterow_str + "</script>";
 			String html_str = "<html><head>" + jscript_str + m_css_interactions_str + "</head><body><div id=\"interactions\">" 
-					+ basket_html_str + delete_all_button_str + "<br><br>" 
-					+ interactions_html_str + "<br>"	+ note_html_str + "</body></div></html>";
+					+ basket_html_str + delete_all_button_str + "<br><br>" + top_note_html_str
+					+ interactions_html_str + "<br>" + bottom_note_html_str + "</body></div></html>";
 			
 			// Update section titles
 			String[] titles = m_section_str.toArray(new String[m_section_str.size()]);
@@ -1969,9 +1998,9 @@ public class AMiKoDesk {
 				m_seek_interactions = true;
 				// Set right panel title
 				if (appLanguage().equals("de"))
-					m_web_panel.setTitle("Interaktionen");
+					m_web_panel.setTitle("Medikamentenkorb");
 				else if (appLanguage().equals("fr"))
-					m_web_panel.setTitle("Interactions");
+					m_web_panel.setTitle("Médicaments sélectionnées");
 				// Switch to interaction mode
 				m_web_panel.doInteractions();
 			}
@@ -2268,7 +2297,7 @@ public class AMiKoDesk {
 		List<String> m = new ArrayList<String>();
 		Pattern p_red = Pattern.compile(".*O]");
 		Pattern p_green = Pattern.compile(".*G]");
-		if (med_search.size() < BigCellNumber) {
+		if (med_search.size()<BigCellNumber && !m_seek_interactions) {
 			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
 				String pack_info_str = "";
@@ -2449,6 +2478,27 @@ public class AMiKoDesk {
         }
         
 		return file_str;	
+	}
+	
+	static Map<String,String> readFromCsvToMap(String filename) {
+		Map<String, String> map = new TreeMap<String, String>();
+		try {
+			File file = new File(filename);
+			if (!file.exists()) 
+				return null;
+			FileInputStream fis = new FileInputStream(filename);
+			BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+			String line;
+			while ((line = br.readLine()) != null) {
+				String token[] = line.split("\\|\\|");
+				map.put(token[0] + "-" + token[1], token[2]);
+			}
+			br.close();
+		} catch (Exception e) {
+			System.err.println(">> Error in reading csv file");
+		}
+		
+		return map;
 	}
 	
 	static void writeToFile(String string_to_write, String dir_name, String file_name) 
