@@ -32,11 +32,13 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -249,7 +251,7 @@ public class SqlDatabase {
 		String drug_interactions_unzipped = app_folder + "\\drug_interactions_csv_de.csv";
 		String db_url = "http://pillbox.oddb.org/amiko_db_full_idx_de.zip";
 		String report_url = "http://pillbox.oddb.org/amiko_report_de.html";
-		String drug_interactions_url = "http://pillbox.oddb.org/drug_interactions_csv_de.csv";
+		String drug_interactions_url = "http://pillbox.oddb.org/drug_interactions_csv_de.zip";
 		// ... works also for "fr"
 		if (db_lang.equals("fr")) {
 			db_unzipped = app_folder + "\\amiko_db_full_idx_fr.db";
@@ -257,7 +259,7 @@ public class SqlDatabase {
 			drug_interactions_unzipped = app_folder + "\\drug_interactions_csv_fr.csv";
 			db_url = "http://pillbox.oddb.org/amiko_db_full_idx_fr.zip";
 			report_url = "http://pillbox.oddb.org/amiko_report_fr.html";
-			drug_interactions_url = "http://pillbox.oddb.org/drug_interactions_csv_fr.csv";
+			drug_interactions_url = "http://pillbox.oddb.org/drug_interactions_csv_fr.zip";
 		}
 		
 		m_app_lang = db_lang;
@@ -304,7 +306,7 @@ public class SqlDatabase {
 	    
 	    public DownloadDialog(String databaseURL, String reportURL, String drugInteractionsURL,
 	    		String amikoReport, String unzippedDB, String drugInteractionsUnzipped) {
-	    	progressBar.setPreferredSize(new Dimension(480, 30));
+	    	progressBar.setPreferredSize(new Dimension(640, 30));
 	    	progressBar.setStringPainted(true);			
 			progressBar.setValue(0);	    	
 
@@ -594,13 +596,25 @@ public class SqlDatabase {
 	    	        Image img = icon.getImage();
 	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
 	    		    icon = new ImageIcon(scaled_img);
+	    		    // Get number of interactions in interaction database
+	    		    int numInteractions = getNumLinesInFile(mDrugInteractions.getAbsolutePath());
 	    		    // Display friendly message
-	    		    if (m_app_lang.equals("de")) {
-	    		    	mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos " +
-	    		    			"erfolgreich geladen!");
-	    		    } else if (m_app_lang.equals("fr")) {
-	    		    	mDialog.getLabel().setText("Nouvelle base de données avec " + getNumRecords() + " notice infopro " +
-	    		    			"chargée avec succès!");
+	    		    if (numInteractions>0) {
+		    		    if (m_app_lang.equals("de")) {
+		    		    	mDialog.getLabel().setText("<html>Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos und "
+		    		    			+ numInteractions + " Interaktionen erfolgreich geladen!</html>");
+		    		    } else if (m_app_lang.equals("fr")) {
+		    		    	mDialog.getLabel().setText("<html>Nouvelle base de données avec " + getNumRecords() + " notice infopro et "
+		    		    			+ numInteractions + " interactions chargée avec succès!</html>");
+		    		    }
+	    		    } else {
+		    		    if (m_app_lang.equals("de")) {
+		    		    	mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + getNumRecords() + " Fachinfos "
+		    		    			+ "erfolgreich geladen!");
+		    		    } else if (m_app_lang.equals("fr")) {
+		    		    	mDialog.getLabel().setText("Nouvelle base de données avec " + getNumRecords() + " notice infopro"
+		    		    			+ " chargée avec succès!");
+		    		    }
 	    		    }
 	    		    // Notify to GUI, update database 		    
 	    		    notifyObserver(db_file);
@@ -890,6 +904,21 @@ public class SqlDatabase {
         }
     }
 	
+    public int getNumLinesInFile(String filename) {
+		try {
+	    	FileInputStream fstream = new FileInputStream(filename);
+	    	BufferedReader br = new BufferedReader(new InputStreamReader(fstream));
+	    	int count = 0;
+	    	while (br.readLine()!=null) 
+	    		count++;
+	    	br.close();
+	    	return count;
+		} catch(IOException e) {
+    		e.printStackTrace();
+    		return 0;
+    	}
+    }
+    
 	public int getNumRecords() {
 		int num_rec = 0;
 		

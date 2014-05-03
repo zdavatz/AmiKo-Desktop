@@ -813,7 +813,7 @@ public class AMiKoDesk {
 		}
 		
 		public void moveToAnchor(String anchor) {
-			anchor = anchor.replaceAll("<html>", "").replaceAll("</html>", "").replaceAll("&rarr;", "-");
+			anchor = anchor.replaceAll("<html>", "").replaceAll("</html>", "").replaceAll(" &rarr; ", "-");	// Spaces before and after of &rarr; are important...
 			// System.out.println(anchor);
 			jWeb.executeJavascript("document.getElementById('" + anchor + "').scrollIntoView(true);");
 		}
@@ -890,12 +890,49 @@ public class AMiKoDesk {
 			}
 		}
 		
+		private String addColorLegend() {
+			String legend;
+		    /*
+		     Risikoklassen
+		     -------------
+			     A: Keine Massnahmen notwendig (grün)
+			     B: Vorsichtsmassnahmen empfohlen (gelb)
+			     C: Regelmässige Überwachung (orange)
+			     D: Kombination vermeiden (pinky)
+			     X: Kontraindiziert (hellrot)
+			     0: Keine Angaben (grau)
+		    */
+			legend = "<table id=\"Legende\" width=\"100%25\">";
+			legend += "<tr><td bgcolor=\"#caff70\"></td>" +
+					"<td>A</td>" +
+					"<td>Keine Massnahmen notwendig</td></tr>";
+			legend += "<tr><td bgcolor=\"#ffec8b\"></td>" +
+					"<td>B</td>" +
+					"<td>Vorsichtsmassnahmen empfohlen</td></tr>";
+			legend += "<tr><td bgcolor=\"#ffb90f\"></td>" +
+					"<td>C</td>" +
+					"<td>Regelmässige Überwachung</td></tr>";
+			legend += "<tr><td bgcolor=\"#ff82ab\"></td>" +
+					"<td>D</td>" +
+					"<td>Kombination vermeiden</td></tr>";
+			legend += "<tr><td bgcolor=\"#ff6a6a\"></td>" +
+					"<td>X</td>" +
+					"<td>Kontraindiziert</td></tr>";		
+			legend += "<tr><td bgcolor=\"#dddddd\"></td>" +
+					"<td>0</td>" +
+					"<td>Keine Angaben</td></tr>";				
+			legend += "</table>";
+			
+			return legend;
+		}
+		
 		public void updateInteractionHtml() {
 			// Redisplay selected meds
 			String basket_html_str = "<table id=\"Interaktionen\" width=\"100%25\">";
 			String delete_all_button_str = "";
 			String interactions_html_str = "";
 			String top_note_html_str = "";
+			String legend_html_str = "";
 			String bottom_note_html_str = "";
 			String atc_code1 = "";
 			String atc_code2 = "";
@@ -930,9 +967,7 @@ public class AMiKoDesk {
 				// Medikamentenkorb ist leer
 				basket_html_str = "<div>Ihr Medikamentenkorb ist leer.<br><br></div>";
 			}
-			
-			m_start_time = System.currentTimeMillis();
-			
+
 			// Build list of interactions
 			m_section_str = new ArrayList<String>();
 			// Add table to section titles
@@ -978,18 +1013,22 @@ public class AMiKoDesk {
 				}
 			}
 			
-			// System.out.println("Search time = " + (System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
-			
-			// Add note
-			if (m_med_basket.size()>0 && m_section_str.size()<2)
-				top_note_html_str = "<p class=\"paragraph0\">Werden keine Interaktionen angezeigt, sind z.Z. keine Interaktionen bekannt.</p><br><br>";
+			if (m_med_basket.size()>0 && m_section_str.size()<2) {
+				// Add note to indicate that there are no interactions
+				top_note_html_str = "<p class=\"paragraph0\">Werden keine Interaktionen angezeigt, sind z.Z. keine Interaktionen bekannt.</p><br><br>";			
+			} else if (m_med_basket.size()>0 && m_section_str.size()>1) {
+				// Add color legend
+				legend_html_str = addColorLegend();				
+				// Add legend to section titles
+				m_section_str.add("Legende");	
+			}
 			bottom_note_html_str += "<p class=\"footnote\">1. Datenquelle: Public Domain Daten von EPha.ch.</p> " +
 					"<p class=\"footnote\">2. Unterstützt durch:  IBSA Institut Biochimique SA.</p>";
 			
 			String jscript_str = "<script> language=\"javascript\">" + m_js_deleterow_str + "</script>";
-			String html_str = "<html><head>" + jscript_str + m_css_interactions_str + "</head><body><div id=\"interactions\">" 
+			String html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_interactions_str + "</head><body><div id=\"interactions\">" 
 					+ basket_html_str + delete_all_button_str + "<br><br>" + top_note_html_str
-					+ interactions_html_str + "<br>" + bottom_note_html_str + "</body></div></html>";
+					+ interactions_html_str + "<br>" + legend_html_str + "<br>" + bottom_note_html_str + "</body></div></html>";
 			
 			// Update section titles
 			String[] titles = m_section_str.toArray(new String[m_section_str.size()]);
@@ -2487,7 +2526,7 @@ public class AMiKoDesk {
 			if (!file.exists()) 
 				return null;
 			FileInputStream fis = new FileInputStream(filename);
-			BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+			BufferedReader br = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
 			String line;
 			while ((line = br.readLine()) != null) {
 				String token[] = line.split("\\|\\|");
