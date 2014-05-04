@@ -103,6 +103,7 @@ import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -582,6 +583,7 @@ public class AMiKoDesk {
 			
 			// Add the list to a scrolling panel
 			jscroll = new JScrollPane(list);
+			jscroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 			listPanel.add(jscroll, BorderLayout.CENTER);
 			add(listPanel, BorderLayout.CENTER);
 			
@@ -902,7 +904,7 @@ public class AMiKoDesk {
 			     X: Kontraindiziert (hellrot)
 			     0: Keine Angaben (grau)
 		    */
-			legend = "<table id=\"Legende\" width=\"100%25\">";
+			legend = "<table id=\"Legende\" width=\"98%25\">";
 			legend += "<tr><td bgcolor=\"#caff70\"></td>" +
 					"<td>A</td>" +
 					"<td>Keine Massnahmen notwendig</td></tr>";
@@ -928,7 +930,7 @@ public class AMiKoDesk {
 		
 		public void updateInteractionHtml() {
 			// Redisplay selected meds
-			String basket_html_str = "<table id=\"Interaktionen\" width=\"100%25\">";
+			String basket_html_str = "<table id=\"Interaktionen\" width=\"98%25\">";
 			String delete_all_button_str = "";
 			String interactions_html_str = "";
 			String top_note_html_str = "";
