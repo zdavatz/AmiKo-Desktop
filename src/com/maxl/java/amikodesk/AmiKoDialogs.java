@@ -88,11 +88,7 @@ public class AmiKoDialogs extends JDialog {
 			if (mAppLang.equals("de")) {
 				app_text = "Arzneimittel-Kompendium für Windows<br>";
 				if (mAppCustom.equals("ywesee")) {
-					app_text = 
-					sponsoring = "<br>" +
-							"<br><a href=\"\">AmiKo / CoMed</a>" +
-							"<br>Arzneimittel-Kompendium für Android" +
-							"<br>";
+					app_text = "Arzneimittel-Kompendium für Windows<br>";					
 				} else if (mAppCustom.equals("desitin")) {
 					sponsoring = "<br>" +
 							"<br>Unterstützt durch Desitin Pharma GmbH" +
@@ -116,10 +112,7 @@ public class AmiKoDialogs extends JDialog {
 			} else if (mAppLang.equals("fr")) {
 				app_text = "Compendium des Médicaments Suisse pour Windows<br>";
 				if (mAppCustom.equals("ywesee")) {
-					sponsoring = "<br>" +
-							"<br><a href=\"\">AmiKo / CoMed</a>" +
-							"<br>Compedium des Médicaments pour Android" +
-							"<br>";
+					app_text = "Compendium des Médicaments Suisse pour Windows<br>";
 				} else if (mAppCustom.equals("desitin")) {
 					sponsoring = "<br>" +
 							"<br>Supporteé par Desitin Pharma GmbH" +

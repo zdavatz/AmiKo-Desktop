@@ -1019,7 +1019,11 @@ public class SqlDatabase {
 					+ KEY_ATCCODE + " like " + "'" + atccode + "%' or "
 					+ KEY_ATCCODE + " like " + "'% " + atccode + "%' or "
 					+ KEY_ATCCLASS + " like " + "'" + atccode + "%' or "
-					+ KEY_ATCCLASS + " like " + "'%;" + atccode + "%'";
+					+ KEY_ATCCLASS + " like " + "'%;" + atccode + "%' or "
+					+ KEY_ATCCLASS + " like " + "'%#" + atccode + "%' or "
+					+ KEY_SUBSTANCES + " like " + "'%, " + atccode + "%' or "
+					+ KEY_SUBSTANCES + " like " + "'" + atccode + "%'";					
+
 			m_rs = m_stat.executeQuery(query);
 			while (m_rs.next()) {
 				med_atccode.add(cursorToShortMedi(m_rs));

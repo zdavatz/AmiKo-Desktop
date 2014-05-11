@@ -919,10 +919,12 @@ public class AMiKoDesk {
 					"<td>Kombination vermeiden</td></tr>";
 			legend += "<tr><td bgcolor=\"#ff6a6a\"></td>" +
 					"<td>X</td>" +
-					"<td>Kontraindiziert</td></tr>";		
+					"<td>Kontraindiziert</td></tr>";
+			/*
 			legend += "<tr><td bgcolor=\"#dddddd\"></td>" +
 					"<td>0</td>" +
 					"<td>Keine Angaben</td></tr>";				
+			*/
 			legend += "</table>";
 			
 			return legend;
@@ -1466,7 +1468,7 @@ public class AMiKoDesk {
 				ywesee_item.setText("med-drugs sur Internet");
 			else
 				ywesee_item.setText(Constants.APP_NAME + " sur Internet");
-			report_item.setText("Error Report");
+			report_item.setText("Rapport d'erreur");
 			// Extrawunsch med-drugs
 			if (appCustomization().equals("meddrugs"))
 				about_item.setText(Constants.APP_NAME);
@@ -1776,7 +1778,7 @@ public class AMiKoDesk {
 		// Names
 		String l_title = "Präparat";
 		String l_author = "Inhaberin";
-		String l_atccode = "ATC Code";
+		String l_atccode = "Wirkstoff / ATC Code";
 		String l_regnr = "Zulassungsnummer";
 		String l_ingredient = "Wirkstoff";
 		String l_therapy = "Therapie";
@@ -1785,7 +1787,7 @@ public class AMiKoDesk {
 		if (appLanguage().equals("fr")) {
 			l_title = "Spécialité";
 			l_author = "Titulaire";
-			l_atccode = "Code ATC";
+			l_atccode = "Principe Active / Code ATC";
 			l_regnr = "Nombre Enregistration";
 			l_ingredient = "Principe Active";
 			l_therapy = "Thérapie";
@@ -1840,6 +1842,7 @@ public class AMiKoDesk {
 		// --> container.add(but_regnr, gbc);
 		left_panel.add(but_regnr, gbc);
 		
+		/*
 		JButton but_ingredients = new JButton(l_ingredient);
 		but_ingredients.setBackground(m_but_color);		
 		but_ingredients.setBorder(new CompoundBorder(
@@ -1851,6 +1854,7 @@ public class AMiKoDesk {
 		gbc.weightx = gbc.weighty = 0.0;
 		// --> container.add(but_ingredients, gbc);	
 		left_panel.add(but_ingredients, gbc);
+		*/
 		
 		JButton but_therapy = new JButton(l_therapy);
 		but_therapy.setBackground(m_but_color);		
@@ -2147,6 +2151,7 @@ public class AMiKoDesk {
 				cardl.show(p_results, final_regnr);
 			}
 		});
+		/*
 		but_ingredients.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
@@ -2156,6 +2161,7 @@ public class AMiKoDesk {
 				cardl.show(p_results, final_ingredient);
 			}
 		});
+		*/
 		but_therapy.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
@@ -2407,12 +2413,21 @@ public class AMiKoDesk {
 				
 				String[] m_class = ms.getAtcClass().split(";");			
 				String atc_class_str = "";
-				if (m_class.length==2)
+				if (m_class.length==2) {			// *** Ver.<1.2.4
 					atc_class_str = m_class[1];
-				else if (m_class.length==3)
-					atc_class_str = m_class[2];
-				m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
-					+ atc_title_str + "<br>" + atc_class_str + "</font></html>");
+					m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
+							+ atc_title_str + "<br>" + atc_class_str + "</font></html>");					
+				} else if (m_class.length==3)	{ 	// *** Ver. 1.2.4 and above
+					atc_class_str = "";
+					String[] atc_class_l4_and_l5 = m_class[2].split("#");
+					if (atc_class_l4_and_l5.length>0)
+						atc_class_str = atc_class_l4_and_l5[atc_class_l4_and_l5.length-1];
+					m.add("<html><b>" + ms.getTitle() + "</b><br>"
+							+ "<font color=gray size=-1>" + atc_code_str + " - " + atc_title_str + "<br>" 
+							+ atc_class_str + "<br>" 
+							+ m_class[1] + "</font></html>");					
+				} 
+				
 				med_id.add(ms.getId());
 			}
 		} else {
