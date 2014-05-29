@@ -29,5 +29,5 @@ public class Constants {
 	// public static final String APP_NAME = AMIKO_ZURROSE_NAME;
 	// public static final String APP_NAME = COMED_ZURROSE_NAME;
 	public static final String APP_VERSION = "1.2.4 (32-bit)";	
-	public static final String GEN_DATE = "09.05.2014";	
+	public static final String GEN_DATE = "16.05.2014";	
 }

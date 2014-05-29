@@ -893,7 +893,7 @@ public class AMiKoDesk {
 		}
 		
 		private String addColorLegend() {
-			String legend;
+			String legend = "<table id=\"Legende\" width=\"98%25\">";
 		    /*
 		     Risikoklassen
 		     -------------
@@ -904,22 +904,42 @@ public class AMiKoDesk {
 			     X: Kontraindiziert (hellrot)
 			     0: Keine Angaben (grau)
 		    */
-			legend = "<table id=\"Legende\" width=\"98%25\">";
-			legend += "<tr><td bgcolor=\"#caff70\"></td>" +
-					"<td>A</td>" +
-					"<td>Keine Massnahmen notwendig</td></tr>";
-			legend += "<tr><td bgcolor=\"#ffec8b\"></td>" +
-					"<td>B</td>" +
-					"<td>Vorsichtsmassnahmen empfohlen</td></tr>";
-			legend += "<tr><td bgcolor=\"#ffb90f\"></td>" +
-					"<td>C</td>" +
-					"<td>Regelmässige Überwachung</td></tr>";
-			legend += "<tr><td bgcolor=\"#ff82ab\"></td>" +
-					"<td>D</td>" +
-					"<td>Kombination vermeiden</td></tr>";
-			legend += "<tr><td bgcolor=\"#ff6a6a\"></td>" +
-					"<td>X</td>" +
-					"<td>Kontraindiziert</td></tr>";
+			// Sets the anchor
+			if (appLanguage().equals("de")) {
+				legend = "<table id=\"Legende\" width=\"98%25\">";
+				legend += "<tr><td bgcolor=\"#caff70\"></td>" +
+						"<td>A</td>" +
+						"<td>Keine Massnahmen notwendig</td></tr>";
+				legend += "<tr><td bgcolor=\"#ffec8b\"></td>" +
+						"<td>B</td>" +
+						"<td>Vorsichtsmassnahmen empfohlen</td></tr>";
+				legend += "<tr><td bgcolor=\"#ffb90f\"></td>" +
+						"<td>C</td>" +
+						"<td>Regelmässige Überwachung</td></tr>";
+				legend += "<tr><td bgcolor=\"#ff82ab\"></td>" +
+						"<td>D</td>" +
+						"<td>Kombination vermeiden</td></tr>";
+				legend += "<tr><td bgcolor=\"#ff6a6a\"></td>" +
+						"<td>X</td>" +
+						"<td>Kontraindiziert</td></tr>";				
+			} else if (appLanguage().equals("fr")) {
+				legend = "<table id=\"Légende\" width=\"98%25\">";
+				legend += "<tr><td bgcolor=\"#caff70\"></td>" +
+						"<td>A</td>" +
+						"<td>Aucune mesure nécessaire</td></tr>";
+				legend += "<tr><td bgcolor=\"#ffec8b\"></td>" +
+						"<td>B</td>" +
+						"<td>Mesures de précaution sont recommandées</td></tr>";
+				legend += "<tr><td bgcolor=\"#ffb90f\"></td>" +
+						"<td>C</td>" +
+						"<td>Doit être régulièrement surveillée</td></tr>";
+				legend += "<tr><td bgcolor=\"#ff82ab\"></td>" +
+						"<td>D</td>" +
+						"<td>Eviter la combinaison</td></tr>";
+				legend += "<tr><td bgcolor=\"#ff6a6a\"></td>" +
+						"<td>X</td>" +
+						"<td>Contre-indiquée</td></tr>";								
+			}
 			/*
 			legend += "<tr><td bgcolor=\"#dddddd\"></td>" +
 					"<td>0</td>" +
@@ -941,10 +961,20 @@ public class AMiKoDesk {
 			String atc_code1 = "";
 			String atc_code2 = "";
 			String name1 = "";
+			String delete_text = "löschen";
+			String delete_all_text = "alle löschen";
 			String[] m_code1 = null;
 			String[] m_code2 = null;
 			int med_counter = 1;
-						
+
+			if (appLanguage().equals("de")) {
+				delete_text = "löschen";
+				delete_all_text = "alle löschen";
+			} else if (appLanguage().equals("fr")) {
+				delete_text = "annuler";
+				delete_all_text = "tout supprimer";
+			}
+			
 			// Build interaction basket table
 			if (m_med_basket.size()>0) {
 				for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
@@ -960,22 +990,28 @@ public class AMiKoDesk {
 							+ "<td>" + entry1.getKey() + " </td> " 
 							+ "<td>" + atc_code1 + "</td>"
 							+ "<td>" + name1 + "</td>"
-							+ "<td align=\"right\">" + "<input type=\"button\" value=\"löschen\" onclick=\"deleteRow('Interaktionen',this)\" />" + "</td>";
+							+ "<td align=\"right\">" + "<input type=\"button\" value=\"" + delete_text + "\" onclick=\"deleteRow('Interaktionen',this)\" />" + "</td>";
 					basket_html_str += "</tr>";
 					med_counter++;					
 				}
 				basket_html_str += "</table>";
 				// Medikamentenkorb löschen
-				delete_all_button_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"alle löschen\" onclick=\"deleteRow('Delete_all',this)\" /></div>";				
+				delete_all_button_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"" + delete_all_text + "\" onclick=\"deleteRow('Delete_all',this)\" /></div>";				
 			} else {
 				// Medikamentenkorb ist leer
-				basket_html_str = "<div>Ihr Medikamentenkorb ist leer.<br><br></div>";
+				if (appLanguage().equals("de"))
+					basket_html_str = "<div>Ihr Medikamentenkorb ist leer.<br><br></div>";
+				else if (appLanguage().equals("fr"))
+					basket_html_str = "<div>Votre panier de médicaments est vide.<br><br></div>";
 			}
 
 			// Build list of interactions
 			m_section_str = new ArrayList<String>();
 			// Add table to section titles
-			m_section_str.add("Interaktionen");
+			if (appLanguage().equals("de"))
+				m_section_str.add("Interaktionen");
+			else if (appLanguage().equals("fr"))
+				m_section_str.add("Interactions");
 			if (med_counter>1) {
 				for (Map.Entry<String, Medication> entry1 : m_med_basket.entrySet()) {
 					m_code1 = entry1.getValue().getAtcCode().split(";");
@@ -1019,16 +1055,26 @@ public class AMiKoDesk {
 			
 			if (m_med_basket.size()>0 && m_section_str.size()<2) {
 				// Add note to indicate that there are no interactions
-				top_note_html_str = "<p class=\"paragraph0\">Werden keine Interaktionen angezeigt, sind z.Z. keine Interaktionen bekannt.</p><br><br>";			
+				if (appLanguage().equals("de"))
+					top_note_html_str = "<p class=\"paragraph0\">Werden keine Interaktionen angezeigt, sind z.Z. keine Interaktionen bekannt.</p><br><br>";
+				else if (appLanguage().equals("fr"))
+					top_note_html_str = "<p class=\"paragraph0\">Si aucune interaction n'est mentionnée, aucun interaction n'est actuellement connue.</p><br><br>";
 			} else if (m_med_basket.size()>0 && m_section_str.size()>1) {
 				// Add color legend
 				legend_html_str = addColorLegend();				
 				// Add legend to section titles
-				m_section_str.add("Legende");	
+				if (appLanguage().equals("de"))
+					m_section_str.add("Legende");
+				else if (appLanguage().equals("fr"))
+					m_section_str.add("Légende");
 			}
-			bottom_note_html_str += "<p class=\"footnote\">1. Datenquelle: Public Domain Daten von EPha.ch.</p> " +
+			if (appLanguage().equals("de")) {
+				bottom_note_html_str += "<p class=\"footnote\">1. Datenquelle: Public Domain Daten von EPha.ch.</p> " +
 					"<p class=\"footnote\">2. Unterstützt durch:  IBSA Institut Biochimique SA.</p>";
-			
+			} else if (appLanguage().equals("fr")) {
+				bottom_note_html_str += "<p class=\"footnote\">1. Source des données: données du domaine publique de EPha.ch</p> " +
+					"<p class=\"footnote\">2. Soutenu par: IBSA Institut Biochimique SA.</p>";
+			}
 			String jscript_str = "<script> language=\"javascript\">" + m_js_deleterow_str + "</script>";
 			String html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_interactions_str + "</head><body><div id=\"interactions\">" 
 					+ basket_html_str + delete_all_button_str + "<br><br>" + top_note_html_str
