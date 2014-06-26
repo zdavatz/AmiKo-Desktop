@@ -1056,9 +1056,9 @@ public class AMiKoDesk {
 			if (m_med_basket.size()>0 && m_section_str.size()<2) {
 				// Add note to indicate that there are no interactions
 				if (appLanguage().equals("de"))
-					top_note_html_str = "<p class=\"paragraph0\">Werden keine Interaktionen angezeigt, sind z.Z. keine Interaktionen bekannt.</p><br><br>";
+					top_note_html_str = "<p class=\"paragraph0\">Zur Zeit sind keine Interaktionen zwischen diesen Medikamenten in der EPha.ch-Datenbank vorhanden. Weitere Informationen finden Sie in der Fachinformation.</p><br><br>";
 				else if (appLanguage().equals("fr"))
-					top_note_html_str = "<p class=\"paragraph0\">Si aucune interaction n'est mentionnée, aucun interaction n'est actuellement connue.</p><br><br>";
+					top_note_html_str = "<p class=\"paragraph0\">Il n’y a aucune information dans la banque de données EPha.ch à propos d’une interaction entre les médicaments sélectionnés. Veuillez consulter les informations professionelles.</p><br><br>";
 			} else if (m_med_basket.size()>0 && m_section_str.size()>1) {
 				// Add color legend
 				legend_html_str = addColorLegend();				
