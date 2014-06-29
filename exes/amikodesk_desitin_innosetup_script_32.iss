@@ -3,7 +3,7 @@
 
 #define MyAppFolder "03_amikodesk_desitin_exe32"
 #define MyAppName "AmiKo Desktop Desitin"
-#define MyVersion "1.2.4"
+#define MyVersion "1.2.5"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "amikodeskdesitin.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"
