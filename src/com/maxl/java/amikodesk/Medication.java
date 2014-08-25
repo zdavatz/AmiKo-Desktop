@@ -36,7 +36,7 @@ public class Medication {
 	private String sectionIds;
 	private String sectionTitles;
 	private String content;
-	private String style_str;
+	private String packages;
 	
 	public long getId() {
 		return this.id;
@@ -166,11 +166,11 @@ public class Medication {
 		this.content = content;
 	}
 	
-	public String getStyle() {
-		return this.style_str;
+	public String getPackages() {
+		return this.packages;
 	}
 	
-	public void setStyle(String style_str) {
-		this.style_str = style_str;
+	public void setPackages(String packages) {
+		this.packages = packages;
 	}
 }

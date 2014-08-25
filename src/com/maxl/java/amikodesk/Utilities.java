@@ -1,9 +1,16 @@
 package com.maxl.java.amikodesk;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CodingErrorAction;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -58,6 +65,25 @@ public class Utilities {
         
 		return file_str;	
 	}	
+
+	static public void writeToFile(String string_to_write, String dir_name, String file_name) 
+			throws IOException {
+	   	File wdir = new File(dir_name);
+	   	if (!wdir.exists())
+	   		wdir.mkdirs();
+		File wfile = new File(dir_name+file_name);
+		if (!wfile.exists())
+			wfile.createNewFile();
+		// FileWriter fw = new FileWriter(wfile.getAbsoluteFile());
+		// Used to be UTF-8 --> does not work (@maxl: 08/Jun/2013)
+	   	CharsetEncoder encoder = Charset.forName("UTF-16").newEncoder();
+	   	encoder.onMalformedInput(CodingErrorAction.REPORT);
+	   	encoder.onUnmappableCharacter(CodingErrorAction.REPORT);
+		OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(wfile.getAbsoluteFile()), encoder);
+		BufferedWriter bw = new BufferedWriter(osw);      			
+		bw.write(string_to_write);
+		bw.close();
+	}		
 	
 	static public Map<String,String> readFromCsvToMap(String filename) {
 		Map<String, String> map = new TreeMap<String, String>();

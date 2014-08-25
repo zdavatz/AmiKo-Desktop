@@ -88,7 +88,7 @@ public class SqlDatabase {
 	public static final String KEY_IDS = "ids_str";
 	public static final String KEY_SECTIONS = "titles_str";
 	public static final String KEY_CONTENT = "content";
-	public static final String KEY_STYLE = "style_str";
+	public static final String KEY_PACKAGES = "packages";
 	
 	private static final String DATABASE_TABLE = "amikodb";
 	
@@ -1202,7 +1202,7 @@ public class SqlDatabase {
 			medi.setSectionIds(result.getString(14));		// KEY_SECTION_IDS
 			medi.setSectionTitles(result.getString(15));	// KEY_SECTION_TITLES
 			medi.setContent(result.getString(16));			// KEY_CONTENT
-			medi.setStyle(result.getString(17));			// KEY_STYLE
+			medi.setPackages(result.getString(17));			// KEY_PACKAGES
 		} catch(SQLException e) {
 			System.err.println(">> SqlDatabase: SQLException in cursorToMedi");
 		}
