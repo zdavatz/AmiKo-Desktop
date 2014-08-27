@@ -19,6 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
+import java.awt.Color;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -36,12 +37,16 @@ import com.itextpdf.text.Element;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.FontFactory;
 import com.itextpdf.text.Image;
+import com.itextpdf.text.PageSize;
 import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.Phrase;
 import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.BarcodeEAN;
+import com.itextpdf.text.pdf.ColumnText;
 import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfPageEventHelper;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.itextpdf.text.pdf.draw.LineSeparator;
 
@@ -52,7 +57,11 @@ public class ShoppingCart {
 	private static String m_js_deleterow_str = null;
 	private static String m_js_generate_str = null;
 	private static String m_css_shopping_cart_str = null;
-	
+		
+	Font font_norm_10 = FontFactory.getFont("Helvetica", 10, Font.NORMAL);
+	Font font_bold_10 = FontFactory.getFont("Helvetica", 10, Font.BOLD);
+	Font font_bold_16 = FontFactory.getFont("Helvetica", 16, Font.BOLD);
+		
 	public ShoppingCart() {
 		// Load delete row javascript
 		m_js_deleterow_str = Utilities.readFromFile(Constants.JS_FOLDER + "deleterow.js");
@@ -61,6 +70,29 @@ public class ShoppingCart {
 		// Load interactions css style sheet
 		m_css_shopping_cart_str = "<style>" + Utilities.readFromFile(Constants.INTERACTIONS_SHEET) + "</style>";
 	}
+
+	/** Inner class to add a header and a footer. */
+    static class HeaderFooter extends PdfPageEventHelper {
+
+        public void onEndPage(PdfWriter writer, Document document) {
+            Rectangle rect = writer.getBoxSize("art");
+            switch(writer.getPageNumber() % 2) {
+                case 0:
+                    ColumnText.showTextAligned(writer.getDirectContent(),
+                        Element.ALIGN_RIGHT, new Phrase("Generiert mit AmiKo. Bestell-Modul gesponsort von IBSA.", 
+                        		FontFactory.getFont("Helvetica", 10, Font.NORMAL)), rect.getRight(), rect.getTop(), 0);
+                    break;
+                case 1:
+                    ColumnText.showTextAligned(writer.getDirectContent(),
+                        Element.ALIGN_LEFT, new Phrase("Generiert mit AmiKo. Bestell-Modul gesponsort von IBSA.",
+                        		FontFactory.getFont("Helvetica", 10, Font.NORMAL)), rect.getLeft(), rect.getTop(), 0);
+                    break;
+            }
+            ColumnText.showTextAligned(writer.getDirectContent(),
+                    Element.ALIGN_CENTER, new Phrase(String.format("Seite %d", writer.getPageNumber())),
+                    (rect.getLeft() + rect.getRight())/2, rect.getBottom()-18, 0);
+        }
+    }	
 	
 	public String updateShoppingCartHtml(Map<String, Article> shopping_basket) {
 		String basket_html_str = "<table id=\"Warenkorb\" width=\"98%25\">";
@@ -84,9 +116,10 @@ public class ShoppingCart {
 		if (m_shopping_basket.size()>0) {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();
+				int quantity = article.getQuantity();
 				basket_html_str += "<tr>";
-				basket_html_str += "<td>" + article.getQuantity() + "</td>"
-						+ "<td>" + article.getPharmaCode() + "</td>"
+				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" min=\"1\" max=\"999\" value=\""+quantity+"\"/ onkeypress=\"changeQuantity('Warenkorb',this)\" />" + "</td>"
+						+ "<td>" + article.getEanCode() + "</td>"
 						+ "<td>" + article.getPackTitle() + "</td>"
 						+ "<td>" + article.getPublicPrice() + "</td>"
 						+ "<td align=\"right\">" + "<input type=\"button\" value=\"" + delete_text + "\" onclick=\"deleteRow('Warenkorb',this)\" />" + "</td>";
@@ -136,14 +169,24 @@ public class ShoppingCart {
 	}
 	
 	public void generatePdf() {
-        Document document = new Document();
+		// marginLeft, marginRight, marginTop, marginBottom
+        Document document = new Document(PageSize.A4, 50, 50, 50, 50);
         try {
         	if (!m_html_str.isEmpty()) {
         		/*
         		String html_str = prettyHtml(createHtml());
         		Utilities.writeToFile(html_str, "", "test.html");
         		*/
-        		PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream("test.pdf"));        		
+        		
+        		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+        		Date date = new Date();
+        		String date_underscores = dateFormat.format(date).replaceAll("[.:]", "").replaceAll(" ", "_");
+        		
+        		PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream("bestellung_" + date_underscores + ".pdf"));        		
+        		writer.setBoxSize("art", new Rectangle(50, 50, 560, 790));
+        		
+        		HeaderFooter event = new HeaderFooter();
+                writer.setPageEvent(event);        		
         		
         		document.open();
         		
@@ -152,20 +195,42 @@ public class ShoppingCart {
         		document.addAuthor("ywesee GmbH");
         		document.addCreator("AmiKo for Windows");
         		
+        		// Logo
         		Image logo = Image.getInstance("./images/desitin_logo.png");
         		logo.scalePercent(30);
         		logo.setAlignment(Rectangle.ALIGN_RIGHT);
         		document.add(logo);        		
-        		
-        		Paragraph p = new Paragraph("Bestellung", FontFactory.getFont("Helvetica", 16, Font.BOLD));
+
+        		// Title
+        		Paragraph p = new Paragraph("Bestellung", font_bold_16);
         		document.add(p);
-        		
-        		DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-        		Date date = new Date();
-        		p = new Paragraph("Datum: " + dateFormat.format(date), FontFactory.getFont("Helvetica", 12, Font.BOLD));
+                
+                // Date
+        		p = new Paragraph("Datum: " + dateFormat.format(date), font_bold_10);
         		document.add(p);
+
         		document.add(Chunk.NEWLINE);
         		
+        		// Bestellt...
+        		p = new Paragraph("Bestellt durch: Dr. Who", font_norm_10);
+        		document.add(p);
+        		
+        		document.add(Chunk.NEWLINE);
+        		
+        		// Add addresses (Lieferadresse + Rechnungsadresse)
+                PdfPTable addressTable = new PdfPTable(new float[] {1,1});
+                addressTable.setWidthPercentage(100f);
+                addressTable.getDefaultCell().setPadding(5);
+                addressTable.setSpacingAfter(5f);
+                addressTable.addCell(getStringCell("Lieferadresse", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+                addressTable.addCell(getStringCell("Rechnungsdresse", font_bold_10,	PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));     		
+                addressTable.addCell(getStringCell("Dr. med. Pippi Langstrumpf\nFantasieweg 123\nCH-8003 Zürich", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+                addressTable.addCell(getStringCell("Dr. med. Pippi Langstrumpf\nFantasieweg 123\nCH-8003 Zürich", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+                document.add(addressTable);
+                
+        		document.add(Chunk.NEWLINE);                
+                
+        		// Add shopping basket
         		document.add(getShoppingBasket(cb));    
         		
         		LineSeparator separator = new LineSeparator();
@@ -187,35 +252,31 @@ public class ShoppingCart {
 	
 	public PdfPTable getShoppingBasket(PdfContentByte cb) {
 		int position = 0;
+		float total_CHF = 0.0f;
+		float rebate_percent = 0.05f;
 
 		BarcodeEAN codeEAN = new BarcodeEAN();
 		
 		// Pos | Menge | Eancode | Bezeichnung | Preis
         PdfPTable table = new PdfPTable(new float[] {1,1,3,6,2});
         table.setWidthPercentage(100f);
+        table.getDefaultCell().setPadding(5);
         table.setSpacingAfter(5f);
         
 		PdfPCell cell = new PdfPCell();	
         
-        table.addCell(getStringCell("Pos", FontFactory.getFont("Helvetica", 12, Font.BOLD), 
-        		Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE));
-		table.addCell(getStringCell("Qty", FontFactory.getFont("Helvetica", 12, Font.BOLD), 
-				Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE));        
-        table.addCell(getStringCell("Ean-Code", FontFactory.getFont("Helvetica", 12, Font.BOLD), 
-        		Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE));        
-        table.addCell(getStringCell("Bezeichnung", FontFactory.getFont("Helvetica", 12, Font.BOLD), 
-        		Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE));        
-        table.addCell(getStringCell("Preis", FontFactory.getFont("Helvetica", 12, Font.BOLD), 
-        		Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE));
+        table.addCell(getStringCell("Pos", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
+		table.addCell(getStringCell("Qty", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell("Ean-Code", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell("Bezeichnung", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell("Preis (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
 		        
         if (m_shopping_basket.size()>0) {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();				
 
-				table.addCell(getStringCell(Integer.toString(++position), FontFactory.getFont("Helvetica"), 
-						PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE));
-				table.addCell(getStringCell(Integer.toString(article.getQuantity()), FontFactory.getFont("Helvetica"), 
-						PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE));
+				table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+				table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
 				
 		        codeEAN.setCode(article.getEanCode());
 		        Image img = codeEAN.createImageWithBarcode(cb, null, null);
@@ -224,26 +285,57 @@ public class ShoppingCart {
 		        cell.setBorder(Rectangle.NO_BORDER);
 		        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
 		        cell.setUseBorderPadding(true);
-		        cell.setBorderWidth(5f);
+		        cell.setBorderWidth(5);
+		        if (position==1)
+		        	cell.setPaddingTop(8);
+		        else
+		        	cell.setPaddingTop(0);
+		        cell.setPaddingBottom(8);
 		        table.addCell(cell);
 		        
-				table.addCell(getStringCell(article.getPackTitle(), FontFactory.getFont("Helvetica"), 
-						PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE));		        
-				table.addCell(getStringCell(article.getPublicPrice(), FontFactory.getFont("Helvetica"), 
-						PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE));
+				table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
+				
+				String price_pruned = article.getPublicPrice().replaceAll("[^\\d.]", "");
+				table.addCell(getStringCell(price_pruned, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));				
+				if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
+					total_CHF += article.getQuantity()*Float.parseFloat(price_pruned);				
 			}
+			
+			table.addCell(getStringCell("Warenwert", font_norm_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_norm_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", total_CHF), font_norm_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));
+
+			table.addCell(getStringCell("Rabatt (" + 100*rebate_percent + "%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("-%.2f", total_CHF*rebate_percent), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
+			
+			float zwischen_total_CHF = total_CHF*(1.0f-rebate_percent);
+
+			table.addCell(getStringCell("Zwischentotal", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));					
+			
+			table.addCell(getStringCell("MwSt (8%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF*0.08f), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
+			
+			table.addCell(getStringCell("Total", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF*1.08f), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
 		}
         return table;
 	}
 	
 	
-	private PdfPCell getStringCell(String str, Font font, int border, int align) {
-		PdfPCell cell = new PdfPCell();
-
-		cell.setBorderWidth(1f);
+	private PdfPCell getStringCell(String str, Font font, int border, int align, int colspan) {
+		PdfPCell cell = new PdfPCell(new Paragraph(str, font));
+		cell.setPaddingTop(5);
+		cell.setPaddingBottom(5);
+		cell.setBorderWidth(1);
 		cell.setBorder(border);
-		cell.setVerticalAlignment(align);
-		cell.addElement(new Paragraph(str, font));
+		cell.setHorizontalAlignment(align);
+		cell.setVerticalAlignment(Element.ALIGN_MIDDLE /*.ALIGN_CENTER*/);
+		cell.setColspan(colspan);
 
 		return cell;
 	}	

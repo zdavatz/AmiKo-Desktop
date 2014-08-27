@@ -641,11 +641,11 @@ public class AMiKoDesk {
 					else {
 						if (sel_index<list_of_articles.size()) {
 							Article article = list_of_articles.get(sel_index);
-							String pharma_code = article.getPharmaCode();
-							if (m_shopping_basket.containsKey(pharma_code)) {
+							String ean_code = article.getEanCode();
+							if (m_shopping_basket.containsKey(ean_code)) {
 								article.incrementQuantity();
 							}
-							m_shopping_basket.put(pharma_code, article);
+							m_shopping_basket.put(ean_code, article);
 							m_web_panel.updateShoppingHtml();
 						}
 					}
@@ -777,8 +777,14 @@ public class AMiKoDesk {
 									m_shopping_cart.generatePdf();
 								}
 							});
-						}
-						else
+						} else if (row_key.equals("ChangeQuantity")) {
+							System.out.println("Changing quantity...");
+							if (m_shopping_basket.containsKey(row_key)) {
+								Article article = m_shopping_basket.get(row_key);
+								article.incrementQuantity();
+								m_shopping_basket.put(row_key, article);
+							}							
+						} else
 							m_shopping_basket.remove(row_key);
 						m_web_panel.updateShoppingHtml();						
 					}
