@@ -54,8 +54,7 @@ public class ShoppingCart {
 	
 	private static Map<String, Article> m_shopping_basket = null;
 	private static String m_html_str = "";
-	private static String m_js_deleterow_str = null;
-	private static String m_js_generate_str = null;
+	private static String m_jscripts_str = null;
 	private static String m_css_shopping_cart_str = null;
 		
 	Font font_norm_10 = FontFactory.getFont("Helvetica", 10, Font.NORMAL);
@@ -63,10 +62,8 @@ public class ShoppingCart {
 	Font font_bold_16 = FontFactory.getFont("Helvetica", 16, Font.BOLD);
 		
 	public ShoppingCart() {
-		// Load delete row javascript
-		m_js_deleterow_str = Utilities.readFromFile(Constants.JS_FOLDER + "deleterow.js");
-		// Load generate javascript
-		m_js_generate_str = Utilities.readFromFile(Constants.JS_FOLDER + "invoke.js");
+		// Load javascripts
+		m_jscripts_str = Utilities.readFromFile(Constants.JS_FOLDER + "shopping_callbacks.js");
 		// Load interactions css style sheet
 		m_css_shopping_cart_str = "<style>" + Utilities.readFromFile(Constants.INTERACTIONS_SHEET) + "</style>";
 	}
@@ -116,17 +113,20 @@ public class ShoppingCart {
 		if (m_shopping_basket.size()>0) {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();
-				int quantity = article.getQuantity();
+				int quantity = article.getQuantity();				
+				String price_pruned = article.getPublicPrice().replaceAll("[^\\d.]", "");
+				float price_CHF = 0.0f;
+				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {
+					price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
+					total_CHF += price_CHF;
+				}
 				basket_html_str += "<tr>";
-				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" min=\"1\" max=\"999\" value=\""+quantity+"\"/ onkeypress=\"changeQuantity('Warenkorb',this)\" />" + "</td>"
+				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" min=\"1\" max=\"999\" value=\""+quantity+"\"/ onkeypress=\"return changeQty('Warenkorb',this)\" />" + "</td>"
 						+ "<td>" + article.getEanCode() + "</td>"
 						+ "<td>" + article.getPackTitle() + "</td>"
-						+ "<td>" + article.getPublicPrice() + "</td>"
+						+ "<td>" + String.format("%.2f",  price_CHF) + "</td>"
 						+ "<td align=\"right\">" + "<input type=\"button\" value=\"" + delete_text + "\" onclick=\"deleteRow('Warenkorb',this)\" />" + "</td>";
 				basket_html_str += "</tr>";
-				String price_pruned = article.getPublicPrice().replaceAll("[^\\d.]", "");
-				if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
-					total_CHF += article.getQuantity()*Float.parseFloat(price_pruned);
 			}
 			basket_html_str += "<tr>"
 					+ "<td></td>"
@@ -151,7 +151,7 @@ public class ShoppingCart {
 			// Warenkorb löschen
 			delete_all_button_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"" + delete_all_text + "\" onclick=\"deleteRow('Delete_all',this)\" /></div>";	
 			// Generate pdf button string
-			generate_pdf_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"" + generate_text + "\" onclick=\"invoke(this)\" /></div>";
+			generate_pdf_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"" + generate_text + "\" onclick=\"createPdf(this)\" /></div>";
 
 		} else {
 			// Warenkorb ist leer
@@ -161,7 +161,7 @@ public class ShoppingCart {
 				basket_html_str = "<div>Votre panier d'achat est vide.<br><br></div>";
 		}
 		
-		String jscript_str = "<script> language=\"javascript\">" + m_js_deleterow_str + m_js_generate_str + "</script>";
+		String jscript_str = "<script> language=\"javascript\">" + m_jscripts_str+ "</script>";
 		m_html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_shopping_cart_str + "</head><body><div id=\"interactions\">" 
 				+ basket_html_str + delete_all_button_str + "<br><br>" + generate_pdf_str + "<br><br>" + "</body></div></html>";		
 		

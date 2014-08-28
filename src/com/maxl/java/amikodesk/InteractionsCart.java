@@ -26,7 +26,7 @@ public class InteractionsCart {
 
 	private static String m_application_data_folder = null;
 	private static Map<String, String> m_interactions_map = null;
-	private static String m_js_deleterow_str = null;
+	private static String m_jscripts_str = null;
 	private static String m_css_interactions_str = null;
 	private static String[] m_section_titles = null;
 	
@@ -37,8 +37,8 @@ public class InteractionsCart {
 			System.out.println("Loading default drug interactions csv file");
 			m_interactions_map = Utilities.readFromCsvToMap("./dbs/" + Constants.DEFAULT_INTERACTION_CSV_BASE + Utilities.appLanguage() + ".csv");
 		}
-		// Load delete row javascript
-		m_js_deleterow_str = Utilities.readFromFile(Constants.JS_FOLDER + "deleterow.js");
+		// Load javascripts
+		m_jscripts_str = Utilities.readFromFile(Constants.JS_FOLDER + "interaction_callbacks.js");
 		// Load interactions css style sheet
 		m_css_interactions_str = "<style>" + Utilities.readFromFile(Constants.INTERACTIONS_SHEET) + "</style>";
 	}
@@ -160,7 +160,7 @@ public class InteractionsCart {
 			bottom_note_html_str += "<p class=\"footnote\">1. Source des données: données du domaine publique de EPha.ch</p> " +
 				"<p class=\"footnote\">2. Soutenu par: IBSA Institut Biochimique SA.</p>";
 		}
-		String jscript_str = "<script> language=\"javascript\">" + m_js_deleterow_str + "</script>";
+		String jscript_str = "<script> language=\"javascript\">" + m_jscripts_str + "</script>";
 		String html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_interactions_str + "</head><body><div id=\"interactions\">" 
 				+ basket_html_str + delete_all_button_str + "<br><br>" + top_note_html_str
 				+ interactions_html_str + "<br>" + legend_html_str + "<br>" + bottom_note_html_str + "</body></div></html>";

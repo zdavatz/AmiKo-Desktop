@@ -10,6 +10,7 @@ public class Article {
 	private String ean_code;
 	private String pharma_code;
 	private int quantity;
+	private int onstock;
 	
 	public Article(String[] entry) {
 		if (entry!=null) {
@@ -122,5 +123,13 @@ public class Article {
 		quantity--;
 		if (quantity<0)
 			quantity = 0;
+	}
+	
+	public void setItemsOnStock(int onstock) {
+		this.onstock = onstock;
+	}
+	
+	public int getItemsOnStock() {
+		return onstock;
 	}
 }

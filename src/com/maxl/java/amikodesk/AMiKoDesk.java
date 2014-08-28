@@ -757,35 +757,38 @@ public class AMiKoDesk {
 			jWeb.registerFunction(new WebBrowserFunction("invokeJava") {
 				@Override
 				public Object invoke(JWebBrowser webBrowser, Object... args) {
-					// int row = (int)Float.parseFloat(args[0].toString());
-					String row_key = args[0].toString().trim();
-					System.out.println(getName() + " -> key = " + row_key + " / num rows = " + args[1]);
+					String msg = args[0].toString().trim();
+					String row_key = args[1].toString().trim();
+					System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
+					// 
 					if (m_seek_interactions) {
-						if (row_key.equals("Delete all"))
+						if (msg.equals("delete_all"))
 							m_med_basket.clear();
-						else
+						else if (msg.equals("delete_row"))
 							m_med_basket.remove(row_key);
 						m_web_panel.updateInteractionsHtml();
 					} else if (m_shopping_mode) {
-						if (row_key.equals("Delete all"))
+						if (msg.equals("delete_all"))
 							m_shopping_basket.clear();
-						else if (row_key.equals("Generate")) {
-							System.out.println("Generate pdf...");
+						else if (msg.equals("create_pdf")) {
 							SwingUtilities.invokeLater(new Runnable() {
 								@Override
 								public void run() {	
 									m_shopping_cart.generatePdf();
 								}
 							});
-						} else if (row_key.equals("ChangeQuantity")) {
-							System.out.println("Changing quantity...");
+						} else if (msg.startsWith("change_qty")) {
 							if (m_shopping_basket.containsKey(row_key)) {
 								Article article = m_shopping_basket.get(row_key);
-								article.incrementQuantity();
+								int value = Integer.parseInt(msg.replaceAll("change_qty", "").trim());
+								article.setQuantity(value);
 								m_shopping_basket.put(row_key, article);
 							}							
-						} else
+						} else if (msg.equals("delete_row")) {
+							Article article = m_shopping_basket.get(row_key);
+							article.setQuantity(1);
 							m_shopping_basket.remove(row_key);
+						}
 						m_web_panel.updateShoppingHtml();						
 					}
 					return "true";					
