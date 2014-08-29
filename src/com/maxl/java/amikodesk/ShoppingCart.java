@@ -121,7 +121,8 @@ public class ShoppingCart {
 					total_CHF += price_CHF;
 				}
 				basket_html_str += "<tr>";
-				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" min=\"1\" max=\"999\" value=\""+quantity+"\"/ onkeypress=\"return changeQty('Warenkorb',this)\" />" + "</td>"
+				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" min=\"1\" max=\"999\" value=\"" + quantity + "\""
+						+ " onkeypress=\"changeQty('Warenkorb',this)\" id=\"qty\" />" + "</td>"
 						+ "<td>" + article.getEanCode() + "</td>"
 						+ "<td>" + article.getPackTitle() + "</td>"
 						+ "<td>" + String.format("%.2f",  price_CHF) + "</td>"
