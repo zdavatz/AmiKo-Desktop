@@ -57,9 +57,9 @@ public class ShoppingCart {
 	private static String m_jscripts_str = null;
 	private static String m_css_shopping_cart_str = null;
 		
-	Font font_norm_10 = FontFactory.getFont("Helvetica", 10, Font.NORMAL);
-	Font font_bold_10 = FontFactory.getFont("Helvetica", 10, Font.BOLD);
-	Font font_bold_16 = FontFactory.getFont("Helvetica", 16, Font.BOLD);
+	private static Font font_norm_10 = FontFactory.getFont("Helvetica", 10, Font.NORMAL);
+	private static Font font_bold_10 = FontFactory.getFont("Helvetica", 10, Font.BOLD);
+	private static Font font_bold_16 = FontFactory.getFont("Helvetica", 16, Font.BOLD);
 		
 	public ShoppingCart() {
 		// Load javascripts
@@ -77,12 +77,12 @@ public class ShoppingCart {
                 case 0:
                     ColumnText.showTextAligned(writer.getDirectContent(),
                         Element.ALIGN_RIGHT, new Phrase("Generiert mit AmiKo. Bestell-Modul gesponsort von IBSA.", 
-                        		FontFactory.getFont("Helvetica", 10, Font.NORMAL)), rect.getRight(), rect.getTop(), 0);
+                        		font_norm_10), rect.getRight(), rect.getTop(), 0);
                     break;
                 case 1:
                     ColumnText.showTextAligned(writer.getDirectContent(),
                         Element.ALIGN_LEFT, new Phrase("Generiert mit AmiKo. Bestell-Modul gesponsort von IBSA.",
-                        		FontFactory.getFont("Helvetica", 10, Font.NORMAL)), rect.getLeft(), rect.getTop(), 0);
+                        		font_norm_10), rect.getLeft(), rect.getTop(), 0);
                     break;
             }
             ColumnText.showTextAligned(writer.getDirectContent(),

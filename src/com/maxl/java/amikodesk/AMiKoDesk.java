@@ -46,17 +46,12 @@ import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.geom.RoundRectangle2D;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -373,11 +368,12 @@ public class AMiKoDesk {
 
         // Setup font size based on screen size  
         UIManager.getLookAndFeelDefaults().put("defaultFont", new Font("Dialog", Font.PLAIN, 14));
-		UIManager.put("Label.font", new Font("Dialog", Font.PLAIN, 14));  
+		UIManager.put("Label.font", new Font("Dialog", Font.PLAIN, 12));  
+		UIManager.put("CheckBox.font", new Font("Dialog", Font.PLAIN, 12));
         UIManager.put("Button.font", new Font("Dialog", Font.BOLD, 14));
-        UIManager.put("Menu.font", new Font("Dialog", Font.PLAIN, 14));
-        UIManager.put("MenuBar.font", new Font("Dialog", Font.PLAIN, 14));
-        UIManager.put("MenuItem.font", new Font("Dialog", Font.PLAIN, 14));
+        UIManager.put("Menu.font", new Font("Dialog", Font.PLAIN, 12));
+        UIManager.put("MenuBar.font", new Font("Dialog", Font.PLAIN, 12));
+        UIManager.put("MenuItem.font", new Font("Dialog", Font.PLAIN, 12));
         UIManager.put("ToolBar.font", new Font("Dialog", Font.PLAIN, 12));
         UIManager.put("ToggleButton.font", new Font("Dialog", Font.PLAIN, 12));
         UIManager.put("ToggleButton.select", new Color(240,240,240));
@@ -1219,10 +1215,10 @@ public class AMiKoDesk {
 		
 		// Display window
 		jframe.pack();
-		// jframe.setAlwaysOnTop(true);
-		jframe.setVisible(true);
 		//jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		jframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);			
+		jframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);		
+		// jframe.setAlwaysOnTop(true);
+		jframe.setVisible(true);	
 		
 		// If command line options are provided start app with a particular title or eancode
 		if (commandLineOptionsProvided()) {
@@ -1347,6 +1343,7 @@ public class AMiKoDesk {
 			datei_menu.setText("Fichier");
 		menu_bar.add(datei_menu);			
 		JMenuItem print_item = new JMenuItem("Drucken...");
+		JMenuItem settings_item = new JMenuItem("Einstellungen...");
 		JMenuItem quit_item = new JMenuItem("Beenden");
 		if (Utilities.appLanguage().equals("fr")) {
 			print_item.setText("Imprimer");
@@ -1354,52 +1351,57 @@ public class AMiKoDesk {
 		}
 		datei_menu.add(print_item);
 		datei_menu.addSeparator();
+		datei_menu.add(settings_item);
+		datei_menu.addSeparator();		
 		datei_menu.add(quit_item);		
+		
+		// -- Menu "Aktualisieren" --
+		JMenu update_menu = new JMenu("Aktualisieren");
+		if (Utilities.appLanguage().equals("fr"))
+			update_menu.setText("Mise à jour");
+		menu_bar.add(update_menu);
+		JMenuItem updatedb_item = new JMenuItem("Aktualisieren via Internet...");
+		JMenuItem choosedb_item = new JMenuItem("Aktualisieren via Datei...");
+		update_menu.add(updatedb_item);
+		update_menu.add(choosedb_item);
+		if (Utilities.appLanguage().equals("fr")) {
+			updatedb_item.setText("Télécharger la banque de données...");
+			choosedb_item.setText("Ajourner la banque de données...");			
+		}
+		
 		// -- Menu "Hilfe" --
-		JMenu hilfe_menu = new JMenu("Support");
+		JMenu hilfe_menu = new JMenu("Hilfe");
 		if (Utilities.appLanguage().equals("fr"))
 			hilfe_menu.setText("Aide");
 		menu_bar.add(hilfe_menu);
 		
+		JMenuItem about_item = new JMenuItem("Über " + Constants.APP_NAME + "...");
 		JMenuItem ywesee_item = new JMenuItem(Constants.APP_NAME + " im Internet");
 		if (Utilities.appCustomization().equals("meddrugs"))
-			ywesee_item.setText("med-drugs im Internet");
-		JMenuItem report_item = new JMenuItem("Error Report");
-		JMenuItem about_item = new JMenuItem("Info zu " + Constants.APP_NAME);		
-		JMenuItem contact_item = new JMenuItem("Kontakt");
+			ywesee_item.setText("med-drugs im Internet");		
+		JMenuItem report_item = new JMenuItem("Error Report...");
+		JMenuItem contact_item = new JMenuItem("Kontakt...");
 		
 		if (Utilities.appLanguage().equals("fr")) {			
-			if (Utilities.appCustomization().equals("meddrugs"))
-				ywesee_item.setText("med-drugs sur Internet");
-			else
-				ywesee_item.setText(Constants.APP_NAME + " sur Internet");
-			report_item.setText("Rapport d'erreur");
 			// Extrawunsch med-drugs
 			if (Utilities.appCustomization().equals("meddrugs"))
 				about_item.setText(Constants.APP_NAME);
 			else
-				about_item.setText("A propos de " + Constants.APP_NAME);
-			contact_item.setText("Contact");			
+				about_item.setText("A propos de " + Constants.APP_NAME + "...");
+			contact_item.setText("Contact...");			
+			if (Utilities.appCustomization().equals("meddrugs"))
+				ywesee_item.setText("med-drugs sur Internet");
+			else
+				ywesee_item.setText(Constants.APP_NAME + " sur Internet");
+			report_item.setText("Rapport d'erreur...");		
 		}		
+		hilfe_menu.add(about_item);
+		hilfe_menu.add(ywesee_item);	
+		hilfe_menu.addSeparator();			
 		hilfe_menu.add(report_item);
 		hilfe_menu.addSeparator();
-		hilfe_menu.add(about_item);
-		hilfe_menu.add(ywesee_item);		
-		hilfe_menu.addSeparator();
 		hilfe_menu.add(contact_item);
-		// -- Menu "Aktualisieren" --
-		JMenu update_menu = new JMenu("Update");
-		if (Utilities.appLanguage().equals("fr"))
-			update_menu.setText("Mise à jour");
-		menu_bar.add(update_menu);
-		JMenuItem updatedb_item = new JMenuItem("Update via Internet");
-		JMenuItem choosedb_item = new JMenuItem("Update via Datei");
-		update_menu.add(updatedb_item);
-		update_menu.add(choosedb_item);
-		if (Utilities.appLanguage().equals("fr")) {
-			updatedb_item.setText("Télécharger la banque de données");
-			choosedb_item.setText("Ajourner la banque de données");			
-		}
+		
 		// Menu "Abonnieren" (only for ywesee)
 		JMenu subscribe_menu = new JMenu("Abonnieren");
 		if (Utilities.appLanguage().equals("fr"))
@@ -1462,6 +1464,12 @@ public class AMiKoDesk {
 			@Override
 			public void actionPerformed(ActionEvent event) {
 				m_web_panel.print();
+			}
+		});
+		settings_item.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {	
+				SettingsPage sp = new SettingsPage(jframe);
 			}
 		});
 		quit_item.addActionListener(new ActionListener() {
@@ -2083,10 +2091,10 @@ public class AMiKoDesk {
 		
 		// Display window
 		jframe.pack();
-		// jframe.setAlwaysOnTop(true);
-		jframe.setVisible(true);
 		//jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		jframe.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);	
+		// jframe.setAlwaysOnTop(true);
+		jframe.setVisible(true);
 
 		// Check if user has selected an alternative database
 		/*  NOTE:
