@@ -11,6 +11,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +48,8 @@ public class SettingsPage extends JDialog {
 	private JFileChooser mFc = null;
 	private JButton mButtonLogo = null;
 	private Preferences mPrefs = null;
+	private JTextArea mTextFieldLiefer = null;
+	private JTextArea mTextFieldRechnung = null;
 	
 	public SettingsPage(JFrame frame) {		
 		
@@ -80,6 +84,18 @@ public class SettingsPage extends JDialog {
 		this.setResizable(false);
 		// Visualize
 		this.setVisible(true);
+		
+		this.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosed(WindowEvent e) {
+				String address = mTextFieldLiefer.getText();
+				if (address!=null)
+					mPrefs.put(LieferAdresseID, address);
+				address = mTextFieldRechnung.getText();
+				if (address!=null)
+					mPrefs.put(RechnungsAdresseID, address);
+			}
+		});
 	}
 	
 	protected JPanel globalAmiKoSettings() {
@@ -98,6 +114,7 @@ public class SettingsPage extends JDialog {
 		JCheckBox updateWeeklyCBox = new JCheckBox("wöchentlich");
 		JCheckBox updateMonthlyCBox = new JCheckBox("monatlich");		
 		
+		// Add to buttongroup to ensure that only one box is selected at a time
 		bg.add(updateNeverCBox);
 		bg.add(updateDailyCBox);
 		bg.add(updateWeeklyCBox);
@@ -173,7 +190,11 @@ public class SettingsPage extends JDialog {
 		jlabelLogo.setHorizontalAlignment(JLabel.LEFT);
 		jPanel.add(jlabelLogo, gbc);
 		
-		ImageIcon icon = getImageIconFromFile(Constants.IMG_FOLDER + "desitin_logo.png");
+		String logoImageStr = mPrefs.get(LogoImageID, Constants.IMG_FOLDER + "empty_logo.png");	
+		File logoFile = new File(logoImageStr);
+		if (!logoFile.exists())
+			logoImageStr = Constants.IMG_FOLDER + "empty_logo.png";
+		ImageIcon icon = getImageIconFromFile(logoImageStr);
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.weightx = 2.5;
 		gbc.gridx = 1;
@@ -202,14 +223,15 @@ public class SettingsPage extends JDialog {
 		jlabelLiefer.setHorizontalAlignment(JLabel.LEFT);
 		jPanel.add(jlabelLiefer, gbc);
 
+		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.weightx = 2.5;
 		gbc.gridx = 1;
 		gbc.gridy = 1;				
-		JTextArea jtextFieldLiefer = new JTextArea();
-		jtextFieldLiefer.setPreferredSize(new Dimension(128, 128));
-		jtextFieldLiefer.setMargin(new Insets(10,10,10,10));
-		jPanel.add(jtextFieldLiefer, gbc);
+		mTextFieldLiefer = new JTextArea(lieferAdrStr);
+		mTextFieldLiefer.setPreferredSize(new Dimension(128, 128));
+		mTextFieldLiefer.setMargin(new Insets(10,10,10,10));
+		jPanel.add(mTextFieldLiefer, gbc);
 		
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.insets = new Insets(16,0,0,0);		
@@ -220,14 +242,15 @@ public class SettingsPage extends JDialog {
 		jlabelRechnung.setHorizontalAlignment(JLabel.LEFT);
 		jPanel.add(jlabelRechnung, gbc);
 
+		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.weightx = 2.5;
 		gbc.gridx = 1;
 		gbc.gridy = 2;		
-		JTextArea jtextFieldRechnung = new JTextArea();
-		jtextFieldRechnung.setPreferredSize(new Dimension(128, 128));
-		jtextFieldRechnung.setMargin(new Insets(10,10,10,10));
-		jPanel.add(jtextFieldRechnung, gbc);
+		mTextFieldRechnung = new JTextArea(rechnungsAdrStr);
+		mTextFieldRechnung.setPreferredSize(new Dimension(128, 128));
+		mTextFieldRechnung.setMargin(new Insets(10,10,10,10));
+		jPanel.add(mTextFieldRechnung, gbc);
 				
 		return jPanel;
 	}
@@ -269,8 +292,9 @@ public class SettingsPage extends JDialog {
 			if (r==JFileChooser.APPROVE_OPTION) {
 				// File file = fc.getSelectedFile();
 				String filename = mFc.getSelectedFile().getPath();	
-				ImageIcon icon = getImageIconFromFile(filename);				
+				ImageIcon icon = getImageIconFromFile(filename);	
 				mButtonLogo.setIcon(icon);
+				mPrefs.put(LogoImageID, filename);
 				System.out.println("SettingsPage - opening " + filename);				
 			} else {
 				System.out.println("SettingsPage - open command cancelled by the user...");
