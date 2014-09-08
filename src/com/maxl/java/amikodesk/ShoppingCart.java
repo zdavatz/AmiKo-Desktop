@@ -20,12 +20,14 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package com.maxl.java.amikodesk;
 
 import java.awt.Color;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
+import java.util.prefs.Preferences;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Entities.EscapeMode;
@@ -60,6 +62,11 @@ public class ShoppingCart {
 	private static Font font_norm_10 = FontFactory.getFont("Helvetica", 10, Font.NORMAL);
 	private static Font font_bold_10 = FontFactory.getFont("Helvetica", 10, Font.BOLD);
 	private static Font font_bold_16 = FontFactory.getFont("Helvetica", 16, Font.BOLD);
+	
+	private static String UpdateID = "update";
+	private static String LogoImageID = "logo";
+	private static String LieferAdresseID = "lieferadresse";
+	private static String RechnungsAdresseID = "rechnungsadresse";
 		
 	public ShoppingCart() {
 		// Load javascripts
@@ -179,6 +186,8 @@ public class ShoppingCart {
         		Utilities.writeToFile(html_str, "", "test.html");
         		*/
         		
+        		Preferences mPrefs = Preferences.userRoot().node(SettingsPage.class.getName());
+        		
         		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
         		Date date = new Date();
         		String date_underscores = dateFormat.format(date).replaceAll("[.:]", "").replaceAll(" ", "_");
@@ -197,7 +206,12 @@ public class ShoppingCart {
         		document.addCreator("AmiKo for Windows");
         		
         		// Logo
-        		Image logo = Image.getInstance("./images/desitin_logo.png");
+        		String logoImageStr = mPrefs.get(LogoImageID, Constants.IMG_FOLDER + "empty_logo.png");	
+        		File logoFile = new File(logoImageStr);
+        		if (!logoFile.exists())
+        			logoImageStr = Constants.IMG_FOLDER + "empty_logo.png";        		
+        		
+        		Image logo = Image.getInstance(logoImageStr);
         		logo.scalePercent(30);
         		logo.setAlignment(Rectangle.ALIGN_RIGHT);
         		document.add(logo);        		
@@ -219,14 +233,17 @@ public class ShoppingCart {
         		document.add(Chunk.NEWLINE);
         		
         		// Add addresses (Lieferadresse + Rechnungsadresse)
+        		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
+        		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");
+        		
                 PdfPTable addressTable = new PdfPTable(new float[] {1,1});
                 addressTable.setWidthPercentage(100f);
                 addressTable.getDefaultCell().setPadding(5);
                 addressTable.setSpacingAfter(5f);
                 addressTable.addCell(getStringCell("Lieferadresse", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
                 addressTable.addCell(getStringCell("Rechnungsdresse", font_bold_10,	PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));     		
-                addressTable.addCell(getStringCell("Dr. med. Pippi Langstrumpf\nFantasieweg 123\nCH-8003 Zürich", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-                addressTable.addCell(getStringCell("Dr. med. Pippi Langstrumpf\nFantasieweg 123\nCH-8003 Zürich", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+                addressTable.addCell(getStringCell(lieferAdrStr, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+                addressTable.addCell(getStringCell(rechnungsAdrStr, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
                 document.add(addressTable);
                 
         		document.add(Chunk.NEWLINE);                

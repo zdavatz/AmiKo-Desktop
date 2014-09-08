@@ -41,6 +41,7 @@ public class SettingsPage extends JDialog {
 
 	private static String UpdateID = "update";
 	private static String LogoImageID = "logo";
+	private static String ZSRNumberID = "zsrnumber";
 	private static String LieferAdresseID = "lieferadresse";
 	private static String RechnungsAdresseID = "rechnungsadresse";
 	
@@ -48,6 +49,7 @@ public class SettingsPage extends JDialog {
 	private JFileChooser mFc = null;
 	private JButton mButtonLogo = null;
 	private Preferences mPrefs = null;
+	private JTextArea mTextFieldZSR = null;
 	private JTextArea mTextFieldLiefer = null;
 	private JTextArea mTextFieldRechnung = null;
 	
@@ -57,8 +59,6 @@ public class SettingsPage extends JDialog {
 		mFc = new JFileChooser();
 		// Defines a node in which the preferences can be stored
 		mPrefs = Preferences.userRoot().node(this.getClass().getName());
-		
-		this.setSize(128,64);
 		
 		this.setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		
@@ -80,7 +80,7 @@ public class SettingsPage extends JDialog {
 		// Centers the dialog
 		this.setLocationRelativeTo(null);
 		// Set size
-		this.setSize(512,640);		
+		this.setSize(512,560);		
 		this.setResizable(false);
 		// Visualize
 		this.setVisible(true);
@@ -201,6 +201,7 @@ public class SettingsPage extends JDialog {
 		gbc.gridy = 0;
 		mButtonLogo = new JButton(icon);
 		mButtonLogo.setPreferredSize(new Dimension(128, 128));
+		mButtonLogo.setMargin(new Insets(10,10,10,10));
 		mButtonLogo.setBackground(new Color(255,255,255));
 		mButtonLogo.setBorder(new CompoundBorder(
 				new LineBorder(new Color(255,255,255)), new EmptyBorder(0,3,0,0)));		
@@ -219,6 +220,26 @@ public class SettingsPage extends JDialog {
 		gbc.weightx = 0.5;
 		gbc.gridx = 0;
 		gbc.gridy = 1;
+		JLabel jlabelZSR = new JLabel("ZSR Nummer");
+		jlabelZSR.setHorizontalAlignment(JLabel.LEFT);
+		jPanel.add(jlabelZSR, gbc);
+		
+		String ZSRNumberStr = mPrefs.get(ZSRNumberID, "Keine ZSR Nummer");
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.weightx = 2.5;
+		gbc.gridx = 1;
+		gbc.gridy = 1;				
+		mTextFieldZSR = new JTextArea(ZSRNumberStr);
+		mTextFieldZSR.setPreferredSize(new Dimension(128, 32));
+		mTextFieldZSR.setMargin(new Insets(5,10,5,10));
+		jPanel.add(mTextFieldZSR, gbc);
+		
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		// Insets(int top, int left, int bottom, int right)		
+		gbc.insets = new Insets(16,0,0,0);
+		gbc.weightx = 0.5;
+		gbc.gridx = 0;
+		gbc.gridy = 2;
 		JLabel jlabelLiefer = new JLabel("Lieferadresse");
 		jlabelLiefer.setHorizontalAlignment(JLabel.LEFT);
 		jPanel.add(jlabelLiefer, gbc);
@@ -227,7 +248,7 @@ public class SettingsPage extends JDialog {
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.weightx = 2.5;
 		gbc.gridx = 1;
-		gbc.gridy = 1;				
+		gbc.gridy = 2;				
 		mTextFieldLiefer = new JTextArea(lieferAdrStr);
 		mTextFieldLiefer.setPreferredSize(new Dimension(128, 128));
 		mTextFieldLiefer.setMargin(new Insets(10,10,10,10));
@@ -237,7 +258,7 @@ public class SettingsPage extends JDialog {
 		gbc.insets = new Insets(16,0,0,0);		
 		gbc.weightx = 0.5;
 		gbc.gridx = 0;
-		gbc.gridy = 2;		
+		gbc.gridy = 3;		
 		JLabel jlabelRechnung = new JLabel("Rechnungsadresse");
 		jlabelRechnung.setHorizontalAlignment(JLabel.LEFT);
 		jPanel.add(jlabelRechnung, gbc);
@@ -246,7 +267,7 @@ public class SettingsPage extends JDialog {
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.weightx = 2.5;
 		gbc.gridx = 1;
-		gbc.gridy = 2;		
+		gbc.gridy = 3;		
 		mTextFieldRechnung = new JTextArea(rechnungsAdrStr);
 		mTextFieldRechnung.setPreferredSize(new Dimension(128, 128));
 		mTextFieldRechnung.setMargin(new Insets(10,10,10,10));
