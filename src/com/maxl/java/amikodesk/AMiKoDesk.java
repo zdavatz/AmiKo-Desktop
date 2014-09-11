@@ -1334,6 +1334,9 @@ public class AMiKoDesk {
 			jframe.setIconImage(img.getImage());        	
         }
 
+		// ------ Setup settingspage ------
+		// final SettingsPage sp = new SettingsPage(jframe);
+        
 		// ------ Setup menubar ------
 		JMenuBar menu_bar = new JMenuBar();	
 		// menu_bar.add(Box.createHorizontalGlue());	// --> aligns menu items to the right!
@@ -1468,7 +1471,7 @@ public class AMiKoDesk {
 		});
 		settings_item.addActionListener(new ActionListener() {
 			@Override
-			public void actionPerformed(ActionEvent event) {	
+			public void actionPerformed(ActionEvent event) {
 				SettingsPage sp = new SettingsPage(jframe);
 			}
 		});

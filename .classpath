@@ -8,7 +8,13 @@
 	<classpathentry kind="lib" path="libs/swt.jar"/>
 	<classpathentry kind="lib" path="libs/sqlite-jdbc-3.7.2.jar"/>
 	<classpathentry kind="lib" path="libs/commons-cli-1.2.jar"/>
-	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/xmlworker-5.5.2.jar"/>
-	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/itextpdf-5.5.2.jar"/>
+	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/dsn.jar"/>
+	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/gimap.jar"/>
+	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/imap.jar"/>
+	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/mailapi.jar"/>
+	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/pop3.jar"/>
+	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/smtp.jar"/>
+	<classpathentry kind="lib" path="libs/itext-5.5.2/itextpdf-5.5.2.jar"/>
+	<classpathentry kind="lib" path="libs/xmlworker-5.5.2/xmlworker-5.5.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

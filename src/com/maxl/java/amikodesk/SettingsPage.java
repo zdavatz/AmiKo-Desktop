@@ -16,9 +16,16 @@ import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Properties;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
@@ -31,6 +38,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -41,17 +49,23 @@ public class SettingsPage extends JDialog {
 
 	private static String UpdateID = "update";
 	private static String LogoImageID = "logo";
-	private static String ZSRNumberID = "zsrnumber";
+	private static String GLNCodeID = "glncode";
+	private static String BestellAdresseID = "bestelladresse";
 	private static String LieferAdresseID = "lieferadresse";
 	private static String RechnungsAdresseID = "rechnungsadresse";
+	private static String EmailAdresseID = "emailadresse";
+	private static String PhoneNumberID = "phonenumber";
 	
 	private JFrame mFrame = null;
 	private JFileChooser mFc = null;
 	private JButton mButtonLogo = null;
 	private Preferences mPrefs = null;
-	private JTextArea mTextFieldZSR = null;
-	private JTextArea mTextFieldLiefer = null;
-	private JTextArea mTextFieldRechnung = null;
+	private JTextField mTextFieldGLN = null;
+	private JTextArea mTextAreaBestell = null;
+	private JTextArea mTextAreaLiefer = null;
+	private JTextArea mTextAreaRechnung = null;
+	private JTextField mTextFieldEmail = null;
+	private JTextField mTextFieldPhone = null;
 	
 	public SettingsPage(JFrame frame) {		
 		
@@ -80,7 +94,7 @@ public class SettingsPage extends JDialog {
 		// Centers the dialog
 		this.setLocationRelativeTo(null);
 		// Set size
-		this.setSize(512,560);		
+		this.setSize(512,640);		
 		this.setResizable(false);
 		// Visualize
 		this.setVisible(true);
@@ -88,10 +102,13 @@ public class SettingsPage extends JDialog {
 		this.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(WindowEvent e) {
-				String address = mTextFieldLiefer.getText();
+				String address = mTextAreaBestell.getText();
+				if (address!=null)
+					mPrefs.put(BestellAdresseID, address);
+				address = mTextAreaLiefer.getText();
 				if (address!=null)
 					mPrefs.put(LieferAdresseID, address);
-				address = mTextFieldRechnung.getText();
+				address = mTextAreaRechnung.getText();
 				if (address!=null)
 					mPrefs.put(RechnungsAdresseID, address);
 			}
@@ -100,7 +117,7 @@ public class SettingsPage extends JDialog {
 	
 	protected JPanel globalAmiKoSettings() {
 		JPanel jPanel = new JPanel();
-		jPanel.setLayout(new GridLayout(4, 1));
+		jPanel.setLayout(new GridLayout(1, 4));
 		
 		ButtonGroup bg = new ButtonGroup();
 		
@@ -179,15 +196,12 @@ public class SettingsPage extends JDialog {
 		
 		jPanel.setOpaque(false);
 		jPanel.setBorder(new CompoundBorder(
-				new TitledBorder("Warenkorb"),
-				new EmptyBorder(5,5,5,5)));		
+				new TitledBorder("Warenkorb"), new EmptyBorder(5,5,5,5)));		
 		
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		gbc.weightx = 0.5;
-		gbc.gridx = 0;
-		gbc.gridy = 0;
+		// -----------------------------
 		JLabel jlabelLogo = new JLabel("Logo");
 		jlabelLogo.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,0, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(jlabelLogo, gbc);
 		
 		String logoImageStr = mPrefs.get(LogoImageID, Constants.IMG_FOLDER + "empty_logo.png");	
@@ -195,16 +209,13 @@ public class SettingsPage extends JDialog {
 		if (!logoFile.exists())
 			logoImageStr = Constants.IMG_FOLDER + "empty_logo.png";
 		ImageIcon icon = getImageIconFromFile(logoImageStr);
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		gbc.weightx = 2.5;
-		gbc.gridx = 1;
-		gbc.gridy = 0;
 		mButtonLogo = new JButton(icon);
 		mButtonLogo.setPreferredSize(new Dimension(128, 128));
 		mButtonLogo.setMargin(new Insets(10,10,10,10));
 		mButtonLogo.setBackground(new Color(255,255,255));
 		mButtonLogo.setBorder(new CompoundBorder(
-				new LineBorder(new Color(255,255,255)), new EmptyBorder(0,3,0,0)));		
+				new LineBorder(new Color(255,255,255)), new EmptyBorder(0,3,0,0)));	
+		gbc = getGbc(1,0, 2.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mButtonLogo, gbc);
 		
 		mButtonLogo.addActionListener(new ActionListener() {
@@ -214,66 +225,179 @@ public class SettingsPage extends JDialog {
 			}
 		});
 		
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		// Insets(int top, int left, int bottom, int right)		
-		gbc.insets = new Insets(16,0,0,0);
-		gbc.weightx = 0.5;
-		gbc.gridx = 0;
-		gbc.gridy = 1;
-		JLabel jlabelZSR = new JLabel("ZSR Nummer");
-		jlabelZSR.setHorizontalAlignment(JLabel.LEFT);
-		jPanel.add(jlabelZSR, gbc);
+		// -----------------------------
+		JLabel jlabelGLN = new JLabel("GLN Code");
+		jlabelGLN.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,1, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
+		jPanel.add(jlabelGLN, gbc);
 		
-		String ZSRNumberStr = mPrefs.get(ZSRNumberID, "Keine ZSR Nummer");
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		gbc.weightx = 2.5;
-		gbc.gridx = 1;
-		gbc.gridy = 1;				
-		mTextFieldZSR = new JTextArea(ZSRNumberStr);
-		mTextFieldZSR.setPreferredSize(new Dimension(128, 32));
-		mTextFieldZSR.setMargin(new Insets(5,10,5,10));
-		jPanel.add(mTextFieldZSR, gbc);
+		String GLNCodeStr = mPrefs.get(GLNCodeID, "7610-");
+		mTextFieldGLN = new JTextField(GLNCodeStr);
+		mTextFieldGLN.setBorder(new LineBorder(new Color(255,255,255), 5, false));
+		gbc = getGbc(1,1 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
+		jPanel.add(mTextFieldGLN, gbc);
 		
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		// Insets(int top, int left, int bottom, int right)		
-		gbc.insets = new Insets(16,0,0,0);
-		gbc.weightx = 0.5;
-		gbc.gridx = 0;
-		gbc.gridy = 2;
+		mTextFieldGLN.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String mGLNCodeStr = mTextFieldGLN.getText();
+				if (mGLNCodeStr.matches("[\\d]{4}-[\\d]{9}")) {
+					mTextFieldGLN.setBorder(new LineBorder(new Color(220,255,220), 5, false));
+					mTextFieldGLN.setBackground(new Color(220,255,220));
+					mPrefs.put(GLNCodeID, mGLNCodeStr);	
+					System.out.println(mGLNCodeStr);					
+				} else {
+					mTextFieldGLN.setBorder(new LineBorder(new Color(255,220,220), 5, false));
+					mTextFieldGLN.setBackground(new Color(255,220,220));
+				}
+			}
+		});
+		
+		// -----------------------------
+		JLabel jlabelBestell = new JLabel("Bestelladresse");
+		jlabelBestell.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,2,0.5,1.0,GridBagConstraints.HORIZONTAL);		
+		jPanel.add(jlabelBestell, gbc);
+
+		String bestellAdrStr = mPrefs.get(BestellAdresseID, "Keine Bestelladresse");
+		mTextAreaBestell = new JTextArea(bestellAdrStr);
+		mTextAreaBestell.setPreferredSize(new Dimension(128, 256));
+		mTextAreaBestell.setMargin(new Insets(5,5,5,5));
+		gbc = getGbc(1,2,3.5,1.0,GridBagConstraints.HORIZONTAL);
+		jPanel.add(mTextAreaBestell, gbc);
+		
+		// -----------------------------
 		JLabel jlabelLiefer = new JLabel("Lieferadresse");
 		jlabelLiefer.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,3,0.5,1.0,GridBagConstraints.HORIZONTAL);
 		jPanel.add(jlabelLiefer, gbc);
 
 		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		gbc.weightx = 2.5;
-		gbc.gridx = 1;
-		gbc.gridy = 2;				
-		mTextFieldLiefer = new JTextArea(lieferAdrStr);
-		mTextFieldLiefer.setPreferredSize(new Dimension(128, 128));
-		mTextFieldLiefer.setMargin(new Insets(10,10,10,10));
-		jPanel.add(mTextFieldLiefer, gbc);
+		mTextAreaLiefer = new JTextArea(lieferAdrStr);
+		mTextAreaLiefer.setPreferredSize(new Dimension(128, 128));
+		mTextAreaLiefer.setMargin(new Insets(5,5,5,5));
+		gbc = getGbc(1,3,2.5,1.0,GridBagConstraints.HORIZONTAL);
+		jPanel.add(mTextAreaLiefer, gbc);		
 		
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		gbc.insets = new Insets(16,0,0,0);		
-		gbc.weightx = 0.5;
-		gbc.gridx = 0;
-		gbc.gridy = 3;		
+		// -----------------------------
 		JLabel jlabelRechnung = new JLabel("Rechnungsadresse");
 		jlabelRechnung.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,4,0.5,1.0,GridBagConstraints.HORIZONTAL);
 		jPanel.add(jlabelRechnung, gbc);
 
 		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		gbc.weightx = 2.5;
-		gbc.gridx = 1;
-		gbc.gridy = 3;		
-		mTextFieldRechnung = new JTextArea(rechnungsAdrStr);
-		mTextFieldRechnung.setPreferredSize(new Dimension(128, 128));
-		mTextFieldRechnung.setMargin(new Insets(10,10,10,10));
-		jPanel.add(mTextFieldRechnung, gbc);
-				
+		mTextAreaRechnung = new JTextArea(rechnungsAdrStr);
+		mTextAreaRechnung.setPreferredSize(new Dimension(128, 128));
+		mTextAreaRechnung.setMargin(new Insets(5,5,5,5));
+		gbc = getGbc(1,4,2.5,1.0,GridBagConstraints.HORIZONTAL);
+		jPanel.add(mTextAreaRechnung, gbc);		
+		
+		// -----------------------------
+		JLabel jlabelEmail = new JLabel("Emailadresse");
+		jlabelEmail.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,5, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
+		jPanel.add(jlabelEmail, gbc);
+		
+		String EmailStr = mPrefs.get(EmailAdresseID, "name@host.ch");
+		mTextFieldEmail = new JTextField(EmailStr);
+		mTextFieldEmail.setBorder(new LineBorder(new Color(255,255,255), 5, false));
+		gbc = getGbc(1,5 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
+		jPanel.add(mTextFieldEmail, gbc);
+		
+		mTextFieldEmail.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// Validate email address
+				String mEmailStr = mTextFieldEmail.getText();
+				if (mEmailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
+					mTextFieldEmail.setBorder(new LineBorder(new Color(220,255,220), 5, false));
+					mTextFieldEmail.setBackground(new Color(220,255,220));
+					mPrefs.put(EmailAdresseID, mEmailStr);
+					System.out.println(mEmailStr);					
+				} else { 
+					mTextFieldEmail.setBorder(new LineBorder(new Color(255,220,220), 5, false));
+					mTextFieldEmail.setBackground(new Color(255,220,220));
+				}
+			}
+		});
+		
+		// -----------------------------	
+		JLabel jlabelPhone = new JLabel("Telephonnummer");
+		jlabelPhone.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,6, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
+		jPanel.add(jlabelPhone, gbc);
+		
+		String PhoneNumberStr = mPrefs.get(PhoneNumberID, "+41-");
+		mTextFieldPhone = new JTextField(PhoneNumberStr);
+		mTextFieldPhone.setBorder(new LineBorder(new Color(255,255,255), 5, false));	
+		gbc = getGbc(1,6 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
+		jPanel.add(mTextFieldPhone, gbc);
+
+		mTextFieldPhone.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String mPhoneStr = mTextFieldPhone.getText();
+				// Validate phone number
+				if (mPhoneStr.matches("[+][\\d]+-[\\d]+")) {
+					mTextFieldPhone.setBorder(new LineBorder(new Color(220,255,220), 5, false));
+					mTextFieldPhone.setBackground(new Color(220,255,220));
+					mPrefs.put(PhoneNumberID, mPhoneStr);
+					System.out.println(mPhoneStr);					
+				} else { 
+					mTextFieldPhone.setBorder(new LineBorder(new Color(255,220,220), 5, false));
+					mTextFieldPhone.setBackground(new Color(255,220,220));
+				}
+			}
+		});
+
 		return jPanel;
+	}
+	
+	private GridBagConstraints getGbc(int x, int y, double wx, double wy, int fill) {
+		GridBagConstraints gbc = new GridBagConstraints();
+
+		gbc.insets = new Insets(8,0,0,0); // Insets(int top, int left, int bottom, int right)		
+		gbc.fill = fill;
+		gbc.weightx = wx;
+		gbc.weighty = wy;
+		gbc.gridx = x;
+		gbc.gridy = y;
+		
+		return gbc;
+	}
+	
+	private void generateAndSendEmail() throws AddressException, MessagingException {
+		Properties mailServerProperties;
+		Session getMailSession;
+		MimeMessage generateMailMessage;
+
+		// Step1
+		System.out.println("\n 1st ===> setup Mail Server Properties..");
+		mailServerProperties = System.getProperties();
+		mailServerProperties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+		mailServerProperties.put("mail.transport.protocol", "smtps");
+		mailServerProperties.put("mail.smtps.host", "smtp.ifi.uzh.ch");
+		mailServerProperties.put("mail.smtps.auth", "true"); // Enable Authentication
+
+		// Step2
+		System.out.println("\n\n 2nd ===> get Mail Session..");
+		getMailSession = Session.getDefaultInstance(mailServerProperties, null);
+		getMailSession.setDebug(true);
+		generateMailMessage = new MimeMessage(getMailSession);
+		generateMailMessage.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress("user1@hostname.com"));
+		generateMailMessage.addRecipient(javax.mail.Message.RecipientType.CC, new InternetAddress("user2@hostname.com"));
+		generateMailMessage.setFrom(new InternetAddress("user3@hostname.com"));
+		generateMailMessage.setSubject("Greetings from Cybermax...");
+		String emailBody = "Test email by Crunchify.com JavaMail API example. "
+				+ "<br><br> Regards, <br>Crunchify Admin";
+		generateMailMessage.setContent(emailBody, "text/html");
+
+		// Step3
+		Transport transport = getMailSession.getTransport("smtps");
+		// Enter your correct gmail UserID and Password
+		transport.connect("smtp.ifi.uzh.ch", 465, "username", "password");
+		transport.sendMessage(generateMailMessage, generateMailMessage.getAllRecipients());
+		transport.close();
 	}
 	
 	private ImageIcon getImageIconFromFile(String filename) {
