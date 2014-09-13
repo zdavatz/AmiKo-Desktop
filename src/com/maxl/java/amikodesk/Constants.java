@@ -9,6 +9,7 @@ public class Constants {
 	public static final String DEFAULT_AMIKO_REPORT_BASE = "amiko_report_";
 	public static final String DEFAULT_INTERACTION_DB_BASE = "drug_interactions_idx_";
 	public static final String DEFAULT_INTERACTION_CSV_BASE = "drug_interactions_csv_";
+	public static final String GLN_CODES_FILE = "gln_codes_csv.csv";
 	
 	// Important folders
 	public static final String IMG_FOLDER = "./images/";	

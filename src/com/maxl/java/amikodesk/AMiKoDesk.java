@@ -1333,9 +1333,6 @@ public class AMiKoDesk {
 			ImageIcon img = new ImageIcon(Constants.AMIKO_ICON);
 			jframe.setIconImage(img.getImage());        	
         }
-
-		// ------ Setup settingspage ------
-		// final SettingsPage sp = new SettingsPage(jframe);
         
 		// ------ Setup menubar ------
 		JMenuBar menu_bar = new JMenuBar();	
@@ -1443,6 +1440,9 @@ public class AMiKoDesk {
 		toolBar.addSeparator(new Dimension(32,32));
 		toolBar.add(m_progress_indicator);				
 		
+		// ------ Setup settingspage ------
+		final SettingsPage sp = new SettingsPage(jframe);
+		
 		jframe.addWindowListener(new WindowListener() {
 			// Use WindowAdapter!
 	        @Override 
@@ -1472,7 +1472,7 @@ public class AMiKoDesk {
 		settings_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				SettingsPage sp = new SettingsPage(jframe);
+				sp.display();
 			}
 		});
 		quit_item.addActionListener(new ActionListener() {

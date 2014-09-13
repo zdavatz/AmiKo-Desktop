@@ -14,9 +14,14 @@ import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
@@ -56,6 +61,8 @@ public class SettingsPage extends JDialog {
 	private static String EmailAdresseID = "emailadresse";
 	private static String PhoneNumberID = "phonenumber";
 	
+	private Map<String, User> m_user_map = null;;
+	
 	private JFrame mFrame = null;
 	private JFileChooser mFc = null;
 	private JButton mButtonLogo = null;
@@ -67,13 +74,37 @@ public class SettingsPage extends JDialog {
 	private JTextField mTextFieldEmail = null;
 	private JTextField mTextFieldPhone = null;
 	
-	public SettingsPage(JFrame frame) {		
-		
+	public SettingsPage(JFrame frame) {
 		mFrame = frame;
 		mFc = new JFileChooser();
 		// Defines a node in which the preferences can be stored
 		mPrefs = Preferences.userRoot().node(this.getClass().getName());
+				
+		// Load gln codes file and create map
+		String m_application_data_folder = Utilities.appDataFolder();
+		m_user_map = readFromCsvToMap(m_application_data_folder + "\\" + Constants.GLN_CODES_FILE);
+		if (m_user_map==null) {
+			System.out.println("Loading default gln codes file");
+			m_user_map = readFromCsvToMap("./dbs/" + Constants.GLN_CODES_FILE);
+		}
 		
+		this.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosed(WindowEvent e) {
+				String address = mTextAreaBestell.getText();
+				if (address!=null)
+					mPrefs.put(BestellAdresseID, address);
+				address = mTextAreaLiefer.getText();
+				if (address!=null)
+					mPrefs.put(LieferAdresseID, address);
+				address = mTextAreaRechnung.getText();
+				if (address!=null)
+					mPrefs.put(RechnungsAdresseID, address);
+			}
+		});
+	}
+	
+	public void display() {		
 		this.setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		
 		add(Box.createRigidArea(new Dimension(0, 10)));
@@ -98,21 +129,6 @@ public class SettingsPage extends JDialog {
 		this.setResizable(false);
 		// Visualize
 		this.setVisible(true);
-		
-		this.addWindowListener(new WindowAdapter() {
-			@Override
-			public void windowClosed(WindowEvent e) {
-				String address = mTextAreaBestell.getText();
-				if (address!=null)
-					mPrefs.put(BestellAdresseID, address);
-				address = mTextAreaLiefer.getText();
-				if (address!=null)
-					mPrefs.put(LieferAdresseID, address);
-				address = mTextAreaRechnung.getText();
-				if (address!=null)
-					mPrefs.put(RechnungsAdresseID, address);
-			}
-		});
 	}
 	
 	protected JPanel globalAmiKoSettings() {
@@ -398,6 +414,40 @@ public class SettingsPage extends JDialog {
 		transport.connect("smtp.ifi.uzh.ch", 465, "username", "password");
 		transport.sendMessage(generateMailMessage, generateMailMessage.getAllRecipients());
 		transport.close();
+	}
+	
+	private Map<String, User> readFromCsvToMap(String filename) {
+		Map<String, User> map = new TreeMap<String, User>();
+		try {
+			File file = new File(filename);
+			if (!file.exists()) 
+				return null;
+			FileInputStream fis = new FileInputStream(filename);
+			BufferedReader br = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
+			String line;
+			while ((line = br.readLine()) != null) {
+				// Human - 7601000900487|Bauer|Wibke Cornelia|8596|Münsterlingen||Ärztin/Arzt|Ja|Nein
+				// Corporate - 7601001059900|Ostschweizer Kinderspital||9006|St. Gallen|Claudiusstrasse 6|Spitalapotheke, Andere|||
+				String token[] = line.split("\\|", -1);	// -1 -> don't discard empty strings				
+				User user = new User();
+				user.setGlnCode(token[0]);
+				user.setName1(token[1]);
+				user.setName2(token[2]);
+				user.setPostCode(token[3]);
+				user.setCity(token[4]);				
+				user.setStreet(token[5]);
+				user.setType(token[6]);
+				user.setHuman(!token[7].isEmpty()&&!token[8].isEmpty());
+				user.setDispensationPermit(!token[7].isEmpty());
+				user.setAnaesthesiaPermit(!token[8].isEmpty());
+				map.put(token[0], user);
+			}
+			br.close();
+		} catch (Exception e) {
+			System.err.println(">> Error in reading csv file");
+		}
+		
+		return map;
 	}
 	
 	private ImageIcon getImageIconFromFile(String filename) {
