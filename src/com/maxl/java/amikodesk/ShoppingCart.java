@@ -65,6 +65,7 @@ public class ShoppingCart {
 	
 	private static String UpdateID = "update";
 	private static String LogoImageID = "logo";
+	private static String BestellAdresseID = "bestelladresse";
 	private static String LieferAdresseID = "lieferadresse";
 	private static String RechnungsAdresseID = "rechnungsadresse";
 		
@@ -128,8 +129,8 @@ public class ShoppingCart {
 					total_CHF += price_CHF;
 				}
 				basket_html_str += "<tr>";
-				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" min=\"1\" max=\"999\" value=\"" + quantity + "\""
-						+ " onkeypress=\"changeQty('Warenkorb',this)\" id=\"qty\" />" + "</td>"
+				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:40px\"" +
+						" value=\"" + quantity + "\"" + " onkeypress=\"changeQty('Warenkorb',this)\" id=\"qty\" />" + "</td>"
 						+ "<td>" + article.getEanCode() + "</td>"
 						+ "<td>" + article.getPackTitle() + "</td>"
 						+ "<td>" + String.format("%.2f",  price_CHF) + "</td>"
@@ -137,22 +138,22 @@ public class ShoppingCart {
 				basket_html_str += "</tr>";
 			}
 			basket_html_str += "<tr>"
-					+ "<td></td>"
-					+ "<td>Subtotal</td>"
-					+ "<td></td>"
-					+ "<td>CHF " + String.format("%.2f", total_CHF) + "</td>"					
+					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\">Subtotal</td>"
+					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\">CHF " + String.format("%.2f", total_CHF) + "</td>"					
 					+ "</tr>";
 			basket_html_str += "<tr>"
-					+ "<td></td>"
-					+ "<td>MWSt</td>"
-					+ "<td></td>"
-					+ "<td>CHF " + String.format("%.2f", total_CHF*0.08) + "</td>"					
+					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\">MWSt</td>"
+					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\">CHF " + String.format("%.2f", total_CHF*0.08) + "</td>"					
 					+ "</tr>";
 			basket_html_str += "<tr>"
-					+ "<td></td>"
-					+ "<td><b>Total</b></td>"
-					+ "<td></td>"
-					+ "<td><b>CHF " + String.format("%.2f", total_CHF*1.08) + "</b></td>"					
+					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\"><b>Total</b></td>"
+					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\"><b>CHF " + String.format("%.2f", total_CHF*1.08) + "</b></td>"					
 					+ "</tr>";
 						
 			basket_html_str += "</table>";
@@ -177,6 +178,8 @@ public class ShoppingCart {
 	}
 	
 	public void generatePdf() {
+		// A4: 8.267in x 11.692in => 595.224units x 841.824units (72units/inch)
+		
 		// marginLeft, marginRight, marginTop, marginBottom
         Document document = new Document(PageSize.A4, 50, 50, 50, 50);
         try {
@@ -216,25 +219,31 @@ public class ShoppingCart {
         		logo.setAlignment(Rectangle.ALIGN_RIGHT);
         		document.add(logo);        		
 
-        		// Title
-        		Paragraph p = new Paragraph("Bestellung", font_bold_16);
-        		document.add(p);
-                
-                // Date
-        		p = new Paragraph("Datum: " + dateFormat.format(date), font_bold_10);
+        		document.add(Chunk.NEWLINE);
+        		
+        		// Bestelladresse
+        		String bestellAdrStr = mPrefs.get(BestellAdresseID, "Keine Bestelladresse");
+        		Paragraph p = new Paragraph(12);
+        		// p.setIndentationLeft(60);
+        		p.add(new Chunk(bestellAdrStr, font_norm_10));
         		document.add(p);
 
         		document.add(Chunk.NEWLINE);
         		
-        		// Bestellt...
-        		p = new Paragraph("Bestellt durch: Dr. Who", font_norm_10);
+        		// Title
+        		p = new Paragraph("Bestellung", font_bold_16);
         		document.add(p);
-        		
-        		document.add(Chunk.NEWLINE);
+                
+                // Date
+        		p = new Paragraph("Datum: " + dateFormat.format(date), font_bold_10);
+        		p.setSpacingAfter(20);
+        		document.add(p);
+
+        		// document.add(Chunk.NEWLINE);
         		
         		// Add addresses (Lieferadresse + Rechnungsadresse)
         		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
-        		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");
+        		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");        		
         		
                 PdfPTable addressTable = new PdfPTable(new float[] {1,1});
                 addressTable.setWidthPercentage(100f);

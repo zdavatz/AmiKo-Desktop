@@ -1441,7 +1441,7 @@ public class AMiKoDesk {
 		toolBar.add(m_progress_indicator);				
 		
 		// ------ Setup settingspage ------
-		final SettingsPage sp = new SettingsPage(jframe);
+		final SettingsPage settingsPage = new SettingsPage(jframe);
 		
 		jframe.addWindowListener(new WindowListener() {
 			// Use WindowAdapter!
@@ -1472,7 +1472,7 @@ public class AMiKoDesk {
 		settings_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				sp.display();
+				settingsPage.display();
 			}
 		});
 		quit_item.addActionListener(new ActionListener() {

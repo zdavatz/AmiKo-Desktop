@@ -62,6 +62,7 @@ public class SettingsPage extends JDialog {
 	private static String PhoneNumberID = "phonenumber";
 	
 	private Map<String, User> m_user_map = null;;
+	private User m_user = null;
 	
 	private JFrame mFrame = null;
 	private JFileChooser mFc = null;
@@ -205,6 +206,13 @@ public class SettingsPage extends JDialog {
 	}
 	
 	protected JPanel shoppingBasketSettings() {
+		String GLNCodeStr = mPrefs.get(GLNCodeID, "7610");
+		String bestellAdrStr = mPrefs.get(BestellAdresseID, "Keine Bestelladresse");
+		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
+		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");
+		String EmailStr = mPrefs.get(EmailAdresseID, "name@host.ch");
+		String PhoneNumberStr = mPrefs.get(PhoneNumberID, "+41-");
+		
 		JPanel jPanel = new JPanel();
 		jPanel.setLayout(new GridBagLayout());
 
@@ -247,21 +255,44 @@ public class SettingsPage extends JDialog {
 		gbc = getGbc(0,1, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(jlabelGLN, gbc);
 		
-		String GLNCodeStr = mPrefs.get(GLNCodeID, "7610-");
 		mTextFieldGLN = new JTextField(GLNCodeStr);
 		mTextFieldGLN.setBorder(new LineBorder(new Color(255,255,255), 5, false));
 		gbc = getGbc(1,1 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mTextFieldGLN, gbc);
+
+		String address = "";		
 		
 		mTextFieldGLN.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String mGLNCodeStr = mTextFieldGLN.getText();
-				if (mGLNCodeStr.matches("[\\d]{4}-[\\d]{9}")) {
-					mTextFieldGLN.setBorder(new LineBorder(new Color(220,255,220), 5, false));
-					mTextFieldGLN.setBackground(new Color(220,255,220));
-					mPrefs.put(GLNCodeID, mGLNCodeStr);	
-					System.out.println(mGLNCodeStr);					
+				if (mGLNCodeStr.matches("[\\d]{13}")) {
+					mPrefs.put(GLNCodeID, mGLNCodeStr);
+					m_user = m_user_map.get(mGLNCodeStr);
+					if (m_user!=null) {
+						System.out.println(m_user.getGlnCode() + " - " + m_user.getName1() + ", " + m_user.getName2());
+						mTextFieldGLN.setBorder(new LineBorder(new Color(220,255,220), 5, false));
+						mTextFieldGLN.setBackground(new Color(220,255,220));
+						String address = "";
+						if (m_user.isHuman()) {
+							address = "Dr. med. " + m_user.getName2() + " " + m_user.getName1() + "\n" 
+								+ m_user.getPostCode() + " " + m_user.getCity() + "\n"
+								+ "Schweiz";
+						} else {
+							address = m_user.getName2() + "\n" 
+								+ m_user.getName1() + "\n" 
+								+ m_user.getStreet() + "\n"
+								+ m_user.getPostCode() + " " + m_user.getCity() + "\n"
+								+ "Schweiz";
+						}
+						m_user.setFullAddress(address);
+						mTextAreaBestell.setText(address);
+						mTextAreaLiefer.setText(address);
+						mTextAreaRechnung.setText(address);
+					} else {
+						mTextFieldGLN.setBorder(new LineBorder(new Color(255,220,220), 5, false));
+						mTextFieldGLN.setBackground(new Color(255,220,220));
+					}
 				} else {
 					mTextFieldGLN.setBorder(new LineBorder(new Color(255,220,220), 5, false));
 					mTextFieldGLN.setBackground(new Color(255,220,220));
@@ -274,8 +305,7 @@ public class SettingsPage extends JDialog {
 		jlabelBestell.setHorizontalAlignment(JLabel.LEFT);
 		gbc = getGbc(0,2,0.5,1.0,GridBagConstraints.HORIZONTAL);		
 		jPanel.add(jlabelBestell, gbc);
-
-		String bestellAdrStr = mPrefs.get(BestellAdresseID, "Keine Bestelladresse");
+		
 		mTextAreaBestell = new JTextArea(bestellAdrStr);
 		mTextAreaBestell.setPreferredSize(new Dimension(128, 256));
 		mTextAreaBestell.setMargin(new Insets(5,5,5,5));
@@ -288,7 +318,6 @@ public class SettingsPage extends JDialog {
 		gbc = getGbc(0,3,0.5,1.0,GridBagConstraints.HORIZONTAL);
 		jPanel.add(jlabelLiefer, gbc);
 
-		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
 		mTextAreaLiefer = new JTextArea(lieferAdrStr);
 		mTextAreaLiefer.setPreferredSize(new Dimension(128, 128));
 		mTextAreaLiefer.setMargin(new Insets(5,5,5,5));
@@ -301,7 +330,6 @@ public class SettingsPage extends JDialog {
 		gbc = getGbc(0,4,0.5,1.0,GridBagConstraints.HORIZONTAL);
 		jPanel.add(jlabelRechnung, gbc);
 
-		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");
 		mTextAreaRechnung = new JTextArea(rechnungsAdrStr);
 		mTextAreaRechnung.setPreferredSize(new Dimension(128, 128));
 		mTextAreaRechnung.setMargin(new Insets(5,5,5,5));
@@ -314,7 +342,6 @@ public class SettingsPage extends JDialog {
 		gbc = getGbc(0,5, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(jlabelEmail, gbc);
 		
-		String EmailStr = mPrefs.get(EmailAdresseID, "name@host.ch");
 		mTextFieldEmail = new JTextField(EmailStr);
 		mTextFieldEmail.setBorder(new LineBorder(new Color(255,255,255), 5, false));
 		gbc = getGbc(1,5 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
@@ -343,7 +370,6 @@ public class SettingsPage extends JDialog {
 		gbc = getGbc(0,6, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(jlabelPhone, gbc);
 		
-		String PhoneNumberStr = mPrefs.get(PhoneNumberID, "+41-");
 		mTextFieldPhone = new JTextField(PhoneNumberStr);
 		mTextFieldPhone.setBorder(new LineBorder(new Color(255,255,255), 5, false));	
 		gbc = getGbc(1,6 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
@@ -382,40 +408,6 @@ public class SettingsPage extends JDialog {
 		return gbc;
 	}
 	
-	private void generateAndSendEmail() throws AddressException, MessagingException {
-		Properties mailServerProperties;
-		Session getMailSession;
-		MimeMessage generateMailMessage;
-
-		// Step1
-		System.out.println("\n 1st ===> setup Mail Server Properties..");
-		mailServerProperties = System.getProperties();
-		mailServerProperties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
-		mailServerProperties.put("mail.transport.protocol", "smtps");
-		mailServerProperties.put("mail.smtps.host", "smtp.ifi.uzh.ch");
-		mailServerProperties.put("mail.smtps.auth", "true"); // Enable Authentication
-
-		// Step2
-		System.out.println("\n\n 2nd ===> get Mail Session..");
-		getMailSession = Session.getDefaultInstance(mailServerProperties, null);
-		getMailSession.setDebug(true);
-		generateMailMessage = new MimeMessage(getMailSession);
-		generateMailMessage.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress("user1@hostname.com"));
-		generateMailMessage.addRecipient(javax.mail.Message.RecipientType.CC, new InternetAddress("user2@hostname.com"));
-		generateMailMessage.setFrom(new InternetAddress("user3@hostname.com"));
-		generateMailMessage.setSubject("Greetings from Cybermax...");
-		String emailBody = "Test email by Crunchify.com JavaMail API example. "
-				+ "<br><br> Regards, <br>Crunchify Admin";
-		generateMailMessage.setContent(emailBody, "text/html");
-
-		// Step3
-		Transport transport = getMailSession.getTransport("smtps");
-		// Enter your correct gmail UserID and Password
-		transport.connect("smtp.ifi.uzh.ch", 465, "username", "password");
-		transport.sendMessage(generateMailMessage, generateMailMessage.getAllRecipients());
-		transport.close();
-	}
-	
 	private Map<String, User> readFromCsvToMap(String filename) {
 		Map<String, User> map = new TreeMap<String, User>();
 		try {
@@ -428,7 +420,7 @@ public class SettingsPage extends JDialog {
 			while ((line = br.readLine()) != null) {
 				// Human - 7601000900487|Bauer|Wibke Cornelia|8596|Münsterlingen||Ärztin/Arzt|Ja|Nein
 				// Corporate - 7601001059900|Ostschweizer Kinderspital||9006|St. Gallen|Claudiusstrasse 6|Spitalapotheke, Andere|||
-				String token[] = line.split("\\|", -1);	// -1 -> don't discard empty strings				
+				String token[] = line.split("\\|", -1);	// -1 -> don't discard empty strings at the end				
 				User user = new User();
 				user.setGlnCode(token[0]);
 				user.setName1(token[1]);
@@ -495,5 +487,39 @@ public class SettingsPage extends JDialog {
 				System.out.println("SettingsPage - open command cancelled by the user...");
 			}
 		}
+	}
+	
+	private void generateAndSendEmail() throws AddressException, MessagingException {
+		Properties mailServerProperties;
+		Session getMailSession;
+		MimeMessage generateMailMessage;
+
+		// Step1
+		System.out.println("\n 1st ===> setup Mail Server Properties..");
+		mailServerProperties = System.getProperties();
+		mailServerProperties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+		mailServerProperties.put("mail.transport.protocol", "smtps");
+		mailServerProperties.put("mail.smtps.host", "smtp.ifi.uzh.ch");
+		mailServerProperties.put("mail.smtps.auth", "true"); // Enable Authentication
+
+		// Step2
+		System.out.println("\n\n 2nd ===> get Mail Session..");
+		getMailSession = Session.getDefaultInstance(mailServerProperties, null);
+		getMailSession.setDebug(true);
+		generateMailMessage = new MimeMessage(getMailSession);
+		generateMailMessage.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress("user1@hostname.com"));
+		generateMailMessage.addRecipient(javax.mail.Message.RecipientType.CC, new InternetAddress("user2@hostname.com"));
+		generateMailMessage.setFrom(new InternetAddress("user3@hostname.com"));
+		generateMailMessage.setSubject("Greetings from Cybermax...");
+		String emailBody = "Test email by Crunchify.com JavaMail API example. "
+				+ "<br><br> Regards, <br>Crunchify Admin";
+		generateMailMessage.setContent(emailBody, "text/html");
+
+		// Step3
+		Transport transport = getMailSession.getTransport("smtps");
+		// Enter your correct gmail UserID and Password
+		transport.connect("smtp.ifi.uzh.ch", 465, "username", "password");
+		transport.sendMessage(generateMailMessage, generateMailMessage.getAllRecipients());
+		transport.close();
 	}
 }

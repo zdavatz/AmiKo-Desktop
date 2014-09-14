@@ -1,17 +1,27 @@
 package com.maxl.java.amikodesk;
 
 public class User {
+	private String full_address;
 	private String gln_code;
 	private String name_1;	// or family name
 	private String name_2;	// or first name
 	private String street;
 	private String post_code;
 	private String city;
+	private String country;
 	private String type;	
 	private boolean is_human;	// human/corporation
 	private boolean dispensation_permit;
 	private boolean anaesthesia_permit;
 
+	public String getFullAddress() {
+		return full_address;
+	}
+	
+	public void setFullAddress(String full_address) {
+		this.full_address = full_address;
+	}	
+	
 	public String getGlnCode() {
 		return gln_code;
 	}
@@ -58,6 +68,14 @@ public class User {
 	
 	public void setCity(String city) {
 		this.city = city;
+	}
+	
+	public String getCountry() {
+		return country;
+	}
+	
+	public void setCountry(String country) {
+		this.country = country;
 	}
 	
 	public String getType() {
