@@ -154,7 +154,7 @@ public class SqlDatabase {
 				// Initialize org.sqlite.JDBC driver
 				Class.forName("org.sqlite.JDBC");
 				// Create connection to db
-				m_conn = DriverManager.getConnection("jdbc:sqlite:" + db_path);		
+				m_conn = DriverManager.getConnection("jdbc:sqlite:" + db_path);	
 				m_stat = m_conn.createStatement();
 				// Trick: check if following two instructions force an exception to occur...
 				String query = "select count(*) from " + DATABASE_TABLE; 

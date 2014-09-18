@@ -14,6 +14,9 @@ import java.nio.charset.CodingErrorAction;
 import java.util.Map;
 import java.util.TreeMap;
 
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileFilter;
+
 public class Utilities {
 
 	static public String appDataFolder() {
@@ -104,5 +107,23 @@ public class Utilities {
 		}
 		
 		return map;
-	}		
+	}
+	
+	static public JFileChooser getFileChooser(String title, String filt, String descr) {
+		JFileChooser fc = new JFileChooser();
+		final String filter = filt;
+		final String description = descr;
+		fc.setDialogTitle(title);
+		if (fc!=null) {
+			fc.setFileFilter(new FileFilter() {
+				public boolean accept(File f) {
+					return (f.getName().toLowerCase().endsWith(filter));
+				}
+				public String getDescription() {
+					return description;
+				}
+			});
+		}
+		return fc;
+	}
 }

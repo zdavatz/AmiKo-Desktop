@@ -11,6 +11,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
@@ -89,23 +91,7 @@ public class SettingsPage extends JDialog {
 			m_user_map = readFromCsvToMap("./dbs/" + Constants.GLN_CODES_FILE);
 		}
 		
-		this.addWindowListener(new WindowAdapter() {
-			@Override
-			public void windowClosed(WindowEvent e) {
-				String address = mTextAreaBestell.getText();
-				if (address!=null)
-					mPrefs.put(BestellAdresseID, address);
-				address = mTextAreaLiefer.getText();
-				if (address!=null)
-					mPrefs.put(LieferAdresseID, address);
-				address = mTextAreaRechnung.getText();
-				if (address!=null)
-					mPrefs.put(RechnungsAdresseID, address);
-			}
-		});
-	}
-	
-	public void display() {		
+		
 		this.setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		
 		add(Box.createRigidArea(new Dimension(0, 10)));
@@ -128,6 +114,24 @@ public class SettingsPage extends JDialog {
 		// Set size
 		this.setSize(512,640);		
 		this.setResizable(false);
+		
+		this.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosed(WindowEvent e) {
+				String address = mTextAreaBestell.getText();
+				if (address!=null)
+					mPrefs.put(BestellAdresseID, address);
+				address = mTextAreaLiefer.getText();
+				if (address!=null)
+					mPrefs.put(LieferAdresseID, address);
+				address = mTextAreaRechnung.getText();
+				if (address!=null)
+					mPrefs.put(RechnungsAdresseID, address);
+			}
+		});
+	}
+	
+	public void display() {
 		// Visualize
 		this.setVisible(true);
 	}
@@ -210,7 +214,7 @@ public class SettingsPage extends JDialog {
 		String bestellAdrStr = mPrefs.get(BestellAdresseID, "Keine Bestelladresse");
 		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
 		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");
-		String EmailStr = mPrefs.get(EmailAdresseID, "name@host.ch");
+		String EmailStr = mPrefs.get(EmailAdresseID, "");
 		String PhoneNumberStr = mPrefs.get(PhoneNumberID, "+41-");
 		
 		JPanel jPanel = new JPanel();
@@ -256,15 +260,24 @@ public class SettingsPage extends JDialog {
 		jPanel.add(jlabelGLN, gbc);
 		
 		mTextFieldGLN = new JTextField(GLNCodeStr);
-		mTextFieldGLN.setBorder(new LineBorder(new Color(255,255,255), 5, false));
+		if (!GLNCodeStr.matches("[\\d]{13}")) {
+			mTextFieldGLN.setBorder(new LineBorder(new Color(255,220,220), 5, false));
+			mTextFieldGLN.setBackground(new Color(255,220,220));
+		} else {
+			mTextFieldGLN.setBorder(new LineBorder(new Color(255,255,255), 5, false));
+		}
+			
 		gbc = getGbc(1,1 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mTextFieldGLN, gbc);
-
-		String address = "";		
 		
-		mTextFieldGLN.addActionListener(new ActionListener() {
+		mTextFieldGLN.addKeyListener(new KeyListener() {   // addActionListener(new ActionListener() {
+			@Override 
+			public void keyPressed(KeyEvent keyEvent) {
+				//
+			}
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void keyReleased(KeyEvent keyEvent) {
+			// public void actionPerformed(ActionEvent e) {
 				String mGLNCodeStr = mTextFieldGLN.getText();
 				if (mGLNCodeStr.matches("[\\d]{13}")) {
 					mPrefs.put(GLNCodeID, mGLNCodeStr);
@@ -276,6 +289,7 @@ public class SettingsPage extends JDialog {
 						String address = "";
 						if (m_user.isHuman()) {
 							address = "Dr. med. " + m_user.getName2() + " " + m_user.getName1() + "\n" 
+								+ m_user.getStreet() + "\n"
 								+ m_user.getPostCode() + " " + m_user.getCity() + "\n"
 								+ "Schweiz";
 						} else {
@@ -297,6 +311,10 @@ public class SettingsPage extends JDialog {
 					mTextFieldGLN.setBorder(new LineBorder(new Color(255,220,220), 5, false));
 					mTextFieldGLN.setBackground(new Color(255,220,220));
 				}
+			}
+			@Override 
+			public void keyTyped(KeyEvent keyEvent) {
+				//
 			}
 		});
 		
@@ -343,24 +361,37 @@ public class SettingsPage extends JDialog {
 		jPanel.add(jlabelEmail, gbc);
 		
 		mTextFieldEmail = new JTextField(EmailStr);
-		mTextFieldEmail.setBorder(new LineBorder(new Color(255,255,255), 5, false));
+		if (!EmailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
+			mTextFieldGLN.setBorder(new LineBorder(new Color(255,220,220), 5, false));
+			mTextFieldGLN.setBackground(new Color(255,220,220));
+		} else {
+			mTextFieldEmail.setBorder(new LineBorder(new Color(255,255,255), 5, false));
+		}
 		gbc = getGbc(1,5 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mTextFieldEmail, gbc);
 		
-		mTextFieldEmail.addActionListener(new ActionListener() {
+		mTextFieldEmail.addKeyListener(new KeyListener() { // .addActionListener(new ActionListener() {
+			@Override 
+			public void keyPressed(KeyEvent keyEvent) {
+				//
+			}
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void keyReleased(KeyEvent keyEvent) {
+			// public void actionPerformed(ActionEvent e) {
 				// Validate email address
 				String mEmailStr = mTextFieldEmail.getText();
 				if (mEmailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
 					mTextFieldEmail.setBorder(new LineBorder(new Color(220,255,220), 5, false));
 					mTextFieldEmail.setBackground(new Color(220,255,220));
-					mPrefs.put(EmailAdresseID, mEmailStr);
-					System.out.println(mEmailStr);					
+					mPrefs.put(EmailAdresseID, mEmailStr);			
 				} else { 
 					mTextFieldEmail.setBorder(new LineBorder(new Color(255,220,220), 5, false));
 					mTextFieldEmail.setBackground(new Color(255,220,220));
 				}
+			}
+			@Override 
+			public void keyTyped(KeyEvent keyEvent) {
+				//
 			}
 		});
 		
@@ -471,10 +502,12 @@ public class SettingsPage extends JDialog {
 							f.isDirectory());
 				}
 				public String getDescription() {
-					return "Logos";
+					return "*.png, *.jpg";
 				}
 			});
 					
+			mFc.setDialogTitle("Logo einstellen");
+			mFc.setApproveButtonText("Wählen");
 			int r = mFc.showOpenDialog(mFrame);
 			if (r==JFileChooser.APPROVE_OPTION) {
 				// File file = fc.getSelectedFile();

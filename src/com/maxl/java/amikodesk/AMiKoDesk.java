@@ -67,6 +67,7 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Scanner;
 import java.util.TreeMap;
+import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -79,6 +80,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JEditorPane;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -123,6 +125,10 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.joda.time.DateTime;
+import org.joda.time.Minutes;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import chrriis.dj.nativeswing.NSComponentOptions;
 import chrriis.dj.nativeswing.NativeSwing;
@@ -194,6 +200,10 @@ public class AMiKoDesk {
 	private static ListPanel m_list_ingredients = null;
 	private static ListPanel m_list_therapies = null;
 
+	// Preferences
+	private static Preferences m_prefs = null;
+	private static boolean m_preferences_ok = false;
+	
 	// Colors
 	private static Color m_but_color = new Color(220,225,255);
 	
@@ -362,6 +372,9 @@ public class AMiKoDesk {
 		m_interactions_cart = new InteractionsCart();
 		m_shopping_cart = new ShoppingCart();
 		
+		// Preferences
+		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
+			
 		// UIUtils.setPreferredLookAndFeel();
 		NativeInterface.open();
 		NativeSwing.initialize();
@@ -596,6 +609,7 @@ public class AMiKoDesk {
 	static class IndexPanel extends JPanel implements ListSelectionListener {
 		
 		private JList<String> list = null;
+		private JScrollPane jscroll = null;
 		
 		public IndexPanel(String[] sec_titles) {			
 			super(new BorderLayout());
@@ -610,6 +624,16 @@ public class AMiKoDesk {
 			list.setSelectionForeground(Color.WHITE);
 			list.setFont(new Font("Dialog", Font.PLAIN, 13));
 			list.addListSelectionListener(this);
+			list.setPreferredSize(null);
+
+			/*
+			jscroll = new JScrollPane(list);
+			jscroll.setPreferredSize(null);
+			jscroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+			jscroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+			indexPanel.add(jscroll, BorderLayout.CENTER);
+			add(indexPanel, BorderLayout.CENTER);
+			*/
 			
 			indexPanel.add(list, BorderLayout.CENTER);
 			add(indexPanel, BorderLayout.CENTER);
@@ -770,7 +794,19 @@ public class AMiKoDesk {
 							SwingUtilities.invokeLater(new Runnable() {
 								@Override
 								public void run() {	
-									m_shopping_cart.generatePdf();
+									// Open file chooser
+									JFileChooser fc = Utilities.getFileChooser("Bestellung speichern", ".pdf", "portable document format (pdf)");
+									String gln_code = m_prefs.get("glncode", "7610000000000");
+									DateTime dT = new DateTime();
+									DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
+									fc.setSelectedFile(new File(gln_code + "_" + fmt.print(dT) + ".pdf"));
+									if (fc!=null) {
+										int r = fc.showSaveDialog(jWeb);
+										if (r==JFileChooser.APPROVE_OPTION) {										
+											String filename = fc.getSelectedFile().getPath();						
+											m_shopping_cart.generatePdf(filename);	
+										}
+									}
 								}
 							});
 						} else if (msg.startsWith("change_qty")) {
@@ -864,6 +900,8 @@ public class AMiKoDesk {
 				content_str = content_str.insert(content_str.indexOf("</head>"), m_css_str);
 				// Enable javascript
 				jWeb.setJavascriptEnabled(true);
+				
+				System.out.println(content_str);
 				
 				if (CML_OPT_SERVER==false) {
 					try {
@@ -1953,21 +1991,29 @@ public class AMiKoDesk {
 		selectShoppingCartButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				selectAipsButton.setSelected(false);
-				selectFavoritesButton.setSelected(false);
-				selectInteractionsButton.setSelected(false);
-				selectShoppingCartButton.setSelected(true);
-				m_database_used = "aips";
-				m_seek_interactions = false;
-				m_shopping_mode = true;				
-				// Set right panel title
-				if (Utilities.appLanguage().equals("de"))
-					m_web_panel.setTitle("Warenkorb");
-				else if (Utilities.appLanguage().equals("fr"))
-					m_web_panel.setTitle("Panier d'achat");	
-				// Switch to shopping cart
-				m_web_panel.updateListOfPackages();
-				m_web_panel.updateShoppingHtml();
+				String email_adr = m_prefs.get("emailadresse", "");
+				if (email_adr!=null && email_adr.length()>0)
+					m_preferences_ok = true;
+				if (m_preferences_ok) {
+					selectAipsButton.setSelected(false);
+					selectFavoritesButton.setSelected(false);
+					selectInteractionsButton.setSelected(false);
+					selectShoppingCartButton.setSelected(true);
+					m_database_used = "aips";
+					m_seek_interactions = false;
+					m_shopping_mode = true;				
+					// Set right panel title
+					if (Utilities.appLanguage().equals("de"))
+						m_web_panel.setTitle("Warenkorb");
+					else if (Utilities.appLanguage().equals("fr"))
+						m_web_panel.setTitle("Panier d'achat");	
+					// Switch to shopping cart
+					m_web_panel.updateListOfPackages();
+					m_web_panel.updateShoppingHtml();
+				} else {
+					selectShoppingCartButton.setSelected(false);
+					settingsPage.display();
+				}
 			}
 		});
 		
@@ -2169,7 +2215,55 @@ public class AMiKoDesk {
 			else if (!CML_OPT_REGNR.isEmpty())
 				startAppWithRegnr(but_regnr);
 		}
+		
+		// Check if update is required and start update...
+		checkIfUpdateRequired(updatedb_item);
 	}	
+	
+	static void checkIfUpdateRequired(JMenuItem update_item) {
+		// Get current date
+		DateTime dT = new DateTime();
+		// Get stored date
+		String updateTime = m_prefs.get("updateTime", dT.now().toString());		
+		DateTime uT = new DateTime(updateTime);
+		// Seconds diffSec = Seconds.secondsBetween(uT, dT);
+		Minutes diffMin = Minutes.minutesBetween(uT, dT);
+		// Do this only when the application is freshly installed
+		int timeDiff = diffMin.getMinutes();
+		if (timeDiff==0)
+			m_prefs.put("updateTime", dT.now().toString());
+		
+		switch(m_prefs.getInt("update", 0)) {
+		case 0:	// Manual
+			break;
+		case 1: // Daily
+			if (timeDiff>60*24) {
+				// Download files
+				update_item.doClick();
+				// ... and update time
+				m_prefs.put("updateTime", dT.now().toString());
+			}
+			break; 	
+		case 2: // Weekly
+			if (timeDiff>60*24*7) {
+				// Download files
+				update_item.doClick();
+				// ... and update time
+				m_prefs.put("updateTime", dT.now().toString());
+			}			
+			break;				
+		case 3: // Monthly
+			if (timeDiff>60*24*30) {
+				// Download files
+				update_item.doClick();
+				// ... and update time
+				m_prefs.put("updateTime", dT.now().toString());
+			}			
+			break;
+		default:
+			break;
+		}
+	}
 	
 	static void retrieveFavorites() 
 	{
@@ -2264,7 +2358,7 @@ public class AMiKoDesk {
 		List<String> m = new ArrayList<String>();
 		Pattern p_red = Pattern.compile(".*O]");
 		Pattern p_green = Pattern.compile(".*G]");
-		if (med_search.size()<BigCellNumber && !m_seek_interactions) {
+		if (med_search.size()<BigCellNumber && !m_seek_interactions && !m_shopping_mode) {
 			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
 				String pack_info_str = "";
@@ -2284,7 +2378,7 @@ public class AMiKoDesk {
 				m.add("<html><b>" + ms.getTitle() + "</b><br><font size=-1>" + pack_info_str + "</font></html>");
 				med_id.add(ms.getId());
 			}
-		} else if (m_seek_interactions){
+		} else if (m_seek_interactions || m_shopping_mode){
 			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
 				m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b></html>");

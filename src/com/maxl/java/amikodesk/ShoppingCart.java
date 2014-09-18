@@ -19,7 +19,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
-import java.awt.Color;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -63,7 +62,6 @@ public class ShoppingCart {
 	private static Font font_bold_10 = FontFactory.getFont("Helvetica", 10, Font.BOLD);
 	private static Font font_bold_16 = FontFactory.getFont("Helvetica", 16, Font.BOLD);
 	
-	private static String UpdateID = "update";
 	private static String LogoImageID = "logo";
 	private static String BestellAdresseID = "bestelladresse";
 	private static String LieferAdresseID = "lieferadresse";
@@ -121,19 +119,21 @@ public class ShoppingCart {
 		if (m_shopping_basket.size()>0) {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();
-				int quantity = article.getQuantity();				
-				String price_pruned = article.getPublicPrice().replaceAll("[^\\d.]", "");
+				int quantity = article.getQuantity();
+				String price = article.getPublicPrice();
+				String price_pruned = price.replaceAll("[^\\d.]", "");
 				float price_CHF = 0.0f;
 				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {
 					price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
 					total_CHF += price_CHF;
 				}
+				// String article_price = String.format("%.2f",  price_CHF);
 				basket_html_str += "<tr>";
 				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:40px\"" +
 						" value=\"" + quantity + "\"" + " onkeypress=\"changeQty('Warenkorb',this)\" id=\"qty\" />" + "</td>"
 						+ "<td>" + article.getEanCode() + "</td>"
 						+ "<td>" + article.getPackTitle() + "</td>"
-						+ "<td>" + String.format("%.2f",  price_CHF) + "</td>"
+						+ "<td>" + price + "</td>"
 						+ "<td align=\"right\">" + "<input type=\"button\" value=\"" + delete_text + "\" onclick=\"deleteRow('Warenkorb',this)\" />" + "</td>";
 				basket_html_str += "</tr>";
 			}
@@ -177,7 +177,7 @@ public class ShoppingCart {
 		return m_html_str;
 	}
 	
-	public void generatePdf() {
+	public void generatePdf(String filename) {
 		// A4: 8.267in x 11.692in => 595.224units x 841.824units (72units/inch)
 		
 		// marginLeft, marginRight, marginTop, marginBottom
@@ -190,12 +190,8 @@ public class ShoppingCart {
         		*/
         		
         		Preferences mPrefs = Preferences.userRoot().node(SettingsPage.class.getName());
-        		
-        		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-        		Date date = new Date();
-        		String date_underscores = dateFormat.format(date).replaceAll("[.:]", "").replaceAll(" ", "_");
-        		
-        		PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream("bestellung_" + date_underscores + ".pdf"));        		
+        		        		
+        		PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream(filename));        		
         		writer.setBoxSize("art", new Rectangle(50, 50, 560, 790));
         		
         		HeaderFooter event = new HeaderFooter();
@@ -235,6 +231,8 @@ public class ShoppingCart {
         		document.add(p);
                 
                 // Date
+        		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+        		Date date = new Date();
         		p = new Paragraph("Datum: " + dateFormat.format(date), font_bold_10);
         		p.setSpacingAfter(20);
         		document.add(p);
@@ -294,7 +292,7 @@ public class ShoppingCart {
         
         table.addCell(getStringCell("Pos", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
 		table.addCell(getStringCell("Qty", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("Ean-Code", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell("GTIN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell("Bezeichnung", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell("Preis (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
 		        
@@ -322,8 +320,9 @@ public class ShoppingCart {
 		        
 				table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
 				
-				String price_pruned = article.getPublicPrice().replaceAll("[^\\d.]", "");
-				table.addCell(getStringCell(price_pruned, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));				
+				String price = article.getPublicPrice();
+				table.addCell(getStringCell(price, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));
+				String price_pruned = price.replaceAll("[^\\d.]", "");
 				if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
 					total_CHF += article.getQuantity()*Float.parseFloat(price_pruned);				
 			}
