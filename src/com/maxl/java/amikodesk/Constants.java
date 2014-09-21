@@ -13,10 +13,11 @@ public class Constants {
 	
 	// Important folders
 	public static final String IMG_FOLDER = "./images/";	
+	public static final String JS_FOLDER = "./jscripts/";
 	public static final String HTML_FILES = "./fis/fi_de_html/";
 	public static final String CSS_SHEET = "./css/amiko_stylesheet.css";
-	public static final String JS_FOLDER = "./jscripts/";
-	public static final String INTERACTIONS_SHEET = "./css/interactions_css.css";	
+	public static final String INTERACTIONS_SHEET = "./css/interactions_css.css";
+	public static final String SHOPPING_SHEET = "./css/shopping_css.css";
 
 	// App names
 	public static final String AMIKO_NAME = "AmiKo Desktop";

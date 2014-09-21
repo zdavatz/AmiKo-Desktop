@@ -795,7 +795,7 @@ public class AMiKoDesk {
 								@Override
 								public void run() {	
 									// Open file chooser
-									JFileChooser fc = Utilities.getFileChooser("Bestellung speichern", ".pdf", "portable document format (pdf)");
+									JFileChooser fc = Utilities.getFileChooser("Bestellung speichern", ".pdf", "*.pdf");
 									String gln_code = m_prefs.get("glncode", "7610000000000");
 									DateTime dT = new DateTime();
 									DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
@@ -809,6 +809,10 @@ public class AMiKoDesk {
 									}
 								}
 							});
+						} else if (msg.equals("create_csv")) {
+							/*
+							/ TODO: IMPLEMENT!!
+							*/
 						} else if (msg.startsWith("change_qty")) {
 							if (m_shopping_basket.containsKey(row_key)) {
 								Article article = m_shopping_basket.get(row_key);

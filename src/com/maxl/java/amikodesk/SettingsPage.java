@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
 
@@ -76,6 +77,11 @@ public class SettingsPage extends JDialog {
 	private JTextArea mTextAreaRechnung = null;
 	private JTextField mTextFieldEmail = null;
 	private JTextField mTextFieldPhone = null;
+	
+	// Colors
+	private static Color color_white = new Color(255,255,255);
+	// private static Color color_green = new Color(220,255,220);
+	private static Color color_red = new Color(255,220,220);
 	
 	public SettingsPage(JFrame frame) {
 		mFrame = frame;
@@ -240,9 +246,12 @@ public class SettingsPage extends JDialog {
 		mButtonLogo = new JButton(icon);
 		mButtonLogo.setPreferredSize(new Dimension(128, 128));
 		mButtonLogo.setMargin(new Insets(10,10,10,10));
-		mButtonLogo.setBackground(new Color(255,255,255));
+		if (!logoFile.exists())
+			mButtonLogo.setBackground(color_red);
+		else
+			mButtonLogo.setBackground(color_white);
 		mButtonLogo.setBorder(new CompoundBorder(
-				new LineBorder(new Color(255,255,255)), new EmptyBorder(0,3,0,0)));	
+				new LineBorder(color_white), new EmptyBorder(0,3,0,0)));	
 		gbc = getGbc(1,0, 2.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mButtonLogo, gbc);
 		
@@ -261,16 +270,17 @@ public class SettingsPage extends JDialog {
 		
 		mTextFieldGLN = new JTextField(GLNCodeStr);
 		if (!GLNCodeStr.matches("[\\d]{13}")) {
-			mTextFieldGLN.setBorder(new LineBorder(new Color(255,220,220), 5, false));
-			mTextFieldGLN.setBackground(new Color(255,220,220));
+			mTextFieldGLN.setBorder(new LineBorder(color_red, 5, false));
+			mTextFieldGLN.setBackground(color_red);
 		} else {
-			mTextFieldGLN.setBorder(new LineBorder(new Color(255,255,255), 5, false));
+			mTextFieldGLN.setBorder(new LineBorder(color_white, 5, false));
+			mTextFieldGLN.setBackground(color_white);
 		}
 			
 		gbc = getGbc(1,1 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mTextFieldGLN, gbc);
 		
-		mTextFieldGLN.addKeyListener(new KeyListener() {   // addActionListener(new ActionListener() {
+		mTextFieldGLN.addKeyListener(new KeyListener() { 
 			@Override 
 			public void keyPressed(KeyEvent keyEvent) {
 				//
@@ -284,14 +294,21 @@ public class SettingsPage extends JDialog {
 					m_user = m_user_map.get(mGLNCodeStr);
 					if (m_user!=null) {
 						System.out.println(m_user.getGlnCode() + " - " + m_user.getName1() + ", " + m_user.getName2());
-						mTextFieldGLN.setBorder(new LineBorder(new Color(220,255,220), 5, false));
-						mTextFieldGLN.setBackground(new Color(220,255,220));
+						mTextFieldGLN.setBorder(new LineBorder(color_white, 5, false));
+						mTextFieldGLN.setBackground(color_white);
 						String address = "";
 						if (m_user.isHuman()) {
-							address = "Dr. med. " + m_user.getName2() + " " + m_user.getName1() + "\n" 
-								+ m_user.getStreet() + "\n"
-								+ m_user.getPostCode() + " " + m_user.getCity() + "\n"
-								+ "Schweiz";
+							if (!m_user.getStreet().isEmpty()) {
+								address = "Dr. med. " + m_user.getName2() + " " + m_user.getName1() + "\n" 
+									+ m_user.getStreet() + "\n"
+									+ m_user.getPostCode() + " " + m_user.getCity() + "\n"
+									+ "Schweiz";
+							} else {
+								address = "Dr. med. " + m_user.getName2() + " " + m_user.getName1() + "\n" 
+									+ "***Strasse fehlt***" + "\n"
+									+ m_user.getPostCode() + " " + m_user.getCity() + "\n"
+									+ "Schweiz";
+							}
 						} else {
 							address = m_user.getName2() + "\n" 
 								+ m_user.getName1() + "\n" 
@@ -303,14 +320,22 @@ public class SettingsPage extends JDialog {
 						mTextAreaBestell.setText(address);
 						mTextAreaLiefer.setText(address);
 						mTextAreaRechnung.setText(address);
-					} else {
-						mTextFieldGLN.setBorder(new LineBorder(new Color(255,220,220), 5, false));
-						mTextFieldGLN.setBackground(new Color(255,220,220));
-					}
-				} else {
-					mTextFieldGLN.setBorder(new LineBorder(new Color(255,220,220), 5, false));
-					mTextFieldGLN.setBackground(new Color(255,220,220));
+						if (m_user.getStreet().isEmpty()) {
+							mTextAreaBestell.setBorder(new LineBorder(color_red, 5, false));
+							mTextAreaBestell.setBackground(color_red);
+							mTextAreaLiefer.setBorder(new LineBorder(color_red, 5, false));
+							mTextAreaLiefer.setBackground(color_red);
+							mTextAreaRechnung.setBorder(new LineBorder(color_red, 5, false));
+							mTextAreaRechnung.setBackground(color_red);							
+						}
+						return;
+					} 
 				}
+				mTextFieldGLN.setBorder(new LineBorder(color_red, 5, false));
+				mTextFieldGLN.setBackground(color_red);
+				mTextAreaBestell.setText("");
+				mTextAreaLiefer.setText("");
+				mTextAreaRechnung.setText("");
 			}
 			@Override 
 			public void keyTyped(KeyEvent keyEvent) {
@@ -340,7 +365,7 @@ public class SettingsPage extends JDialog {
 		mTextAreaLiefer.setPreferredSize(new Dimension(128, 128));
 		mTextAreaLiefer.setMargin(new Insets(5,5,5,5));
 		gbc = getGbc(1,3,2.5,1.0,GridBagConstraints.HORIZONTAL);
-		jPanel.add(mTextAreaLiefer, gbc);		
+		jPanel.add(mTextAreaLiefer, gbc);
 		
 		// -----------------------------
 		JLabel jlabelRechnung = new JLabel("Rechnungsadresse");
@@ -352,41 +377,41 @@ public class SettingsPage extends JDialog {
 		mTextAreaRechnung.setPreferredSize(new Dimension(128, 128));
 		mTextAreaRechnung.setMargin(new Insets(5,5,5,5));
 		gbc = getGbc(1,4,2.5,1.0,GridBagConstraints.HORIZONTAL);
-		jPanel.add(mTextAreaRechnung, gbc);		
+		jPanel.add(mTextAreaRechnung, gbc);
 		
 		// -----------------------------
 		JLabel jlabelEmail = new JLabel("Emailadresse");
 		jlabelEmail.setHorizontalAlignment(JLabel.LEFT);
-		gbc = getGbc(0,5, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
+		gbc = getGbc(0,5, 0.5,1.0, GridBagConstraints.HORIZONTAL);
 		jPanel.add(jlabelEmail, gbc);
 		
 		mTextFieldEmail = new JTextField(EmailStr);
 		if (!EmailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
-			mTextFieldGLN.setBorder(new LineBorder(new Color(255,220,220), 5, false));
-			mTextFieldGLN.setBackground(new Color(255,220,220));
+			mTextFieldEmail.setBorder(new LineBorder(color_red, 5, false));
+			mTextFieldEmail.setBackground(color_red);  
 		} else {
-			mTextFieldEmail.setBorder(new LineBorder(new Color(255,255,255), 5, false));
+			mTextFieldEmail.setBorder(new LineBorder(color_white, 5, false));
+			mTextFieldEmail.setBackground(color_white); 
 		}
 		gbc = getGbc(1,5 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mTextFieldEmail, gbc);
 		
-		mTextFieldEmail.addKeyListener(new KeyListener() { // .addActionListener(new ActionListener() {
+		mTextFieldEmail.addKeyListener(new KeyListener() { 
 			@Override 
 			public void keyPressed(KeyEvent keyEvent) {
 				//
 			}
 			@Override
 			public void keyReleased(KeyEvent keyEvent) {
-			// public void actionPerformed(ActionEvent e) {
 				// Validate email address
 				String mEmailStr = mTextFieldEmail.getText();
 				if (mEmailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
-					mTextFieldEmail.setBorder(new LineBorder(new Color(220,255,220), 5, false));
-					mTextFieldEmail.setBackground(new Color(220,255,220));
+					mTextFieldEmail.setBorder(new LineBorder(color_white, 5, false));
+					mTextFieldEmail.setBackground(color_white);
 					mPrefs.put(EmailAdresseID, mEmailStr);			
 				} else { 
-					mTextFieldEmail.setBorder(new LineBorder(new Color(255,220,220), 5, false));
-					mTextFieldEmail.setBackground(new Color(255,220,220));
+					mTextFieldEmail.setBorder(new LineBorder(color_red, 5, false));
+					mTextFieldEmail.setBackground(color_red);
 				}
 			}
 			@Override 
@@ -402,7 +427,13 @@ public class SettingsPage extends JDialog {
 		jPanel.add(jlabelPhone, gbc);
 		
 		mTextFieldPhone = new JTextField(PhoneNumberStr);
-		mTextFieldPhone.setBorder(new LineBorder(new Color(255,255,255), 5, false));	
+		if (PhoneNumberStr.matches("[+][\\d]+-[\\d]+")) {
+			mTextFieldPhone.setBorder(new LineBorder(color_white, 5, false));
+			mTextFieldPhone.setBackground(color_white);
+		} else {
+			mTextFieldPhone.setBorder(new LineBorder(color_red, 5, false));
+			mTextFieldPhone.setBackground(color_red);
+		}
 		gbc = getGbc(1,6 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mTextFieldPhone, gbc);
 
@@ -412,13 +443,13 @@ public class SettingsPage extends JDialog {
 				String mPhoneStr = mTextFieldPhone.getText();
 				// Validate phone number
 				if (mPhoneStr.matches("[+][\\d]+-[\\d]+")) {
-					mTextFieldPhone.setBorder(new LineBorder(new Color(220,255,220), 5, false));
-					mTextFieldPhone.setBackground(new Color(220,255,220));
+					mTextFieldPhone.setBorder(new LineBorder(color_white, 5, false));
+					mTextFieldPhone.setBackground(color_white);
 					mPrefs.put(PhoneNumberID, mPhoneStr);
 					System.out.println(mPhoneStr);					
 				} else { 
-					mTextFieldPhone.setBorder(new LineBorder(new Color(255,220,220), 5, false));
-					mTextFieldPhone.setBackground(new Color(255,220,220));
+					mTextFieldPhone.setBorder(new LineBorder(color_red, 5, false));
+					mTextFieldPhone.setBackground(color_red);
 				}
 			}
 		});

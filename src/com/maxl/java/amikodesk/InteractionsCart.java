@@ -160,10 +160,10 @@ public class InteractionsCart {
 			bottom_note_html_str += "<p class=\"footnote\">1. Source des données: données du domaine publique de EPha.ch</p> " +
 				"<p class=\"footnote\">2. Soutenu par: IBSA Institut Biochimique SA.</p>";
 		}
-		String jscript_str = "<script> language=\"javascript\">" + m_jscripts_str + "</script>";
+		String jscript_str = "<script language=\"javascript\">" + m_jscripts_str + "</script>";
 		String html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_interactions_str + "</head><body><div id=\"interactions\">" 
 				+ basket_html_str + delete_all_button_str + "<br><br>" + top_note_html_str
-				+ interactions_html_str + "<br>" + legend_html_str + "<br>" + bottom_note_html_str + "</body></div></html>";
+				+ interactions_html_str + "<br>" + legend_html_str + "<br>" + bottom_note_html_str + "</div></body></html>";
 		
 		// Update section titles
 		m_section_titles = section_str.toArray(new String[section_str.size()]);
