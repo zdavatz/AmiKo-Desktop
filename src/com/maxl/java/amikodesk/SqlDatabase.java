@@ -88,6 +88,7 @@ public class SqlDatabase {
 	public static final String KEY_IDS = "ids_str";
 	public static final String KEY_SECTIONS = "titles_str";
 	public static final String KEY_CONTENT = "content";
+	public static final String KEY_STYLE = "style_str";
 	public static final String KEY_PACKAGES = "packages";
 	
 	private static final String DATABASE_TABLE = "amikodb";
@@ -150,7 +151,6 @@ public class SqlDatabase {
 			// Check if file exists
 			File f = new File(db_path);
 			if (f.exists() && f.length()>0) {
-				System.out.println("Loading alternative database");
 				// Initialize org.sqlite.JDBC driver
 				Class.forName("org.sqlite.JDBC");
 				// Create connection to db
@@ -159,6 +159,8 @@ public class SqlDatabase {
 				// Trick: check if following two instructions force an exception to occur...
 				String query = "select count(*) from " + DATABASE_TABLE; 
 				m_rs = m_stat.executeQuery(query);
+				// Display user version
+				System.out.println("Loaded alternative database ver." + getUserVersion());
 			} else {
 				System.out.println("No alternative database found");
 				return 0;
@@ -252,6 +254,8 @@ public class SqlDatabase {
 		String db_url = "http://pillbox.oddb.org/amiko_db_full_idx_de.zip";
 		String report_url = "http://pillbox.oddb.org/amiko_report_de.html";
 		String drug_interactions_url = "http://pillbox.oddb.org/drug_interactions_csv_de.zip";
+		String gln_codes_url = "http://pillbox.oddb.org/gln_codes_csv.zip";
+		String gln_codes_unzipped = app_folder + "\\gln_codes_csv.csv";
 		// ... works also for "fr"
 		if (db_lang.equals("fr")) {
 			db_unzipped = app_folder + "\\amiko_db_full_idx_fr.db";
@@ -266,8 +270,8 @@ public class SqlDatabase {
 		m_customization = custom;
 		m_operationCancelled = false;
 		if (isInternetReachable())
-			new DownloadDialog(db_url, report_url, drug_interactions_url,
-					amiko_report, db_unzipped, drug_interactions_unzipped);
+			new DownloadDialog(db_url, report_url, drug_interactions_url, gln_codes_url,
+					amiko_report, db_unzipped, drug_interactions_unzipped, gln_codes_unzipped);
 		else {
 			AmiKoDialogs cd = new AmiKoDialogs(db_lang, custom);
 			cd.NoInternetDialog();
@@ -304,8 +308,8 @@ public class SqlDatabase {
 	    private JLabel label = new JLabel();
 	    private JButton okButton = new JButton();
 	    
-	    public DownloadDialog(String databaseURL, String reportURL, String drugInteractionsURL,
-	    		String amikoReport, String unzippedDB, String drugInteractionsUnzipped) {
+	    public DownloadDialog(String databaseURL, String reportURL, String drugInteractionsURL, String glnCodesURL,
+	    		String amikoReport, String unzippedDB, String drugInteractionsUnzipped, String glnCodesUnzipped) {
 	    	progressBar.setPreferredSize(new Dimension(640, 30));
 	    	progressBar.setStringPainted(true);			
 			progressBar.setValue(0);	    	
@@ -342,8 +346,9 @@ public class SqlDatabase {
 	        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			
 			final DownloadWorker downloadWorker = new DownloadWorker(this, 
-					databaseURL, reportURL, drugInteractionsURL,
-					new File(amikoReport), new File(unzippedDB), new File(drugInteractionsUnzipped)); 
+					databaseURL, reportURL, drugInteractionsURL, glnCodesURL,
+					new File(amikoReport), new File(unzippedDB), 
+					new File(drugInteractionsUnzipped), new File(glnCodesUnzipped)); 
 			// Attach property listener to it
     		downloadWorker.addPropertyChangeListener(this);
     		// Launch SwingWorker
@@ -387,19 +392,24 @@ public class SqlDatabase {
 		private String mDatabaseURL;
 		private String mReportURL;
 		private String mDrugInteractionsURL;
+		private String mGLNCodesURL;
 		private File mAmikoDatabase;
 		private File mAmikoReport;
 		private File mDrugInteractions;
+		private File mGLNCodes;
 		private DownloadDialog mDialog;
 
-		public DownloadWorker(DownloadDialog dialog, String databaseURL, String reportURL, String drugInteractionsURL,
-				File amikoReport, File amikoDatabase, File drugInteractions) {
+		public DownloadWorker(DownloadDialog dialog, String databaseURL, String reportURL, 
+				String drugInteractionsURL, String glnCodesURL,
+				File amikoReport, File amikoDatabase, File drugInteractions, File glnCodes) {
 			mDatabaseURL = databaseURL;
 			mReportURL = reportURL;
 			mDrugInteractionsURL = drugInteractionsURL;
+			mGLNCodesURL = glnCodesURL;
 			mAmikoReport = amikoReport;
 			mAmikoDatabase = amikoDatabase;
 			mDrugInteractions = drugInteractions;
+			mGLNCodes = glnCodes;
 			mDialog = dialog;
 		}
 		
@@ -533,7 +543,49 @@ public class SqlDatabase {
 				setProgress(0);
 				cancel(true);
 			}
+			
+			// Unzip file
+			unzipper(downloadedFile, mDrugInteractions, "drug interactions");
+						
+			// **** Download GLN codes ****
+			mDialog.setLabel("Downloading GLN codes file...");
+			url = new URL(mGLNCodesURL);
+			is = url.openStream();
+			// Retrieve file length from http header
+			sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
+			downloadedFile = new File(mGLNCodes.getAbsolutePath() + ".zip");
+			os = new FileOutputStream(downloadedFile);
 
+			try {
+				while (!isCancelled() && (bytesRead = is.read(buffer)) != -1) {
+					os.write(buffer, 0, bytesRead);
+					totBytesRead += bytesRead;
+					percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
+					if (percentCompleted > 100)
+						percentCompleted = 100;
+					setProgress(percentCompleted);
+					mDialog.setLabel("Downloading... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
+				}
+				os.close();
+			} catch (IOException e) {
+				mDialog.getLabel().setText("Error downloading GLN codes file: " + e.getMessage());
+				e.printStackTrace();
+				setProgress(0);
+				cancel(true);
+			}
+			
+			// Unzip file
+			unzipper(downloadedFile, mGLNCodes, "GLN codes");
+			
+			return null;
+		}
+
+		private void unzipper(File downloadedFile, File unzippedFile, String fileName) {
+			byte buffer[] = new byte[4096];
+			int bytesRead = -1;
+			long totBytesRead = 0;
+			int percentCompleted = 0;
+			
 			// Unzip database file
 			mDialog.setLabel("Unzipping...");
 
@@ -548,7 +600,7 @@ public class SqlDatabase {
 						// Zip file inputstream
 						InputStream zin = zipFile.getInputStream(zipEntry);
 						// Copy data from ZipEntry to file
-						FileOutputStream fos = new FileOutputStream(mDrugInteractions);
+						FileOutputStream fos = new FileOutputStream(unzippedFile);
 						totBytesRead = 0;
 						while (!isCancelled() && (bytesRead = zin.read(buffer)) != -1) {
 							fos.write(buffer, 0, bytesRead);
@@ -566,15 +618,13 @@ public class SqlDatabase {
 					zipFile.close();
 				}
 			} catch (IOException e) {
-				mDialog.getLabel().setText("Error unzipping drug interactions file: " + e.getMessage());
+				mDialog.getLabel().setText("Error unzipping " + fileName + " file: " + e.getMessage());
 				e.printStackTrace();
 				setProgress(0);
 				cancel(true);
 			}
-			
-			return null;
 		}
-
+		
 		/**
 		 * Executed in Swing's event dispatching thread
 		 */
@@ -587,8 +637,7 @@ public class SqlDatabase {
 	        	closeDB();
 	        	String db_file = mAmikoDatabase.getAbsolutePath();
 			    mDialog.setOKButton("OK");
-			    mDialog.setOKButton("OK");
-	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
+	        	if (loadDBFromPath(db_file)>0 && getUserVersion()>0 && getNumRecords()>0) {
 	        		// Setup icon
 	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
 	    			if (m_customization.equals("desitin"))
@@ -621,9 +670,9 @@ public class SqlDatabase {
 	        	} else {
 	        		// Show message: db not kosher!
 	        		if (m_app_lang.equals("de")) 
-	        			mDialog.getLabel().setText("Fehler beim laden der Datenbank!");
+	        			mDialog.getLabel().setText("Fehler beim laden der Datenbank mit Version " + getUserVersion() + "!");
 	        		else if (m_app_lang.equals("fr"))
-	        			mDialog.getLabel().setText("Erreurs lors du chargement de la base de données!");	        		
+	        			mDialog.getLabel().setText("Erreurs lors du chargement de la base de données version " + getUserVersion() + "!");	        		
 	        		// Load standard db
 	        		loadDB("de");
 	        	}							
@@ -640,7 +689,7 @@ public class SqlDatabase {
 	 * @param db_lang
 	 * @return filename if success, empty string if error
 	 */
-	public String chooseDB(JFrame frame, String db_lang, String app_folder) {			
+	public String chooseDB(JFrame frame, String db_lang, String custom, String app_folder) {			
 		JFileChooser fc = new JFileChooser();		
 		
 		// Add checkbox for zipped databases, this is the default!
@@ -660,8 +709,9 @@ public class SqlDatabase {
 
         // Launch the file chooser
         if (returnVal==JFileChooser.APPROVE_OPTION) {
-        	// Set db language
+        	// Set db language and customization
     		m_app_lang = db_lang;
+    		m_customization = custom;
         	// Get filename
         	String db_file = fc.getSelectedFile().toString();  	      	
         	// Do we have a zipped file?
@@ -685,7 +735,7 @@ public class SqlDatabase {
         	} else {        	
 	        	// Close previous DB
 	        	closeDB();
-	        	if (loadDBFromPath(db_file)>0 && getNumRecords()>0) {
+	        	if (loadDBFromPath(db_file)>0 && getUserVersion()>0 && getNumRecords()>0) {
 	        		// Copy DB to application folder
 	        		copyDB(new File(db_file), new File(app_folder + "\\amiko_db_full_idx_" + db_lang + ".db"));
 	        		// Setup icon
@@ -709,10 +759,10 @@ public class SqlDatabase {
 	        	} else {
 	        		// Show message: db not kosher!
 	        		if (db_lang.equals("de")) {
-	        			JOptionPane.showMessageDialog(frame, "Fehler beim laden der Datenbank!",
+	        			JOptionPane.showMessageDialog(frame, "Fehler beim laden der Datenbank mit Version " + getUserVersion() + "!",
 	        					"Fehler", JOptionPane.ERROR_MESSAGE);
 	        		} else if (db_lang.equals("fr")) {
-	        			JOptionPane.showMessageDialog(frame, "Fehler beim laden der Datenbank!",
+	        			JOptionPane.showMessageDialog(frame, "Erreurs lors du chargement de la base de données version " + getUserVersion() + "!",
 	        					"Fehler", JOptionPane.ERROR_MESSAGE);
 	        		}
 	        		// Load standard db
@@ -917,6 +967,21 @@ public class SqlDatabase {
     		e.printStackTrace();
     		return 0;
     	}
+    }
+    
+    public int getUserVersion() {
+		int user_version = 0;
+		
+		try {
+			m_stat = m_conn.createStatement();
+			String query = "pragma user_version"; 
+			m_rs = m_stat.executeQuery(query);
+			user_version = m_rs.getInt(1);
+		} catch(SQLException e) {
+			System.err.println(">> SqlDatabase: SQLException in getUserVersion!");
+		}
+		
+		return user_version; 
     }
     
 	public int getNumRecords() {
@@ -1202,7 +1267,8 @@ public class SqlDatabase {
 			medi.setSectionIds(result.getString(14));		// KEY_SECTION_IDS
 			medi.setSectionTitles(result.getString(15));	// KEY_SECTION_TITLES
 			medi.setContent(result.getString(16));			// KEY_CONTENT
-			medi.setPackages(result.getString(17));			// KEY_PACKAGES
+															// KEY_STYLE...
+			medi.setPackages(result.getString(18));			// KEY_PACKAGES
 		} catch(SQLException e) {
 			System.err.println(">> SqlDatabase: SQLException in cursorToMedi");
 		}

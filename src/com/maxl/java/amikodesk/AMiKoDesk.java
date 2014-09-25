@@ -181,9 +181,11 @@ public class AMiKoDesk {
 		"Remarques", "Numéro d'autorisation", "Présentation", "Titulaire", "Mise à jour"};	
 	
 	private static int med_index = -1;
+	private static int prev_med_index = -1;
 	private static IndexPanel m_section_titles = null;
 	private static WebPanel2 m_web_panel = null;
 	private static String m_css_str = null;
+	private static String m_jscript_str = null;
 	private static String m_query_str = null;
 	private static SqlDatabase m_sqldb = null;
 	private static InteractionsCart m_interactions_cart = null;	
@@ -343,6 +345,10 @@ public class AMiKoDesk {
 		} else if (Utilities.appCustomization().equals("zurrose")) {
 			new SplashWindow(Constants.APP_NAME, 3000);
 		}
+		// Load javascript 
+		String jscript_str = Utilities.readFromFile(Constants.JS_FOLDER + "main_callbacks.js");
+		m_jscript_str = "<script language=\"javascript\">" + jscript_str + "</script>";
+		
 		// Load css style sheet
 		m_css_str = "<style>" + Utilities.readFromFile(Constants.CSS_SHEET) + "</style>";
 	
@@ -579,8 +585,11 @@ public class AMiKoDesk {
 		 * Called when somebody clicks on the ListPanel
 		 */
 		public void valueChanged(ListSelectionEvent e) {
-			if (!e.getValueIsAdjusting()) {
+			if (e.getSource()==list && !e.getValueIsAdjusting()) {	
+				prev_med_index = med_index;		// Store current index
 				med_index = list.getSelectedIndex();
+				if (med_index<0 && prev_med_index>=0)
+					list.setSelectedIndex(prev_med_index);
 				if (m_seek_interactions && !m_shopping_mode) {
 					// Display interaction cart
 					m_web_panel.updateInteractionsCart();
@@ -614,9 +623,6 @@ public class AMiKoDesk {
 		public IndexPanel(String[] sec_titles) {			
 			super(new BorderLayout());
 			
-			JPanel indexPanel = new JPanel(new BorderLayout());
-			// indexPanel.setBorder(BorderFactory.createTitledBorder("Index"));
-			indexPanel.setBorder(null);
 			list = new JList<String>(sec_titles);
 			// list.setSelectedIndex(0);
 			list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -626,11 +632,16 @@ public class AMiKoDesk {
 			list.addListSelectionListener(this);
 			list.setPreferredSize(null);
 
+			JPanel indexPanel = new JPanel(new BorderLayout());
+			// indexPanel.setBorder(BorderFactory.createTitledBorder("Index"));
+			indexPanel.setBorder(null);			
+
 			/*
-			jscroll = new JScrollPane(list);
-			jscroll.setPreferredSize(null);
-			jscroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-			jscroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+			jscroll = new JScrollPane();
+			jscroll.setViewportView(list);
+			jscroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+			// jscroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);			
+			indexPanel.setLayout(new BorderLayout());			
 			indexPanel.add(jscroll, BorderLayout.CENTER);
 			add(indexPanel, BorderLayout.CENTER);
 			*/
@@ -826,6 +837,31 @@ public class AMiKoDesk {
 							m_shopping_basket.remove(row_key);
 						}
 						m_web_panel.updateShoppingHtml();						
+					} else {
+						if (msg.equals("add_to_shopping_cart")) {
+							if (m_shopping_basket.containsKey(row_key)) {
+								Article article = m_shopping_basket.get(row_key);
+								article.incrementQuantity();
+							} else {
+								if (med_index>=0) {
+									// Get full info on selected medication
+									Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
+									// Get its packages
+									String[] packages = m.getPackages().split("\n");
+									if (packages!=null) {
+										// Loop through all packages and find the right one, add it to the basket
+										for (int i=0; i<packages.length; ++i) {
+											if (!packages[i].isEmpty() && packages[i].contains(row_key)) {
+												String[] entry = packages[i].split("\\|");
+												Article article = new Article(entry);
+												article.setQuantity(1);
+												m_shopping_basket.put(row_key, article);
+											}
+										}
+									}
+								}
+							}
+						}
 					}
 					return "true";					
  				}
@@ -888,9 +924,27 @@ public class AMiKoDesk {
 		}
 		
 		public void updateText() {
-			if (med_index>=0) {
+			if (med_index>=0 || prev_med_index>=0) {
 				// Get full info on selected medication
-				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
+				Medication m = null;
+				if (med_index>=0) {
+					m =  m_sqldb.getMediWithId(med_id.get(med_index));
+					// Set right panel title
+					if (Utilities.appLanguage().equals("de"))
+						m_web_panel.setTitle("Fachinformation");
+					else if (Utilities.appLanguage().equals("fr"))
+						m_web_panel.setTitle("Notice Infopro");
+				} else if (m_database_used.equals("aips") && prev_med_index>=0)	{
+					m =  m_sqldb.getMediWithId(med_id.get(prev_med_index));
+					// Set right panel title
+					if (Utilities.appLanguage().equals("de"))
+						m_web_panel.setTitle("Fachinformation");
+					else if (Utilities.appLanguage().equals("fr"))
+						m_web_panel.setTitle("Notice Infopro");					
+				}
+				else 
+					return;
+				
 				// Get section ids
 				String[] sections = m.getSectionIds().split(",");
 				m_section_str = Arrays.asList(sections);
@@ -901,11 +955,11 @@ public class AMiKoDesk {
 				// DateFormat df = new SimpleDateFormat("dd.MM.yy");
 				String _amiko_str = Constants.APP_NAME + " - Datenstand AIPS Swissmedic " + Constants.GEN_DATE;
 				content_str = content_str.insert(content_str.indexOf("<head>"), "<title>" + _amiko_str + "</title>");
-				content_str = content_str.insert(content_str.indexOf("</head>"), m_css_str);
+				content_str = content_str.insert(content_str.indexOf("</head>"), m_jscript_str + m_css_str);
 				// Enable javascript
 				jWeb.setJavascriptEnabled(true);
 				
-				System.out.println(content_str);
+				// System.out.println(content_str);
 				
 				if (CML_OPT_SERVER==false) {
 					try {
@@ -1914,11 +1968,6 @@ public class AMiKoDesk {
 				m_database_used = "aips";
 				m_seek_interactions = false;
 				m_shopping_mode = false;
-				// Set right panel title
-				if (Utilities.appLanguage().equals("de"))
-					m_web_panel.setTitle("Fachinformation");
-				else if (Utilities.appLanguage().equals("fr"))
-					m_web_panel.setTitle("Notice Infopro");
 				
 				m_start_time = System.currentTimeMillis();
 				m_query_str = searchField.getText();				
@@ -1927,8 +1976,8 @@ public class AMiKoDesk {
 				cardl.show(p_results, final_title);	
 
 				m_status_label.setText(med_search.size() + " Suchresultate in " + 
-						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
-
+						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");				
+				
 				m_web_panel.updateText();
 			}
 		});
@@ -1942,11 +1991,6 @@ public class AMiKoDesk {
 				m_database_used = "favorites";
 				m_seek_interactions = false;
 				m_shopping_mode = false;
-				// Set right panel title
-				if (Utilities.appLanguage().equals("de"))
-					m_web_panel.setTitle("Fachinformation");
-				else if (Utilities.appLanguage().equals("fr"))
-					m_web_panel.setTitle("Notice Infopro");
 				
 				m_start_time = System.currentTimeMillis();
 				// m_query_str = searchField.getText();				
@@ -2188,7 +2232,7 @@ public class AMiKoDesk {
 		choosedb_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				String db_file = m_sqldb.chooseDB(jframe, Utilities.appLanguage(), m_application_data_folder);
+				String db_file = m_sqldb.chooseDB(jframe, Utilities.appLanguage(), Utilities.appCustomization(), m_application_data_folder);
 				if (!db_file.isEmpty()) {
 					// Save db path (can't hurt)
 					WindowSaver.setDbPath(db_file);				
