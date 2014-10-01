@@ -1043,7 +1043,7 @@ public class SqlDatabase {
 			m_rs = m_stat.executeQuery(query);
 			while (m_rs.next()) {
 				med_titles.add(cursorToShortMedi(m_rs));
-			} 
+			} 			
 		} catch (SQLException e) {
 			System.err.println(">> SqlDatabase: SQLException in searchTitle!");
 		}

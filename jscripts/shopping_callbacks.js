@@ -29,7 +29,8 @@ function createPdf(currentRow) {
 
 function changeQty(tableID,currentRow) {
     try {
-		if (window.event.keyCode==13) {
+		var key = window.event.keyCode;
+		if (key==9 || key==13) {
 			if (tableID=="Warenkorb") {
 				var table = document.getElementById(tableID);
 				var rowCount = table.rows.length;		
@@ -38,11 +39,20 @@ function changeQty(tableID,currentRow) {
 					if (row==currentRow.parentNode.parentNode) {
 						var qty = row.cells[0].firstChild.value;
 						// Check if value is in safe bounds and call java
-						if (qty>=0 && qty<=99999)
-							invokeJava("change_qty"+qty,row.cells[1].innerText);
+						var eanCode = row.cells[1].innerText;
+						if (qty>=0 && qty<=99999) {
+							// alert(document.forms[0].elements.length);						
+							invokeJava("change_qty"+qty,eanCode);
+							/*
+							if (i<(document.forms[0].elements.length-1))
+								document.forms[0].elements[i+1].focus();
+							else
+								document.forms[0].elements[0].focus();
+								*/
+						}
 					}
 				}
-			}
+			}			
 		}
     } catch (e) {
         // alert(e);

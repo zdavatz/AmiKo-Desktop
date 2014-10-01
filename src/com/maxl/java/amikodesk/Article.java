@@ -6,6 +6,7 @@ public class Article {
 	private String pack_unit;
 	private String public_price;
 	private String exfactory_price;
+	private String total_price;
 	private String additional_info;
 	private String ean_code;
 	private String pharma_code;
@@ -97,6 +98,14 @@ public class Article {
 
 	public void setExfactoryPrice(String exfactory_price) {
 		this.exfactory_price = exfactory_price;
+	}
+	
+	public String getTotalPrice() {
+		return total_price;
+	}
+	
+	public void setTotalPrice(String total_price) {
+		this.total_price = total_price;
 	}
 	
 	public String getAdditionalInfo() {

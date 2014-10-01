@@ -31,8 +31,6 @@ import java.util.prefs.Preferences;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Entities.EscapeMode;
 
-import chrriis.common.WebServer;
-
 import com.itextpdf.text.Chunk;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
@@ -73,9 +71,13 @@ public class ShoppingCart {
 		// Load javascripts
 		m_jscripts_str = Utilities.readFromFile(Constants.JS_FOLDER + "shopping_callbacks.js");
 		// Load shopping cart css style sheet
-		m_css_shopping_cart_str = "<style>" + Utilities.readFromFile(Constants.SHOPPING_SHEET) + "</style>";
+		m_css_shopping_cart_str = "<style type=\"text/css\">" + Utilities.readFromFile(Constants.SHOPPING_SHEET) + "</style>";
 	}
 
+	public void setShoppingBasket(Map<String, Article> shopping_basket) {
+		m_shopping_basket = shopping_basket;
+	}
+	
 	/** Inner class to add a header and a footer. */
     static class HeaderFooter extends PdfPageEventHelper {
 
@@ -98,83 +100,92 @@ public class ShoppingCart {
                     (rect.getLeft() + rect.getRight())/2, rect.getBottom()-18, 0);
         }
     }	
-	
+    
+    public float calcPrice(Article article, int quantity) {
+    	article.setQuantity(quantity);
+		String price = article.getPublicPrice();
+		String price_pruned = price.replaceAll("[^\\d.]", "");
+		float price_CHF = 0.0f;
+		if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {
+			price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
+			price = String.format("%.2f CHF", price_CHF);
+		} else {
+			price = "k.A.";
+		}	
+		article.setTotalPrice(price);
+		return price_CHF;
+    }
+    
 	public String updateShoppingCartHtml(Map<String, Article> shopping_basket) {
-		String basket_html_str = "<table id=\"Warenkorb\" width=\"98%25\">";
+		String basket_html_str = "<form id=\"my_form\"><table id=\"Warenkorb\" width=\"100%25\">";
 		String delete_all_button_str = "";
 		String generate_pdf_str = "";
 		String generate_csv_str = "";
-		String delete_all_text = "alle löschen";		
-		String generate_pdf_text = "PDF generieren";
-		String generate_csv_text = "CSV generieren";
-		float total_CHF = 0.0f;
+		String delete_all_text = "";		
+		String generate_pdf_text = "";
+		String generate_csv_text = "";
+		float subtotal_CHF = 0.0f;
 
 		m_shopping_basket = shopping_basket;
-		
-		if (Utilities.appLanguage().equals("de")) {
-			delete_all_text = "alle löschen";
-		} else if (Utilities.appLanguage().equals("fr")) {
-			delete_all_text = "tout supprimer";
-		}
 				
 		String images_dir = System.getProperty("user.dir") + "/images/";	
-		
+
 		if (m_shopping_basket.size()>0) {
+			int index = 1;
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();
+				String ean_code = article.getEanCode();
 				int quantity = article.getQuantity();
-				String price = article.getPublicPrice();
-				String price_pruned = price.replaceAll("[^\\d.]", "");
-				float price_CHF = 0.0f;
-				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {
-					price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-					total_CHF += price_CHF;
-					price = String.format("%.2f CHF", price_CHF);
-				} else {
-					price = "k.A.";
-				}				
+				subtotal_CHF += calcPrice(article, quantity);
 				// String article_price = String.format("%.2f",  price_CHF);
-				basket_html_str += "<tr>";
-				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:40px; text-align:right\"" +
-						" value=\"" + quantity + "\"" + " onkeypress=\"changeQty('Warenkorb',this)\" id=\"qty\" />" + "</td>"
-						+ "<td>" + article.getEanCode() + "</td>"
+				basket_html_str += "<tr id=\"" + ean_code + "\">";
+				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:40px; text-align:right;\"" +
+						" value=\"" + quantity + "\"" + " onkeydown=\"changeQty('Warenkorb',this)\" id=\"" + index + "\" tabindex=\"" + index + "\" />" + "</td>"
+						+ "<td>" + ean_code + "</td>"
 						+ "<td>" + article.getPackTitle() + "</td>"
-						+ "<td style=\"text-align:right;\">" + price + "</td>"
-						+ "<td>" + "<input type=\"image\" src=\"" + images_dir + "trash_icon.png\" onmouseup=\"deleteRow('Warenkorb',this)\" />" + "</td>";
-				basket_html_str += "</tr>";
+						+ "<td style=\"text-align:right;\">" + article.getTotalPrice() + "</td>"
+						// + "<td>" + "<input type=\"image\" src=\"" + images_dir + "trash_icon.png\" onmouseup=\"deleteRow('Warenkorb',this)\" tabindex=\"-1\" />" + "</td>";
+						+ "<td>" + "<button style=\"border:none;\" tabindex=\"-1\"><img src=\"" + images_dir + "trash_icon.png\" onmouseup=\"deleteRow('Warenkorb',this)\" /></button>" + "</td>";
+				basket_html_str += "</tr>";			
+				index++;
 			}
-			basket_html_str += "<tr>"
+			/*
+			 * Note: negative tabindex skips element
+			*/
+			basket_html_str += "<tr id=\"Subtotal\">"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\">Subtotal</td>"
 					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px; text-align:right\">" + String.format("%.2f", total_CHF) + " CHF</td>"					
+					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_CHF) + " CHF</td>"					
 					+ "</tr>";
-			basket_html_str += "<tr>"
+			basket_html_str += "<tr id=\"MWSt\">"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\">MWSt (+8%)</td>"
 					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px; text-align:right\">" + String.format("%.2f", total_CHF*0.08) + " CHF</td>"					
+					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_CHF*0.08) + " CHF</td>"					
 					+ "</tr>";
-			basket_html_str += "<tr>"
+			basket_html_str += "<tr id=\"Total\">"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"><b>Total</b></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px; text-align:right\"><b>" + String.format("%.2f", total_CHF*1.08) + " CHF</b></td>"					
+					+ "<td style=\"padding-top:10px; text-align:right;\"><b>" + String.format("%.2f", subtotal_CHF*1.08) + " CHF</b></td>"					
 					+ "</tr>";
 						
-			basket_html_str += "</table>";
+			basket_html_str += "</table></form>";
 	
 			// Warenkorb löschen
-			delete_all_button_str = "<div class=\"left\" id=\"Delete_all\"><input type=\"image\" src=\"" 
-					+ images_dir + "delete_all_icon.png\" title=\"" + delete_all_text + "\" onmouseup=\"deleteRow('Delete_all',this)\" /></div>";	
+			delete_all_button_str = "<td align=center valign=middle><div class=\"right\" id=\"Delete_all\"><input type=\"image\" src=\"" 
+					+ images_dir + "delete_all_icon.png\" title=\"" + delete_all_text + "\" onmouseup=\"deleteRow('Delete_all',this)\" tabindex=\"-1\" /></div></td>";	
 			// Generate pdf button string
-			generate_pdf_str = "<div class=\"left\" id=\"Generate_pdf\"><input type=\"image\" src=\"" 
-					+ images_dir + "pdf_save_icon.png\" title=\"" + generate_pdf_text + "\" onmouseup=\"createPdf(this)\" /></div>";
+			generate_pdf_str = "<td align=center valign=middle><div class=\"right\" id=\"Generate_pdf\"><input type=\"image\" src=\"" 
+					+ images_dir + "pdf_save_icon.png\" title=\"" + generate_pdf_text + "\" onmouseup=\"createPdf(this)\" tabindex=\"-1\" /></div></td>";
 			// Generate csv button string
-			generate_csv_str = "<div class=\"left\" id=\"Generate_csv\"><input type=\"image\" src=\"" 
-					+ images_dir + "csv_save_icon.png\" title=\"" + generate_csv_text + "\" onmouseup=\"createCsv(this)\" /></div>";			
-			// delete_all_button_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"" + delete_all_text + "\" onclick=\"deleteRow('Delete_all',this)\" /></div>";	
-			// generate_pdf_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"" + generate_text + "\" onclick=\"createPdf(this)\" /></div>";
+			generate_csv_str = "<td align=center valign=middle><div class=\"right\" id=\"Generate_csv\"><input type=\"image\" src=\"" 
+					+ images_dir + "csv_save_icon.png\" title=\"" + generate_csv_text + "\" onmouseup=\"createCsv(this)\" tabindex=\"-1\" /></div></td>";			
+			//
+			delete_all_text = "<td><div class=\"right\">Alle löschen</div></td>";		
+			generate_pdf_text = "<td><div class=\"right\">PDF generieren</div></td>";
+			generate_csv_text = "<td><div class=\"right\">CSV generieren</div></td>";
 			
 		} else {
 			// Warenkorb ist leer
@@ -187,7 +198,10 @@ public class ShoppingCart {
 		String jscript_str = "<script language=\"javascript\">" + m_jscripts_str+ "</script>";
 		m_html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_shopping_cart_str + "</head>"
 				+ "<body><div id=\"shopping\">" 
-				+ basket_html_str + "<br>" + "<div class=\"container\">" + delete_all_button_str + generate_pdf_str + generate_csv_str + "</div>" 
+				+ basket_html_str + "<br />" 
+				// + "<div class=\"container\">" + delete_all_button_str + generate_pdf_str + generate_csv_str + "</div>" 
+				+ "<form><table class=\"container\"><tr>" + delete_all_button_str + generate_pdf_str + generate_csv_str + "</tr>"
+				+ "<tr>" + delete_all_text + generate_pdf_text + generate_csv_text + "</tr></table></form>"
 				+ "</div></body></html>";		
 		
 		return m_html_str;
@@ -306,8 +320,8 @@ public class ShoppingCart {
         
 		PdfPCell cell = new PdfPCell();	
         
-        table.addCell(getStringCell("Pos", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
-		table.addCell(getStringCell("Qty", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell("Pos.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
+		table.addCell(getStringCell("Anz.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell("GTIN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell("Bezeichnung", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell("Preis (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
@@ -316,6 +330,8 @@ public class ShoppingCart {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();				
 
+				System.out.println(article.getQuantity() + " x " + article.getPublicPrice());
+				
 				table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
 				table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
 				
@@ -336,11 +352,13 @@ public class ShoppingCart {
 		        
 				table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
 				
-				String price = article.getPublicPrice();
-				table.addCell(getStringCell(price, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));
-				String price_pruned = price.replaceAll("[^\\d.]", "");
-				if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
-					total_CHF += article.getQuantity()*Float.parseFloat(price_pruned);				
+				float price_CHF = 0.0f;
+				String price_pruned =  article.getPublicPrice().replaceAll("[^\\d.]", "");
+				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {			
+					price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
+					total_CHF += price_CHF;					
+					table.addCell(getStringCell(String.format("%.2f", price_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));						
+				}
 			}
 			
 			table.addCell(getStringCell("Warenwert", font_norm_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));

@@ -60,6 +60,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -74,6 +75,7 @@ import java.util.regex.Pattern;
 import javax.swing.AbstractListModel;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -160,28 +162,17 @@ public class AMiKoDesk {
 	private static List<Medication> med_title = new ArrayList<Medication>();
 	private static List<Medication> list_of_favorites = new ArrayList<Medication>();
 	private static Map<String, Medication> m_med_basket = new TreeMap<String, Medication>();
-	private static Map<String, Article> m_shopping_basket = new TreeMap<String, Article>();
+	private static Map<String, Article> m_shopping_basket = new LinkedHashMap<String, Article>();
 	private static List<Article> list_of_articles = new ArrayList<Article>();
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
-	private static String m_database_used = "aips";
 	private static boolean m_seek_interactions = false;
 	private static boolean m_shopping_mode = false;
-	private static ProgressIndicator m_progress_indicator = new ProgressIndicator(32);
-	
-	// German section title abbreviations
-	private static final String[] SectionTitle_DE = {"Zusammensetzung", "Galenische Form", "Kontraindikationen", 
-		"Indikationen", "Dosierung/Anwendung", "Vorsichtsmassnahmen", "Interaktionen", "Schwangerschaft", 
-		"Fahrtüchtigkeit", "Unerwünschte Wirk.", "Überdosierung", "Eig./Wirkung", "Kinetik", "Präklinik", 
-		"Sonstige Hinweise", "Zulassungsnummer", "Packungen", "Inhaberin", "Stand der Information"};	
-	// French section title abbrevations
-	private static final String[] SectionTitle_FR = {"Composition", "Forme galénique", "Contre-indications", 
-		"Indications", "Posologie", "Précautions", "Interactions", "Grossesse/All.", 
-		"Conduite", "Effets indésir.", "Surdosage", "Propriétés/Effets", "Cinétique", "Préclinique", 
-		"Remarques", "Numéro d'autorisation", "Présentation", "Titulaire", "Mise à jour"};	
-	
 	private static int med_index = -1;
 	private static int prev_med_index = -1;
+	private static UIState m_curr_uistate = new UIState("aips");
+	
+	private static ProgressIndicator m_progress_indicator = new ProgressIndicator(32);
 	private static IndexPanel m_section_titles = null;
 	private static WebPanel2 m_web_panel = null;
 	private static String m_css_str = null;
@@ -207,11 +198,26 @@ public class AMiKoDesk {
 	private static boolean m_preferences_ok = false;
 	
 	// Colors
-	private static Color m_but_color = new Color(220,225,255);
+	private static Color m_toolbar_bg = new Color(240,240,240);
+	private static Color m_but_color_bg = new Color(250,250,210);
+	private static Color m_selected_but_color = new Color(240,240,240);
+	private static Color m_list_selected_color = new Color(235,235,235);
+	private static Color m_search_field_bg = new Color(230,250,250);
 	
 	// 0: Präparat, 1: Inhaber, 2: ATC Code, 3: Reg. Nr., 4: Wirkstoff, 5: Therapie
 	// -> {0, 1, 2, 3, 4, 5, 6};
 	private static int m_query_type = 0;
+	
+	// German section title abbreviations
+	private static final String[] SectionTitle_DE = {"Zusammensetzung", "Galenische Form", "Kontraindikationen", 
+		"Indikationen", "Dosierung/Anwendung", "Vorsichtsmassnahmen", "Interaktionen", "Schwangerschaft", 
+		"Fahrtüchtigkeit", "Unerwünschte Wirk.", "Überdosierung", "Eig./Wirkung", "Kinetik", "Präklinik", 
+		"Sonstige Hinweise", "Zulassungsnummer", "Packungen", "Inhaberin", "Stand der Information"};	
+	// French section title abbrevations
+	private static final String[] SectionTitle_FR = {"Composition", "Forme galénique", "Contre-indications", 
+		"Indications", "Posologie", "Précautions", "Interactions", "Grossesse/All.", 
+		"Conduite", "Effets indésir.", "Surdosage", "Propriétés/Effets", "Cinétique", "Préclinique", 
+		"Remarques", "Numéro d'autorisation", "Présentation", "Titulaire", "Mise à jour"};	
 	
 	/**
 	 * Adds an option into the command line parser
@@ -310,7 +316,7 @@ public class AMiKoDesk {
 				!CML_OPT_TITLE.isEmpty() || !CML_OPT_EANCODE.isEmpty() || !CML_OPT_REGNR.isEmpty() || 
 				CML_OPT_SERVER==true));
 	}
-	
+		
 	public static void main(String[] args) {		
 			
 		// Initialize globales
@@ -390,12 +396,12 @@ public class AMiKoDesk {
 		UIManager.put("Label.font", new Font("Dialog", Font.PLAIN, 12));  
 		UIManager.put("CheckBox.font", new Font("Dialog", Font.PLAIN, 12));
         UIManager.put("Button.font", new Font("Dialog", Font.BOLD, 14));
+        UIManager.put("ToggleButton.font", new Font("Dialog", Font.BOLD, 14));
+        UIManager.put("ToggleButton.select", m_selected_but_color);
         UIManager.put("Menu.font", new Font("Dialog", Font.PLAIN, 12));
         UIManager.put("MenuBar.font", new Font("Dialog", Font.PLAIN, 12));
         UIManager.put("MenuItem.font", new Font("Dialog", Font.PLAIN, 12));
         UIManager.put("ToolBar.font", new Font("Dialog", Font.PLAIN, 12));
-        UIManager.put("ToggleButton.font", new Font("Dialog", Font.PLAIN, 12));
-        UIManager.put("ToggleButton.select", new Color(240,240,240));
         
 		// Schedule a job for the event-dispatching thread:
 		// creating and showing this application's GUI
@@ -448,18 +454,20 @@ public class AMiKoDesk {
 			// System.out.println("getListCellRenderer");
 	
 			if (isSelected) {
-				setBackground(new Color(230,230,230));
+				setBackground(m_list_selected_color);
 				setForeground(list.getForeground());				
 			} else {
 				setBackground(list.getBackground());
 				setForeground(list.getForeground());
 			}
 			// Extract registration number corresponding to index
-			String regnrs = med_search.get(index).getRegnrs();
-			if (favorite_meds_set.contains(regnrs)) 
-				setIcon(imgFavSelected);
-			else				
-				setIcon(imgFavNotSelected);
+			if (index<med_search.size()) {
+				String regnrs = med_search.get(index).getRegnrs();
+				if (favorite_meds_set.contains(regnrs)) 
+					setIcon(imgFavSelected);
+				else				
+					setIcon(imgFavNotSelected);
+			}
 			// Set position of the star
 			setVerticalTextPosition(SwingConstants.TOP);
 
@@ -512,7 +520,7 @@ public class AMiKoDesk {
 			list.setSelectedIndex(0);
 			list.setCellRenderer(new CheckListRenderer());
 			list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-			list.setSelectionBackground(new Color(240,240,240));
+			list.setSelectionBackground(m_list_selected_color);
 			list.setSelectionForeground(Color.BLACK);
 			list.setFont(new Font("Dialog", Font.PLAIN, 14));
 			list.addListSelectionListener(this);
@@ -587,19 +595,15 @@ public class AMiKoDesk {
 		public void valueChanged(ListSelectionEvent e) {
 			if (e.getSource()==list && !e.getValueIsAdjusting()) {	
 				prev_med_index = med_index;		// Store current index
-				med_index = list.getSelectedIndex();
+				med_index = list.getSelectedIndex();	// Returns -1 if there is no selection
 				if (med_index<0 && prev_med_index>=0)
-					list.setSelectedIndex(prev_med_index);
-				if (m_seek_interactions && !m_shopping_mode) {
-					// Display interaction cart
+					list.setSelectedIndex(prev_med_index);				
+				if (m_curr_uistate.isInteractionsMode())	// Display interaction cart
 					m_web_panel.updateInteractionsCart();
-				} else if (m_shopping_mode && !m_seek_interactions) {
-					// Display shopping cart
+				else if (m_curr_uistate.isShoppingMode())	// Display shopping cart
 					m_web_panel.updateListOfPackages();
-				} else {
-					// Display Fachinformation, default usage!
+				else										// Display Fachinformation, default usage!
 					m_web_panel.updateText();
-				}
 			}
 		}
 		
@@ -630,24 +634,21 @@ public class AMiKoDesk {
 			list.setSelectionForeground(Color.WHITE);
 			list.setFont(new Font("Dialog", Font.PLAIN, 13));
 			list.addListSelectionListener(this);
-			list.setPreferredSize(null);
 
-			JPanel indexPanel = new JPanel(new BorderLayout());
-			// indexPanel.setBorder(BorderFactory.createTitledBorder("Index"));
-			indexPanel.setBorder(null);			
+			JPanel listPanel = new JPanel(new BorderLayout());
+			listPanel.setBorder(null);
+			// listPanel.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+
+			jscroll = new JScrollPane(list);
+			jscroll.setBorder(null);
+			jscroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);	
+			listPanel.add(jscroll, BorderLayout.CENTER);
+			add(listPanel, BorderLayout.CENTER);
 
 			/*
-			jscroll = new JScrollPane();
-			jscroll.setViewportView(list);
-			jscroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-			// jscroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);			
-			indexPanel.setLayout(new BorderLayout());			
-			indexPanel.add(jscroll, BorderLayout.CENTER);
-			add(indexPanel, BorderLayout.CENTER);
+			listPanel.add(list, BorderLayout.CENTER);
+			add(listPanel, BorderLayout.CENTER);
 			*/
-			
-			indexPanel.add(list, BorderLayout.CENTER);
-			add(indexPanel, BorderLayout.CENTER);
 		}	
 		
 		public void updatePanel(String[] sec_titles) {
@@ -799,9 +800,39 @@ public class AMiKoDesk {
 							m_med_basket.remove(row_key);
 						m_web_panel.updateInteractionsHtml();
 					} else if (m_shopping_mode) {
-						if (msg.equals("delete_all"))
+						if (msg.equals("delete_all")) {
 							m_shopping_basket.clear();
-						else if (msg.equals("create_pdf")) {
+							m_web_panel.updateShoppingHtml();
+						} else if (msg.equals("delete_row")) {
+							Article article = m_shopping_basket.get(row_key);
+							article.setQuantity(1);
+							m_shopping_basket.remove(row_key);
+							m_web_panel.updateShoppingHtml();
+						} else if (msg.startsWith("change_qty")) {
+							if (m_shopping_basket.containsKey(row_key)) {
+								Article article = m_shopping_basket.get(row_key);
+								int value = Integer.parseInt(msg.replaceAll("change_qty", "").trim());
+								article.setQuantity(value);
+								m_shopping_basket.put(row_key, article);	
+								// Update shopping basket
+								m_shopping_cart.setShoppingBasket(m_shopping_basket);
+								// 
+								float subtotal = 0.0f;
+								for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+									Article a = entry.getValue();
+									subtotal += m_shopping_cart.calcPrice(a, a.getQuantity());
+								}
+								// Update shopping cart html
+								String subtotal_CHF = String.format("%.2f CHF", subtotal);
+								String mwst_CHF = String.format("%.2f CHF", subtotal*0.08);
+								String total_CHF = String.format("%.2f CHF", subtotal*1.08);
+								String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[3].innerHTML=\"" + article.getTotalPrice() + "\";" 
+										+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[3].innerHTML=\"" + subtotal_CHF + "\";"
+										+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[3].innerHTML=\"" + mwst_CHF + "\";"
+										+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[3].innerHTML=\"<b>" + total_CHF + "</b>\";";
+								jWeb.executeJavascript(js);
+							}																
+						} else if (msg.equals("create_pdf")) {
 							SwingUtilities.invokeLater(new Runnable() {
 								@Override
 								public void run() {	
@@ -820,23 +851,13 @@ public class AMiKoDesk {
 									}
 								}
 							});
+							m_web_panel.updateShoppingHtml();
 						} else if (msg.equals("create_csv")) {
 							/*
 							/ TODO: IMPLEMENT!!
 							*/
-						} else if (msg.startsWith("change_qty")) {
-							if (m_shopping_basket.containsKey(row_key)) {
-								Article article = m_shopping_basket.get(row_key);
-								int value = Integer.parseInt(msg.replaceAll("change_qty", "").trim());
-								article.setQuantity(value);
-								m_shopping_basket.put(row_key, article);
-							}							
-						} else if (msg.equals("delete_row")) {
-							Article article = m_shopping_basket.get(row_key);
-							article.setQuantity(1);
-							m_shopping_basket.remove(row_key);
+							m_web_panel.updateShoppingHtml();
 						}
-						m_web_panel.updateShoppingHtml();						
 					} else {
 						if (msg.equals("add_to_shopping_cart")) {
 							if (m_shopping_basket.containsKey(row_key)) {
@@ -924,26 +945,14 @@ public class AMiKoDesk {
 		}
 		
 		public void updateText() {
-			if (med_index>=0 || prev_med_index>=0) {
+			if (med_id.size()>0 && med_index>=0) {
 				// Get full info on selected medication
-				Medication m = null;
-				if (med_index>=0) {
-					m =  m_sqldb.getMediWithId(med_id.get(med_index));
-					// Set right panel title
-					if (Utilities.appLanguage().equals("de"))
-						m_web_panel.setTitle("Fachinformation");
-					else if (Utilities.appLanguage().equals("fr"))
-						m_web_panel.setTitle("Notice Infopro");
-				} else if (m_database_used.equals("aips") && prev_med_index>=0)	{
-					m =  m_sqldb.getMediWithId(med_id.get(prev_med_index));
-					// Set right panel title
-					if (Utilities.appLanguage().equals("de"))
-						m_web_panel.setTitle("Fachinformation");
-					else if (Utilities.appLanguage().equals("fr"))
-						m_web_panel.setTitle("Notice Infopro");					
-				}
-				else 
-					return;
+				Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
+				// Set right panel title
+				if (Utilities.appLanguage().equals("de"))
+					m_web_panel.setTitle("Fachinformation");
+				else if (Utilities.appLanguage().equals("fr"))
+					m_web_panel.setTitle("Notice Infopro");
 				
 				// Get section ids
 				String[] sections = m.getSectionIds().split(",");
@@ -979,7 +988,8 @@ public class AMiKoDesk {
 				}
 				
 				jWeb.setVisible(true);
-			}
+			} else 
+				return;
 		}
 		
 		public void updateInteractionsCart() {
@@ -1013,7 +1023,7 @@ public class AMiKoDesk {
 		
 		public void updateListOfPackages() {
 			String[] packages = {"Packungen"};
-			if (med_index>=0) {
+			if (med_index<med_id.size() && med_index>=0) {
 				// Get full info on selected medication
 				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
 				list_of_articles.clear();
@@ -1172,7 +1182,7 @@ public class AMiKoDesk {
 	        // this.setBorder(BorderFactory.createLineBorder(new Color(220,250,250)));
 	        // this.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
 	        this.setBorder(BorderFactory.createSoftBevelBorder(SoftBevelBorder.LOWERED));
-	        this.setBackground(new Color(220,250,250));
+	        this.setBackground(m_search_field_bg);
 	        this.setEditable(true);
 	        
 	        this.icon = new ImageIcon(Constants.IMG_FOLDER+"mag_glass_16x16.png");
@@ -1318,7 +1328,7 @@ public class AMiKoDesk {
 		
 		// If command line options are provided start app with a particular title or eancode
 		if (commandLineOptionsProvided()) {
-			final JButton but_dummy = new JButton("dummy_button");
+			final JToggleButton but_dummy = new JToggleButton("dummy_button");
 			if (!CML_OPT_TITLE.isEmpty())
 				startAppWithTitle(but_dummy);
 			else if (!CML_OPT_EANCODE.isEmpty())
@@ -1386,12 +1396,13 @@ public class AMiKoDesk {
 	}
 	
 	private static void setupButton(JToggleButton button, String toolTipText, String rolloverImg, String selectedImg) {
+		button.setFont(new Font("Dialog", Font.PLAIN, 12));
 		button.setVerticalTextPosition(SwingConstants.BOTTOM);
 	    button.setHorizontalTextPosition(SwingConstants.CENTER);
 		button.setText(toolTipText);
 		button.setRolloverIcon(new ImageIcon(Constants.IMG_FOLDER+rolloverImg));
 		button.setSelectedIcon(new ImageIcon(Constants.IMG_FOLDER+selectedImg));
-		button.setBackground(new Color(240,240,240));
+		button.setBackground(m_selected_but_color);
 		button.setToolTipText(toolTipText);
 		
 		// Remove border
@@ -1401,6 +1412,14 @@ public class AMiKoDesk {
 		button.setPreferredSize(new Dimension(32,32));		
 	}
 		
+	private static void setupToggleButton(JToggleButton button) {
+		button.setBackground(m_but_color_bg);
+		button.setFocusPainted(false);
+		button.setBorder(new CompoundBorder(
+				new LineBorder(m_but_color_bg), new EmptyBorder(0,3,0,0)));
+		button.setHorizontalAlignment(SwingConstants.LEFT);
+	}
+	
 	private static void createAndShowFullGUI() {
 		// Create and setup window
 		final JFrame jframe = new JFrame(Constants.APP_NAME);
@@ -1522,7 +1541,7 @@ public class AMiKoDesk {
 		setupButton(selectShoppingCartButton, "Warenkorb", "shoppingcart32x32_gray.png", "shoppingcart32x32_dark.png");
 		
 		// Add to toolbar and set up
-		toolBar.setBackground(new Color(240,240,240));
+		toolBar.setBackground(m_toolbar_bg);
 		toolBar.add(selectAipsButton);
 		toolBar.addSeparator();
 		toolBar.add(selectFavoritesButton);
@@ -1783,11 +1802,11 @@ public class AMiKoDesk {
 			l_search = "Recherche";
 		}
 		
-		JButton but_title = new JButton(l_title);
-		but_title.setBackground(m_but_color);
-		but_title.setBorder(new CompoundBorder(
-				new LineBorder(m_but_color), new EmptyBorder(0,3,0,0)));
-		but_title.setHorizontalAlignment(SwingConstants.LEFT);
+		ButtonGroup bg = new ButtonGroup();
+		
+		JToggleButton but_title = new JToggleButton(l_title);
+		setupToggleButton(but_title);
+		bg.add(but_title);
 		gbc.gridx = 0;
 		gbc.gridy = 1;
 		gbc.gridwidth = gbc.gridheight = 1;
@@ -1795,11 +1814,9 @@ public class AMiKoDesk {
 		// --> container.add(but_title, gbc);
 		left_panel.add(but_title, gbc);
 		
-		JButton but_auth = new JButton(l_author);
-		but_auth.setBackground(m_but_color);
-		but_auth.setBorder(new CompoundBorder(
-				new LineBorder(m_but_color), new EmptyBorder(0,3,0,0)));
-		but_auth.setHorizontalAlignment(SwingConstants.LEFT);		
+		JToggleButton but_auth = new JToggleButton(l_author);
+		setupToggleButton(but_auth);
+		bg.add(but_auth);
 		gbc.gridx = 0;
 		gbc.gridy += 1;
 		gbc.gridwidth = gbc.gridheight = 1;
@@ -1807,11 +1824,9 @@ public class AMiKoDesk {
 		// --> container.add(but_auth, gbc);
 		left_panel.add(but_auth, gbc);
 		
-		JButton but_atccode = new JButton(l_atccode);
-		but_atccode.setBackground(m_but_color);
-		but_atccode.setBorder(new CompoundBorder(
-				new LineBorder(m_but_color), new EmptyBorder(0,3,0,0)));
-		but_atccode.setHorizontalAlignment(SwingConstants.LEFT);
+		JToggleButton but_atccode = new JToggleButton(l_atccode);
+		setupToggleButton(but_atccode);
+		bg.add(but_atccode);
 		gbc.gridx = 0;
 		gbc.gridy += 1;
 		gbc.gridwidth = gbc.gridheight = 1;
@@ -1819,11 +1834,9 @@ public class AMiKoDesk {
 		// --> container.add(but_atccode, gbc);
 		left_panel.add(but_atccode, gbc);
 		
-		JButton but_regnr = new JButton(l_regnr);
-		but_regnr.setBackground(m_but_color);
-		but_regnr.setBorder(new CompoundBorder(
-				new LineBorder(m_but_color), new EmptyBorder(0,3,0,0)));
-		but_regnr.setHorizontalAlignment(SwingConstants.LEFT);
+		JToggleButton but_regnr = new JToggleButton(l_regnr);
+		setupToggleButton(but_regnr);
+		bg.add(but_regnr);
 		gbc.gridx = 0;
 		gbc.gridy += 1;
 		gbc.gridwidth = gbc.gridheight = 1;
@@ -1831,25 +1844,9 @@ public class AMiKoDesk {
 		// --> container.add(but_regnr, gbc);
 		left_panel.add(but_regnr, gbc);
 		
-		/*
-		JButton but_ingredients = new JButton(l_ingredient);
-		but_ingredients.setBackground(m_but_color);		
-		but_ingredients.setBorder(new CompoundBorder(
-				new LineBorder(m_but_color), new EmptyBorder(0,3,0,0)));
-		but_ingredients.setHorizontalAlignment(SwingConstants.LEFT);
-		gbc.gridx = 0;
-		gbc.gridy += 1;
-		gbc.gridwidth = gbc.gridheight = 1;
-		gbc.weightx = gbc.weighty = 0.0;
-		// --> container.add(but_ingredients, gbc);	
-		left_panel.add(but_ingredients, gbc);
-		*/
-		
-		JButton but_therapy = new JButton(l_therapy);
-		but_therapy.setBackground(m_but_color);		
-		but_therapy.setBorder(new CompoundBorder(
-				new LineBorder(m_but_color), new EmptyBorder(0,3,0,0)));
-		but_therapy.setHorizontalAlignment(SwingConstants.LEFT);
+		JToggleButton but_therapy = new JToggleButton(l_therapy);
+		setupToggleButton(but_therapy);
+		bg.add(but_therapy);
 		gbc.gridx = 0;
 		gbc.gridy += 1;
 		gbc.gridwidth = gbc.gridheight = 1;
@@ -1885,6 +1882,7 @@ public class AMiKoDesk {
 		
 		// --> container.add(p_results, gbc);
 		left_panel.add(p_results, gbc);
+		left_panel.setBorder(null);
 		// First card to show
 		cardl.show(p_results, l_title);
 
@@ -1900,36 +1898,25 @@ public class AMiKoDesk {
 		} else if (Utilities.appLanguage().equals("fr")) {
 			m_section_titles = new IndexPanel(SectionTitle_FR);				
 		}			
-		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx = 0;
-		gbc.gridy = 0;
-		gbc.gridwidth = 1;
-		gbc.gridheight = 8;
-		gbc.weightx = gbc.weighty = 0.0;
-		// --> container.add(m_section_titles, gbc);
-		if (m_section_titles!=null)
-			right_panel.add(m_section_titles, gbc);
-		
+		m_section_titles.setMinimumSize(new Dimension(150,150));
+		m_section_titles.setMaximumSize(new Dimension(320,1000));
+	
 		// ---- Fachinformation ----
 		m_web_panel = new WebPanel2();
-		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx = 1;
-		gbc.gridy = 0;
-		gbc.gridwidth = 3;
-		gbc.gridheight = 20;
-		gbc.weightx = 2.0;
-		gbc.weighty = 1.0;
-		gbc.anchor = GridBagConstraints.EAST;
-		// --> container.add(m_web_panel, gbc);
-		right_panel.add(m_web_panel, gbc);
-				
-		// Add JSplitPane
-		JSplitPane split_pane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left_panel, right_panel);
-		split_pane.setOneTouchExpandable(true);
-		split_pane.setDividerLocation(320);	// Sets the pane divider location
-		left_panel.setBorder(null);
-		right_panel.setBorder(null);
-		container.add(split_pane, BorderLayout.CENTER);
+		m_web_panel.setMinimumSize(new Dimension(320,150));
+		
+		// Add JSplitPane on the RIGHT
+		JSplitPane split_pane_right = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, m_section_titles, m_web_panel);
+		split_pane_right.setOneTouchExpandable(true);
+		split_pane_right.setDividerLocation(150);
+		split_pane_right.setDividerSize(10);
+		
+		// Add JSplitPane on the LEFT
+		JSplitPane split_pane_left = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, left_panel, split_pane_right /* right_panel */);
+		split_pane_left.setOneTouchExpandable(true);
+		split_pane_left.setDividerLocation(320);	// Sets the pane divider location
+		split_pane_left.setDividerSize(10);
+		container.add(split_pane_left, BorderLayout.CENTER);
 		
 		// Add status bar on the bottom
 		JPanel statusPanel = new JPanel();
@@ -1953,7 +1940,6 @@ public class AMiKoDesk {
 		final String final_author = l_author;
 		final String final_atccode = l_atccode;
 		final String final_regnr = l_regnr;
-		final String final_ingredient = l_ingredient;
 		final String final_therapy = l_therapy;
 		final String final_search = l_search;	
 		
@@ -1964,21 +1950,42 @@ public class AMiKoDesk {
 				selectAipsButton.setSelected(true);
 				selectFavoritesButton.setSelected(false);
 				selectInteractionsButton.setSelected(false);
-				selectShoppingCartButton.setSelected(false);
-				m_database_used = "aips";
-				m_seek_interactions = false;
-				m_shopping_mode = false;
+				selectShoppingCartButton.setSelected(false);											
 				
-				m_start_time = System.currentTimeMillis();
-				m_query_str = searchField.getText();				
-				med_search = m_sqldb.searchTitle(m_query_str);
-				sTitle("");	// Used instead of sTitle (which is slow)
-				cardl.show(p_results, final_title);	
-
-				m_status_label.setText(med_search.size() + " Suchresultate in " + 
-						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");				
-				
-				m_web_panel.updateText();
+				if (!m_curr_uistate.getUseMode().equals("aips")) {
+					m_seek_interactions = false;
+					m_shopping_mode = false;					
+					
+					m_curr_uistate.setUseMode("aips");
+					
+					m_start_time = System.currentTimeMillis();
+					m_query_str = searchField.getText();						
+					
+					retrieveAipsSearchResults();
+					switch(m_curr_uistate.getQueryType()) {
+					case 0:
+						cardl.show(p_results, final_title);	
+						break;
+					case 1:
+						cardl.show(p_results, final_author);	
+						break;
+					case 2:
+						cardl.show(p_results, final_atccode);	
+						break;
+					case 3:
+						cardl.show(p_results, final_regnr);							
+						break;
+					case 4:
+						cardl.show(p_results, final_therapy);							
+						break;
+					default:						
+						break;
+					}
+					m_status_label.setText(med_search.size() + " Suchresultate in " + 
+							(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");				
+					
+					m_web_panel.updateText();
+				}
 			}
 		});
 		selectFavoritesButton.addActionListener(new ActionListener() {
@@ -1987,33 +1994,37 @@ public class AMiKoDesk {
 				selectAipsButton.setSelected(false);
 				selectFavoritesButton.setSelected(true);
 				selectInteractionsButton.setSelected(false);
-				selectShoppingCartButton.setSelected(false);
-				m_database_used = "favorites";
-				m_seek_interactions = false;
-				m_shopping_mode = false;
+				selectShoppingCartButton.setSelected(false);		
 				
-				m_start_time = System.currentTimeMillis();
-				// m_query_str = searchField.getText();				
-				// Clear the search container
-				med_search.clear();
-				for (String regnr : favorite_meds_set) {
-					List<Medication> meds = m_sqldb.searchRegNr(regnr);
-					if (!meds.isEmpty())
-						med_search.add(meds.get(0));
-				}
-				// Sort list of meds
-				Collections.sort(med_search, new Comparator<Medication>() {
-					@Override
-					public int compare(final Medication m1, final Medication m2) {
-						return m1.getTitle().compareTo(m2.getTitle());
+				if (!m_curr_uistate.getUseMode().equals("favorites")) {
+					m_seek_interactions = false;
+					m_shopping_mode = false;						
+					
+					m_curr_uistate.setUseMode("favorites");
+	
+					m_start_time = System.currentTimeMillis();
+					// m_query_str = searchField.getText();				
+					// Clear the search container
+					med_search.clear();
+					for (String regnr : favorite_meds_set) {
+						List<Medication> meds = m_sqldb.searchRegNr(regnr);
+						if (!meds.isEmpty())
+							med_search.add(meds.get(0));
 					}
-				});
+					// Sort list of meds
+					Collections.sort(med_search, new Comparator<Medication>() {
+						@Override
+						public int compare(final Medication m1, final Medication m2) {
+							return m1.getTitle().compareTo(m2.getTitle());
+						}
+					});
+					
+					sTitle();
+					cardl.show(p_results, final_title);
 				
-				sTitle("");		// "" argument unused
-				cardl.show(p_results, final_title);
-			
-				m_status_label.setText(med_search.size() + " Suchresultate in " + 
-						(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
+					m_status_label.setText(med_search.size() + " Suchresultate in " + 
+							(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
+				}
 			}
 		});
 		selectInteractionsButton.addActionListener(new ActionListener() {
@@ -2023,17 +2034,22 @@ public class AMiKoDesk {
 				selectFavoritesButton.setSelected(false);
 				selectInteractionsButton.setSelected(true);
 				selectShoppingCartButton.setSelected(false);				
-				m_database_used = "aips";
-				m_seek_interactions = true;
-				m_shopping_mode = false;
-				// Set right panel title
-				if (Utilities.appLanguage().equals("de"))
-					m_web_panel.setTitle("Medikamentenkorb");
-				else if (Utilities.appLanguage().equals("fr"))
-					m_web_panel.setTitle("Médicaments sélectionnées");
 				
-				// Switch to interaction mode
-				m_web_panel.updateInteractionsCart();
+				if (!m_curr_uistate.getUseMode().equals("interactions")) {
+					m_seek_interactions = true;
+					m_shopping_mode = false;
+					
+					m_curr_uistate.setUseMode("interactions");				
+	
+					// Set right panel title
+					if (Utilities.appLanguage().equals("de"))
+						m_web_panel.setTitle("Medikamentenkorb");
+					else if (Utilities.appLanguage().equals("fr"))
+						m_web_panel.setTitle("Médicaments sélectionnées");
+					
+					// Switch to interaction mode
+					m_web_panel.updateInteractionsCart();
+				}
 			}
 		});
 		selectShoppingCartButton.addActionListener(new ActionListener() {
@@ -2047,17 +2063,22 @@ public class AMiKoDesk {
 					selectFavoritesButton.setSelected(false);
 					selectInteractionsButton.setSelected(false);
 					selectShoppingCartButton.setSelected(true);
-					m_database_used = "aips";
-					m_seek_interactions = false;
-					m_shopping_mode = true;				
-					// Set right panel title
-					if (Utilities.appLanguage().equals("de"))
-						m_web_panel.setTitle("Warenkorb");
-					else if (Utilities.appLanguage().equals("fr"))
-						m_web_panel.setTitle("Panier d'achat");	
-					// Switch to shopping cart
-					m_web_panel.updateListOfPackages();
-					m_web_panel.updateShoppingHtml();
+					
+					if (!m_curr_uistate.getUseMode().equals("shopping")) {
+						m_seek_interactions = false;
+						m_shopping_mode = true;							
+						
+						m_curr_uistate.setUseMode("shopping");
+						
+						// Set right panel title
+						if (Utilities.appLanguage().equals("de"))
+							m_web_panel.setTitle("Warenkorb");
+						else if (Utilities.appLanguage().equals("fr"))
+							m_web_panel.setTitle("Panier d'achat");	
+						// Switch to shopping cart
+						m_web_panel.updateListOfPackages();
+						m_web_panel.updateShoppingHtml();
+					}
 				} else {
 					selectShoppingCartButton.setSelected(false);
 					settingsPage.display();
@@ -2079,39 +2100,33 @@ public class AMiKoDesk {
 						if (!m_query_str.isEmpty()) {
 							if (m_query_type==0) {
 								med_search = m_sqldb.searchTitle(m_query_str);
-								if (m_database_used.equals("favorites"))
+								if (m_curr_uistate.databaseUsed().equals("favorites"))
 									retrieveFavorites();
-								sTitle(m_query_str);
+								sTitle();
 								cardl.show(p_results, final_title);
 							} else if (m_query_type==1) {
 								med_search = m_sqldb.searchAuth(m_query_str);
-								if (m_database_used.equals("favorites"))
+								if (m_curr_uistate.databaseUsed().equals("favorites"))
 									retrieveFavorites();
-								sAuth(m_query_str);
+								sAuth();
 								cardl.show(p_results, final_author);
 							} else if (m_query_type==2) {
 								med_search = m_sqldb.searchATC(m_query_str);
-								if (m_database_used.equals("favorites"))
+								if (m_curr_uistate.databaseUsed().equals("favorites"))
 									retrieveFavorites();
-								sATC(m_query_str);
+								sATC();
 								cardl.show(p_results, final_atccode);
 							} else if (m_query_type==3) {
 								med_search = m_sqldb.searchRegNr(m_query_str);
-								if (m_database_used.equals("favorites"))
+								if (m_curr_uistate.databaseUsed().equals("favorites"))
 									retrieveFavorites();
-								sRegNr(m_query_str);
+								sRegNr();
 								cardl.show(p_results, final_regnr);					
 							} else if (m_query_type==4) {
-								med_search = m_sqldb.searchIngredient(m_query_str);
-								if (m_database_used.equals("favorites"))
-									retrieveFavorites();
-								sIngredient(m_query_str);
-								cardl.show(p_results, final_ingredient);	
-							} else if (m_query_type==5) {
 								med_search = m_sqldb.searchApplication(m_query_str);
-								if (m_database_used.equals("favorites"))
+								if (m_curr_uistate.databaseUsed().equals("favorites"))
 									retrieveFavorites();
-								sTherapy(m_query_str);
+								sTherapy();
 								cardl.show(p_results, final_therapy);	
 							} else {
 								// do nothing
@@ -2133,8 +2148,8 @@ public class AMiKoDesk {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
 				searchField.setText(final_search + " " + final_title);
-				m_query_type = 0;
-				sTitle(m_query_str);
+				m_curr_uistate.setQueryType(m_query_type = 0);
+				sTitle();
 				cardl.show(p_results, final_title);
 			}
 		});
@@ -2142,8 +2157,8 @@ public class AMiKoDesk {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
 				searchField.setText(final_search + " " + final_author);
-				m_query_type = 1;
-				sAuth(m_query_str);
+				m_curr_uistate.setQueryType(m_query_type = 1);
+				sAuth();
 				cardl.show(p_results, final_author);
 			}
 		});		
@@ -2151,8 +2166,8 @@ public class AMiKoDesk {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
 				searchField.setText(final_search + " " + final_atccode);
-				m_query_type = 2;
-				sATC(m_query_str);
+				m_curr_uistate.setQueryType(m_query_type = 2);
+				sATC();
 				cardl.show(p_results, final_atccode);
 			}
 		});
@@ -2160,28 +2175,17 @@ public class AMiKoDesk {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
 				searchField.setText(final_search + " " + final_regnr);
-				m_query_type = 3;
-				sRegNr(m_query_str);
+				m_curr_uistate.setQueryType(m_query_type = 3);
+				sRegNr();
 				cardl.show(p_results, final_regnr);
 			}
 		});
-		/*
-		but_ingredients.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent ae) {
-				searchField.setText(final_search + " " + final_ingredient);
-				m_query_type = 4;
-				sIngredient(m_query_str);
-				cardl.show(p_results, final_ingredient);
-			}
-		});
-		*/
 		but_therapy.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
 				searchField.setText(final_search + " " + final_therapy);
-				m_query_type = 5;
-				sTherapy(m_query_str);
+				m_curr_uistate.setQueryType(m_query_type = 4);
+				sTherapy();
 				cardl.show(p_results, final_therapy);
 			}
 		});
@@ -2212,9 +2216,9 @@ public class AMiKoDesk {
 		// Load AIPS database
 		selectAipsButton.setSelected(true);
 		selectFavoritesButton.setSelected(false);
-		m_database_used = "aips";
+		m_curr_uistate.setUseMode("aips");
 		med_search = m_sqldb.searchTitle("");
-		sTitle("");	// Used instead of sTitle (which is slow)
+		sTitle();	// Used instead of sTitle (which is slow)
 		cardl.show(p_results, final_title);	
 
 		// Add menu item listeners	
@@ -2247,9 +2251,9 @@ public class AMiKoDesk {
 				// Refresh search results
 				selectAipsButton.setSelected(true);
 				selectFavoritesButton.setSelected(false);
-				m_database_used = "aips";
+				m_curr_uistate.setUseMode("aips");
 				med_search = m_sqldb.searchTitle("");
-				sTitle("");	// Used instead of sTitle (which is slow)
+				sTitle();	// Used instead of sTitle (which is slow)
 				cardl.show(p_results, final_title);						
 			}
 		});
@@ -2267,6 +2271,47 @@ public class AMiKoDesk {
 		// Check if update is required and start update...
 		checkIfUpdateRequired(updatedb_item);
 	}	
+
+	static void retrieveAipsSearchResults() {
+		switch (m_curr_uistate.getQueryType()) {
+		case 0:
+			med_search = m_sqldb.searchTitle(m_query_str);				
+			sTitle();
+			break;
+		case 1:
+			med_search = m_sqldb.searchAuth(m_query_str);			
+			sAuth();	
+			break;
+		case 2:
+			med_search = m_sqldb.searchATC(m_query_str);				
+			sATC();
+			break;
+		case 3:
+			med_search = m_sqldb.searchRegNr(m_query_str);				
+			sRegNr();			
+			break;
+		case 4:
+			med_search = m_sqldb.searchIngredient(m_query_str);				
+			sIngredient();			
+			break;
+		default:
+			break;
+		}		
+	}
+	
+	static void retrieveFavorites() 
+	{
+		// Select only subset, remove the rest
+		// TODO: optimize!! too slow
+		list_of_favorites.clear();
+		for (Medication m : med_search) {
+			if (favorite_meds_set.contains(m.getRegnrs()))
+				list_of_favorites.add(m);										
+		}
+		med_search.clear();
+		for (Medication f : list_of_favorites)
+			med_search.add(f);
+	}
 	
 	static void checkIfUpdateRequired(JMenuItem update_item) {
 		// Get current date
@@ -2313,22 +2358,7 @@ public class AMiKoDesk {
 		}
 	}
 	
-	static void retrieveFavorites() 
-	{
-		// Select only subset, remove the rest
-		// TODO: optimize!! too slow
-		list_of_favorites.clear();
-		for (Medication m : med_search) {
-			if (favorite_meds_set.contains(m.getRegnrs()))
-				list_of_favorites.add(m);										
-		}
-		med_search.clear();
-		for (Medication f : list_of_favorites)
-			med_search.add(f);
-	}
-	
-	static void startAppWithTitle(JButton but_title)
-	{
+	static void startAppWithTitle(JToggleButton but_title) {
 		m_query_str = CML_OPT_TITLE;
 		med_search = m_sqldb.searchTitle(m_query_str);
 		// Check first if search delivers any result
@@ -2348,8 +2378,7 @@ public class AMiKoDesk {
 		}
 	}
 	
-	static void startAppWithEancode(JButton but_regnr)
-	{
+	static void startAppWithEancode(JToggleButton but_regnr) {
 		// Check if delivered eancode is "kosher"
 		if (CML_OPT_EANCODE.length()==13 && CML_OPT_EANCODE.indexOf("7680")==0) {
 			// Extract 5-digit registration number			
@@ -2375,7 +2404,7 @@ public class AMiKoDesk {
 		}
 	}
 	
-	static void startAppWithRegnr(JButton but_regnr)
+	static void startAppWithRegnr(JToggleButton but_regnr)
 	{
 		// Simple check, should be improved...
 		if (CML_OPT_REGNR.length()==5) {
@@ -2401,12 +2430,12 @@ public class AMiKoDesk {
 		}
 	}
 
-	static void sTitle(String query_str) {
+	static void sTitle() {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
 		Pattern p_red = Pattern.compile(".*O]");
 		Pattern p_green = Pattern.compile(".*G]");
-		if (med_search.size()<BigCellNumber && !m_seek_interactions && !m_shopping_mode) {
+		if (med_search.size()<BigCellNumber && m_curr_uistate.isSearchMode()) {
 			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
 				String pack_info_str = "";
@@ -2426,18 +2455,18 @@ public class AMiKoDesk {
 				m.add("<html><b>" + ms.getTitle() + "</b><br><font size=-1>" + pack_info_str + "</font></html>");
 				med_id.add(ms.getId());
 			}
-		} else if (m_seek_interactions || m_shopping_mode){
+		} else if (!m_curr_uistate.isSearchMode()){
 			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
 				m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b></html>");
 				med_id.add(ms.getId());
 			}
 		}
-
+		
 		m_list_titles.update(m);
 	}
 	
-	static void sAuth(String query_str) {
+	static void sAuth() {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
 		if (med_search.size()<BigCellNumber) {		
@@ -2456,7 +2485,7 @@ public class AMiKoDesk {
 		m_list_auths.update(m);
 	}
 	
-	static void sATC(String query_str) {
+	static void sATC() {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
 		if (med_search.size()<BigCellNumber) {
@@ -2509,7 +2538,7 @@ public class AMiKoDesk {
 		m_list_atccodes.update(m);
 	}
 
-	static void sRegNr(String query_str) {
+	static void sRegNr() {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
 		if (med_search.size()<BigCellNumber) {
@@ -2532,7 +2561,7 @@ public class AMiKoDesk {
 	 * Nicely formats search for ingredient ("Wirkstoff")
 	 * @param query_str
 	 */
-	static void sIngredient(String query_str) {
+	static void sIngredient() {
 		med_id.clear();					
 		List<String> m = new ArrayList<String>();
 		if (med_search.size()<BigCellNumber) {
@@ -2551,7 +2580,7 @@ public class AMiKoDesk {
 		m_list_ingredients.update(m);
 	}
 	
-	static void sTherapy(String query_str) {
+	static void sTherapy() {
 		med_id.clear();					
 		List<String> m = new ArrayList<String>();
 		if (med_search.size()<BigCellNumber) {
