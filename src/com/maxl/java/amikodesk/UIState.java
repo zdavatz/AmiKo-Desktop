@@ -68,11 +68,11 @@ public class UIState {
 	}
 	
 	public boolean isInteractionsMode() {
-		return (seek_interactions && !shopping_mode);
+		return seek_interactions;
 	}
 	
 	public boolean isShoppingMode() {
-		return (shopping_mode && !seek_interactions);
+		return shopping_mode;
 	}
 	
 	public void setDatabaseUsed(String database) {

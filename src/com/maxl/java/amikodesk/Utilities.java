@@ -69,7 +69,7 @@ public class Utilities {
 		return file_str;	
 	}	
 
-	static public void writeToFile(String string_to_write, String dir_name, String file_name) 
+	static public void writeToFile(String string_to_write, String dir_name, String file_name, String encoding) 
 			throws IOException {
 	   	File wdir = new File(dir_name);
 	   	if (!wdir.exists())
@@ -77,9 +77,10 @@ public class Utilities {
 		File wfile = new File(dir_name+file_name);
 		if (!wfile.exists())
 			wfile.createNewFile();
+		
 		// FileWriter fw = new FileWriter(wfile.getAbsoluteFile());
 		// Used to be UTF-8 --> does not work (@maxl: 08/Jun/2013)
-	   	CharsetEncoder encoder = Charset.forName("UTF-16").newEncoder();
+	   	CharsetEncoder encoder = Charset.forName(encoding).newEncoder();
 	   	encoder.onMalformedInput(CodingErrorAction.REPORT);
 	   	encoder.onUnmappableCharacter(CodingErrorAction.REPORT);
 		OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(wfile.getAbsoluteFile()), encoder);

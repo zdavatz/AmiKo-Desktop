@@ -23,8 +23,12 @@ function deleteRow(tableID,currentRow) {
     }
 }
 
-function createPdf(currentRow) {
+function createPdf(event) {
 	invokeJava("create_pdf",0);
+}
+
+function createCsv(event) {
+	invokeJava("create_csv",0);
 }
 
 function changeQty(tableID,currentRow) {

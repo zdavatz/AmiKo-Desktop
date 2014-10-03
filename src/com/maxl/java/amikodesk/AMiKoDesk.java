@@ -79,7 +79,6 @@ import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JEditorPane;
 import javax.swing.JFileChooser;
@@ -166,8 +165,6 @@ public class AMiKoDesk {
 	private static List<Article> list_of_articles = new ArrayList<Article>();
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
-	private static boolean m_seek_interactions = false;
-	private static boolean m_shopping_mode = false;
 	private static int med_index = -1;
 	private static int prev_med_index = -1;
 	private static UIState m_curr_uistate = new UIState("aips");
@@ -198,11 +195,11 @@ public class AMiKoDesk {
 	private static boolean m_preferences_ok = false;
 	
 	// Colors
-	private static Color m_toolbar_bg = new Color(240,240,240);
-	private static Color m_but_color_bg = new Color(250,250,210);
-	private static Color m_selected_but_color = new Color(240,240,240);
-	private static Color m_list_selected_color = new Color(235,235,235);
-	private static Color m_search_field_bg = new Color(230,250,250);
+	private static Color m_toolbar_bg = new Color(240,240,240);				// light gray
+	private static Color m_but_color_bg = new Color(250,250,210);			// yellow-ish
+	private static Color m_selected_but_color = new Color(240,240,240);		// light gray
+	private static Color m_list_selected_color = new Color(235,235,235);	// light gray
+	private static Color m_search_field_bg = new Color(230,250,250);		// green-ish
 	
 	// 0: Präparat, 1: Inhaber, 2: ATC Code, 3: Reg. Nr., 4: Wirkstoff, 5: Therapie
 	// -> {0, 1, 2, 3, 4, 5, 6};
@@ -659,6 +656,8 @@ public class AMiKoDesk {
 					if (titles!=null) {
 						list.removeAll();
 						list.setListData(titles);
+						if (m_curr_uistate.isInteractionsMode())
+							m_section_str = Arrays.asList(titles);
 					}
 				}
 			});
@@ -668,7 +667,7 @@ public class AMiKoDesk {
 			if (!e.getValueIsAdjusting()) {
 				int sel_index = list.getSelectedIndex();
 				if (sel_index>=0) {
-					if (!m_shopping_mode)
+					if (!m_curr_uistate.isShoppingMode())
 						m_web_panel.moveToAnchor(m_section_str.get(sel_index));
 					else {
 						if (sel_index<list_of_articles.size()) {
@@ -793,13 +792,13 @@ public class AMiKoDesk {
 					String row_key = args[1].toString().trim();
 					System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
 					// 
-					if (m_seek_interactions) {
+					if (m_curr_uistate.isInteractionsMode()) {
 						if (msg.equals("delete_all"))
 							m_med_basket.clear();
 						else if (msg.equals("delete_row"))
 							m_med_basket.remove(row_key);
 						m_web_panel.updateInteractionsHtml();
-					} else if (m_shopping_mode) {
+					} else if (m_curr_uistate.isShoppingMode()) {
 						if (msg.equals("delete_all")) {
 							m_shopping_basket.clear();
 							m_web_panel.updateShoppingHtml();
@@ -853,9 +852,24 @@ public class AMiKoDesk {
 							});
 							m_web_panel.updateShoppingHtml();
 						} else if (msg.equals("create_csv")) {
-							/*
-							/ TODO: IMPLEMENT!!
-							*/
+							SwingUtilities.invokeLater(new Runnable() {
+								@Override
+								public void run() {	
+									// Open file chooser
+									JFileChooser fc = Utilities.getFileChooser("Bestellung speichern", ".csv", "*.csv");
+									String gln_code = m_prefs.get("glncode", "7610000000000");
+									DateTime dT = new DateTime();
+									DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
+									fc.setSelectedFile(new File(gln_code + "_" + fmt.print(dT) + ".csv"));
+									if (fc!=null) {
+										int r = fc.showSaveDialog(jWeb);
+										if (r==JFileChooser.APPROVE_OPTION) {										
+											String filename = fc.getSelectedFile().getPath();						
+											m_shopping_cart.generateCsv(filename);	
+										}
+									}
+								}
+							});
 							m_web_panel.updateShoppingHtml();
 						}
 					} else {
@@ -976,7 +990,7 @@ public class AMiKoDesk {
 						String path_html = System.getProperty ("user.home") + "/" + Constants.APP_NAME +"/htmls/";
 						String _title = m.getTitle();					
 						String file_name = _title.replaceAll("[®,/;.]","_") + ".html";
-						Utilities.writeToFile(content_str.toString(), path_html, file_name);
+						Utilities.writeToFile(content_str.toString(), path_html, file_name, "UTF-16");
 						jWeb.navigate("file:///" + path_html + file_name);
 					} catch(IOException e) {
 						// Fallback solution (used to be preferred implementation)
@@ -1012,7 +1026,7 @@ public class AMiKoDesk {
 		
 		public void updateInteractionsHtml() {
 			// Retrieve main html
-			String html_str = m_interactions_cart.updateInteractionHtml(m_med_basket);
+			String html_str = m_interactions_cart.updateHtml(m_med_basket);
 			// Retrieve section titles
 			m_section_titles.updatePanel(m_interactions_cart.sectionTitles());						
 			// Update html
@@ -1210,16 +1224,18 @@ public class AMiKoDesk {
 	    
 	    @Override
 	    public void focusGained(FocusEvent e) {
-	    	if(!this.getText().isEmpty()) {
+	    	if (!this.getText().isEmpty()) {
 	            super.setText("");
 	        }
+	    	/*
 	        this.setEditable(true);
 	        this.requestFocus();
+	        */
 	    }
 	    
 	    @Override
 	    public void focusLost(FocusEvent e) {
-	        if(this.getText().isEmpty()) {
+	        if (this.getText().isEmpty()) {
 	            super.setText(hint);
 	        }
 	    }
@@ -1952,10 +1968,7 @@ public class AMiKoDesk {
 				selectInteractionsButton.setSelected(false);
 				selectShoppingCartButton.setSelected(false);											
 				
-				if (!m_curr_uistate.getUseMode().equals("aips")) {
-					m_seek_interactions = false;
-					m_shopping_mode = false;					
-					
+				if (!m_curr_uistate.getUseMode().equals("aips")) {								
 					m_curr_uistate.setUseMode("aips");
 					
 					m_start_time = System.currentTimeMillis();
@@ -1997,9 +2010,6 @@ public class AMiKoDesk {
 				selectShoppingCartButton.setSelected(false);		
 				
 				if (!m_curr_uistate.getUseMode().equals("favorites")) {
-					m_seek_interactions = false;
-					m_shopping_mode = false;						
-					
 					m_curr_uistate.setUseMode("favorites");
 	
 					m_start_time = System.currentTimeMillis();
@@ -2036,9 +2046,6 @@ public class AMiKoDesk {
 				selectShoppingCartButton.setSelected(false);				
 				
 				if (!m_curr_uistate.getUseMode().equals("interactions")) {
-					m_seek_interactions = true;
-					m_shopping_mode = false;
-					
 					m_curr_uistate.setUseMode("interactions");				
 	
 					// Set right panel title
@@ -2065,9 +2072,6 @@ public class AMiKoDesk {
 					selectShoppingCartButton.setSelected(true);
 					
 					if (!m_curr_uistate.getUseMode().equals("shopping")) {
-						m_seek_interactions = false;
-						m_shopping_mode = true;							
-						
 						m_curr_uistate.setUseMode("shopping");
 						
 						// Set right panel title

@@ -47,7 +47,7 @@ public class InteractionsCart {
 		return m_section_titles;
 	}
 	
-	public String updateInteractionHtml(Map<String, Medication> med_basket) {
+	public String updateHtml(Map<String, Medication> med_basket) {
 		// Redisplay selected meds
 		String basket_html_str = "<table id=\"Interaktionen\" width=\"98%25\">";
 		String delete_all_button_str = "";

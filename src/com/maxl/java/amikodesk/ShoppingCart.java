@@ -19,9 +19,14 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CodingErrorAction;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -78,7 +83,7 @@ public class ShoppingCart {
 		m_shopping_basket = shopping_basket;
 	}
 	
-	/** Inner class to add a header and a footer. */
+	/** Class to add a header and a footer. */
     static class HeaderFooter extends PdfPageEventHelper {
 
         public void onEndPage(PdfWriter writer, Document document) {
@@ -87,7 +92,7 @@ public class ShoppingCart {
                 case 0:
                     ColumnText.showTextAligned(writer.getDirectContent(),
                         Element.ALIGN_RIGHT, new Phrase("Generiert mit AmiKo. Bestell-Modul gesponsort von IBSA.", 
-                        		font_norm_10), rect.getRight(), rect.getTop(), 0);
+                        		font_norm_10), rect.getRight()-18, rect.getTop(), 0);
                     break;
                 case 1:
                     ColumnText.showTextAligned(writer.getDirectContent(),
@@ -96,8 +101,8 @@ public class ShoppingCart {
                     break;
             }
             ColumnText.showTextAligned(writer.getDirectContent(),
-                    Element.ALIGN_CENTER, new Phrase(String.format("Seite %d", writer.getPageNumber())),
-                    (rect.getLeft() + rect.getRight())/2, rect.getBottom()-18, 0);
+                    Element.ALIGN_CENTER, new Phrase(String.format("Seite %d", writer.getPageNumber()), 
+                    		font_norm_10), (rect.getLeft() + rect.getRight())/2, rect.getBottom()-18, 0);
         }
     }	
     
@@ -145,7 +150,8 @@ public class ShoppingCart {
 						+ "<td>" + article.getPackTitle() + "</td>"
 						+ "<td style=\"text-align:right;\">" + article.getTotalPrice() + "</td>"
 						// + "<td>" + "<input type=\"image\" src=\"" + images_dir + "trash_icon.png\" onmouseup=\"deleteRow('Warenkorb',this)\" tabindex=\"-1\" />" + "</td>";
-						+ "<td>" + "<button style=\"border:none;\" tabindex=\"-1\"><img src=\"" + images_dir + "trash_icon.png\" onmouseup=\"deleteRow('Warenkorb',this)\" /></button>" + "</td>";
+						+ "<td>" + "<button type=\"button\" style=\"border:none;\" tabindex=\"-1\" onclick=\"deleteRow('Warenkorb',this)\"><img src=\"" 
+							+ images_dir + "trash_icon.png\" /></button>" + "</td>";
 				basket_html_str += "</tr>";			
 				index++;
 			}
@@ -211,7 +217,7 @@ public class ShoppingCart {
 		// A4: 8.267in x 11.692in => 595.224units x 841.824units (72units/inch)
 		
 		// marginLeft, marginRight, marginTop, marginBottom
-        Document document = new Document(PageSize.A4, 50, 50, 50, 50);
+        Document document = new Document(PageSize.A4, 50, 50, 80, 50);
         try {
         	if (!m_html_str.isEmpty()) {
         		/*
@@ -233,6 +239,7 @@ public class ShoppingCart {
         		
         		document.addAuthor("ywesee GmbH");
         		document.addCreator("AmiKo for Windows");
+        		document.addCreationDate();
         		
         		// Logo
         		String logoImageStr = mPrefs.get(LogoImageID, Constants.IMG_FOLDER + "empty_logo.png");	
@@ -329,33 +336,31 @@ public class ShoppingCart {
         if (m_shopping_basket.size()>0) {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();				
+				
+				String price_pruned = article.getPublicPrice().replaceAll("[^\\d.]", "");
 
-				System.out.println(article.getQuantity() + " x " + article.getPublicPrice());
-				
-				table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-				table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-				
-		        codeEAN.setCode(article.getEanCode());
-		        Image img = codeEAN.createImageWithBarcode(cb, null, null);
-		        img.scalePercent(120);
-		        cell = new PdfPCell(img);
-		        cell.setBorder(Rectangle.NO_BORDER);
-		        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-		        cell.setUseBorderPadding(true);
-		        cell.setBorderWidth(5);
-		        if (position==1)
-		        	cell.setPaddingTop(8);
-		        else
-		        	cell.setPaddingTop(0);
-		        cell.setPaddingBottom(8);
-		        table.addCell(cell);
-		        
-				table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
-				
-				float price_CHF = 0.0f;
-				String price_pruned =  article.getPublicPrice().replaceAll("[^\\d.]", "");
-				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {			
-					price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
+				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {						
+					table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+					table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+					
+			        codeEAN.setCode(article.getEanCode());
+			        Image img = codeEAN.createImageWithBarcode(cb, null, null);
+			        img.scalePercent(120);
+			        cell = new PdfPCell(img);
+			        cell.setBorder(Rectangle.NO_BORDER);
+			        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+			        cell.setUseBorderPadding(true);
+			        cell.setBorderWidth(5);
+			        if (position==1)
+			        	cell.setPaddingTop(8);
+			        else
+			        	cell.setPaddingTop(0);
+			        cell.setPaddingBottom(8);
+			        table.addCell(cell);
+			        
+					table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
+					
+					float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
 					total_CHF += price_CHF;					
 					table.addCell(getStringCell(String.format("%.2f", price_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));						
 				}
@@ -386,6 +391,37 @@ public class ShoppingCart {
         return table;
 	}
 	
+	public void generateCsv(String filename) {
+        if (m_shopping_basket.size()>0) {
+        	int pos = 0;
+        	String shopping_basket_str = "";
+			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+				Article article = entry.getValue();				
+				
+				String price_pruned = article.getPublicPrice().replaceAll("[^\\d.]", "");
+				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
+					float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
+					shopping_basket_str += (++pos) + "|" 
+							+ article.getQuantity() + "|" 
+							+ article.getEanCode() + "|" 
+							+ article.getPackTitle() + "|" 
+							+ price_pruned + "|"
+							+ price_CHF + "\n"; 
+				}
+			}
+			try {
+				CharsetEncoder encoder = Charset.forName("UTF-8").newEncoder();
+			   	encoder.onMalformedInput(CodingErrorAction.REPORT);
+			   	encoder.onUnmappableCharacter(CodingErrorAction.REPORT);
+				OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(filename), encoder);
+				BufferedWriter bw = new BufferedWriter(osw);      			
+				bw.write(shopping_basket_str);
+				bw.close();
+	        } catch(IOException e) {
+	        	System.out.println("Could not save the csv file...");
+	        }
+        }
+	}
 	
 	private PdfPCell getStringCell(String str, Font font, int border, int align, int colspan) {
 		PdfPCell cell = new PdfPCell(new Paragraph(str, font));
