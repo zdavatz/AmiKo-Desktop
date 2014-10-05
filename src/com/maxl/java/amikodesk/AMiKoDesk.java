@@ -196,7 +196,7 @@ public class AMiKoDesk {
 	
 	// Colors
 	private static Color m_toolbar_bg = new Color(240,240,240);				// light gray
-	private static Color m_but_color_bg = new Color(250,250,210);			// yellow-ish
+	private static Color m_but_color_bg = new Color(220,220,250);			// yellow-ish
 	private static Color m_selected_but_color = new Color(240,240,240);		// light gray
 	private static Color m_list_selected_color = new Color(235,235,235);	// light gray
 	private static Color m_search_field_bg = new Color(230,250,250);		// green-ish
@@ -1202,9 +1202,11 @@ public class AMiKoDesk {
 	        this.icon = new ImageIcon(Constants.IMG_FOLDER+"mag_glass_16x16.png");
 	        Border border = UIManager.getBorder("TextField.border");
 	        insets = border.getBorderInsets(this);
-	        
+	        /*
 	        Border empty = new EmptyBorder(0, 0, 0, 0);
-	        setBorder(new CompoundBorder(border, empty));	        
+	        insets = empty.getBorderInsets(this);
+	        */
+	        setBorder(border);	//new CompoundBorder(border, empty));	        
 	    }
 
 	    @Override
