@@ -165,6 +165,8 @@ public class AMiKoDesk {
 	private static List<Article> list_of_articles = new ArrayList<Article>();
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
+	private static String m_query_str = null;
+	private static String m_prev_query_str = null;
 	private static int med_index = -1;
 	private static int prev_med_index = -1;
 	private static UIState m_curr_uistate = new UIState("aips");
@@ -174,7 +176,6 @@ public class AMiKoDesk {
 	private static WebPanel2 m_web_panel = null;
 	private static String m_css_str = null;
 	private static String m_jscript_str = null;
-	private static String m_query_str = null;
 	private static SqlDatabase m_sqldb = null;
 	private static InteractionsCart m_interactions_cart = null;	
 	private static ShoppingCart m_shopping_cart = null;
@@ -579,27 +580,28 @@ public class AMiKoDesk {
 				list.setPrototypeCellValue(null);		// Does not work!
 				list.setFixedCellHeight(-1);
 			}
-			
-			// System.out.println("update");
+
 			list.setModel(dlm);
 			jscroll.revalidate();
 			jscroll.repaint();	
 		}
 		
 		/**
-		 * Called when somebody clicks on the ListPanel
+		 * Called any time the user selects an item from the list
 		 */
 		public void valueChanged(ListSelectionEvent e) {
 			if (e.getSource()==list && !e.getValueIsAdjusting()) {	
 				prev_med_index = med_index;		// Store current index
 				med_index = list.getSelectedIndex();	// Returns -1 if there is no selection
+				/*
 				if (med_index<0 && prev_med_index>=0)
-					list.setSelectedIndex(prev_med_index);				
+					list.setSelectedIndex(prev_med_index);
+				*/				
 				if (m_curr_uistate.isInteractionsMode())	// Display interaction cart
 					m_web_panel.updateInteractionsCart();
 				else if (m_curr_uistate.isShoppingMode())	// Display shopping cart
-					m_web_panel.updateListOfPackages();
-				else										// Display Fachinformation, default usage!
+					m_web_panel.updateListOfPackages();				
+				else										// Display Fachinformation, default usage!				
 					m_web_panel.updateText();
 			}
 		}
@@ -959,7 +961,7 @@ public class AMiKoDesk {
 		}
 		
 		public void updateText() {
-			if (med_id.size()>0 && med_index>=0) {
+			if (med_index>=0 && med_index<med_id.size()) {
 				// Get full info on selected medication
 				Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
 				// Set right panel title
@@ -1008,7 +1010,7 @@ public class AMiKoDesk {
 		
 		public void updateInteractionsCart() {
 			// Display interactions in the web panel
-			if (med_index>=0) {
+			if (med_index>=0 && med_index<med_id.size()) {
 				// Get full info on selected medication
 				Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
 				// Add med to basket if not already in basket 
@@ -1997,8 +1999,10 @@ public class AMiKoDesk {
 						break;
 					}
 					m_status_label.setText(med_search.size() + " Suchresultate in " + 
-							(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");				
+							(System.currentTimeMillis()-m_start_time)/1000.0f + " Sek.");
 					
+					if (med_index<0 && prev_med_index>=0)
+						med_index = prev_med_index;
 					m_web_panel.updateText();
 				}
 			}
