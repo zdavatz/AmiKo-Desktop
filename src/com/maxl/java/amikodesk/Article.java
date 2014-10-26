@@ -11,6 +11,7 @@ public class Article {
 	private String ean_code;
 	private String pharma_code;
 	private int quantity;
+	private int draufgabe;
 	private int onstock;
 	
 	public Article(String[] entry) {
@@ -132,6 +133,14 @@ public class Article {
 		quantity--;
 		if (quantity<0)
 			quantity = 0;
+	}
+	
+	public int getDraufgabe() {
+		return draufgabe;
+	}
+	
+	public void setDraufgabe(int draufgabe) {
+		this.draufgabe = draufgabe;
 	}
 	
 	public void setItemsOnStock(int onstock) {

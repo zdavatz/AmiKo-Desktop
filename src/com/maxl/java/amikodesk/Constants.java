@@ -14,6 +14,7 @@ public class Constants {
 	// Important folders
 	public static final String IMG_FOLDER = "./images/";	
 	public static final String JS_FOLDER = "./jscripts/";
+	public static final String SHOP_FOLDER = "./shop/";
 	public static final String HTML_FILES = "./fis/fi_de_html/";
 	public static final String CSS_SHEET = "./css/amiko_stylesheet.css";
 	public static final String INTERACTIONS_SHEET = "./css/interactions_css.css";

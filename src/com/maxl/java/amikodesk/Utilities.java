@@ -2,6 +2,7 @@ package com.maxl.java.amikodesk;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -69,6 +70,19 @@ public class Utilities {
 		return file_str;	
 	}	
 
+	static public byte[] readBytesFromFile(String path) {
+		File file = new File(path);
+		byte[] buf = new byte[(int)file.length()];
+		try {
+			DataInputStream dis = new DataInputStream(new FileInputStream(file));
+			dis.readFully(buf);
+			dis.close();
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+		return buf;
+	}
+	
 	static public void writeToFile(String string_to_write, String dir_name, String file_name, String encoding) 
 			throws IOException {
 	   	File wdir = new File(dir_name);

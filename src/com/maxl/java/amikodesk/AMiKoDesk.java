@@ -821,16 +821,17 @@ public class AMiKoDesk {
 								float subtotal = 0.0f;
 								for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 									Article a = entry.getValue();
-									subtotal += m_shopping_cart.calcPrice(a, a.getQuantity());
+									subtotal += m_shopping_cart.calcTotalPrice(a, a.getQuantity());
 								}
 								// Update shopping cart html
-								String subtotal_CHF = String.format("%.2f CHF", subtotal);
-								String mwst_CHF = String.format("%.2f CHF", subtotal*0.08);
-								String total_CHF = String.format("%.2f CHF", subtotal*1.08);
-								String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[3].innerHTML=\"" + article.getTotalPrice() + "\";" 
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[3].innerHTML=\"" + subtotal_CHF + "\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[3].innerHTML=\"" + mwst_CHF + "\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[3].innerHTML=\"<b>" + total_CHF + "</b>\";";
+								String subtotal_CHF = String.format("%.2f", subtotal);
+								String mwst_CHF = String.format("%.2f", subtotal*0.08);
+								String total_CHF = String.format("%.2f", subtotal*1.08);
+								String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[3].innerHTML=\"+ " + article.getDraufgabe() + "\";"  
+										+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[5].innerHTML=\"" + article.getTotalPrice() + "\";" 
+										+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[5].innerHTML=\"" + subtotal_CHF + "\";"
+										+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[5].innerHTML=\"" + mwst_CHF + "\";"
+										+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[5].innerHTML=\"<b>" + total_CHF + "</b>\";";
 								jWeb.executeJavascript(js);
 							}																
 						} else if (msg.equals("create_pdf")) {

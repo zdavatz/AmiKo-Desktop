@@ -9,7 +9,7 @@ function deleteRow(tableID,currentRow) {
 				var row = table.rows[i];
 				if (row==currentRow.parentNode.parentNode) {
 					// Call java
-					invokeJava("delete_row",row.cells[1].innerText);
+					invokeJava("delete_row",row.cells[0].innerText);	// used to be row.cells[1]
 					// Delete row				
 					table.deleteRow(i);		
 					// Update counters
@@ -41,9 +41,9 @@ function changeQty(tableID,currentRow) {
 				for (var i=0; i<rowCount; i++) {
 					var row = table.rows[i];
 					if (row==currentRow.parentNode.parentNode) {
-						var qty = row.cells[0].firstChild.value;
+						var qty = row.cells[2].firstChild.value;
 						// Check if value is in safe bounds and call java
-						var eanCode = row.cells[1].innerText;
+						var eanCode = row.cells[0].innerText;	// used to be row.cells[1]
 						if (qty>=0 && qty<=99999) {
 							// alert(document.forms[0].elements.length);						
 							invokeJava("change_qty"+qty,eanCode);
@@ -61,4 +61,20 @@ function changeQty(tableID,currentRow) {
     } catch (e) {
         // alert(e);
     }
+}
+
+function onSelect(tableID,currentRow,index) {
+	if (tableID=="Warenkorb") {
+		var table = document.getElementById(tableID);
+		var rowCount = table.rows.length;
+		for (var i=0; i<rowCount; i++) {
+			var row = table.rows[i];
+			if (row==currentRow.parentNode.parentNode) {
+				var selectId = document.getElementById("selected" + index);
+				var qty = selectId.value;
+				var eanCode = row.cells[0].innerText;
+				invokeJava("change_qty"+qty,eanCode);
+			}
+		}
+	}
 }

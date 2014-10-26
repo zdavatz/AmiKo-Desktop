@@ -20,17 +20,21 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package com.maxl.java.amikodesk;
 
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.prefs.Preferences;
 
 import org.jsoup.Jsoup;
@@ -55,10 +59,13 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfPageEventHelper;
 import com.itextpdf.text.pdf.PdfWriter;
 import com.itextpdf.text.pdf.draw.LineSeparator;
+import com.maxl.java.shared.Conditions;
 
-public class ShoppingCart {
+public class ShoppingCart implements java.io.Serializable {
 	
 	private static Map<String, Article> m_shopping_basket = null;
+	private static Map<String, Conditions> m_map_conditions = null;
+	
 	private static String m_html_str = "";
 	private static String m_jscripts_str = null;
 	private static String m_css_shopping_cart_str = null;		
@@ -71,14 +78,37 @@ public class ShoppingCart {
 	private static String BestellAdresseID = "bestelladresse";
 	private static String LieferAdresseID = "lieferadresse";
 	private static String RechnungsAdresseID = "rechnungsadresse";
-		
+	
 	public ShoppingCart() {
 		// Load javascripts
 		m_jscripts_str = Utilities.readFromFile(Constants.JS_FOLDER + "shopping_callbacks.js");
 		// Load shopping cart css style sheet
 		m_css_shopping_cart_str = "<style type=\"text/css\">" + Utilities.readFromFile(Constants.SHOPPING_SHEET) + "</style>";
+		// Load key
+		String key = Utilities.readFromFile(Constants.SHOP_FOLDER+"secret.txt").trim();
+		// Load encrypted files
+		byte[] encrypted_msg = Utilities.readBytesFromFile(Constants.SHOP_FOLDER+"ibsa_conditions.ser");
+		// Decrypt and deserialize
+		if (encrypted_msg!=null) {
+			Crypto crypto = new Crypto();
+			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
+			System.out.println(Arrays.toString(plain_msg).substring(0, 128));
+			// m_map_conditions = new TreeMap<String, Conditions>();
+			m_map_conditions = (TreeMap<String, Conditions>)deserialize(plain_msg);
+		}
 	}
-
+		
+	private Object deserialize(byte[] byteArray) {
+		try {
+			ByteArrayInputStream bin = new ByteArrayInputStream(byteArray);
+			ObjectInputStream sin = new ObjectInputStream(bin);
+			return sin.readObject();
+		} catch(IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
 	public void setShoppingBasket(Map<String, Article> shopping_basket) {
 		m_shopping_basket = shopping_basket;
 	}
@@ -106,14 +136,24 @@ public class ShoppingCart {
         }
     }	
     
-    public float calcPrice(Article article, int quantity) {
+    public String calcPrunedPrice(Article article) {
+		String price = article.getPublicPrice();
+		String price_pruned = price.replaceAll("[^\\d.]", "");
+		if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
+			price = price_pruned;
+		else
+			price = "k.A.";
+		return price;
+    }
+    
+    public float calcTotalPrice(Article article, int quantity) {
     	article.setQuantity(quantity);
 		String price = article.getPublicPrice();
 		String price_pruned = price.replaceAll("[^\\d.]", "");
 		float price_CHF = 0.0f;
 		if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {
 			price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-			price = String.format("%.2f CHF", price_CHF);
+			price = String.format("%.2f", price_CHF);		// No "CHF"
 		} else {
 			price = "k.A.";
 		}	
@@ -136,23 +176,71 @@ public class ShoppingCart {
 		String images_dir = System.getProperty("user.dir") + "/images/";	
 
 		if (m_shopping_basket.size()>0) {
-			int index = 1;
+			int index = 1;			
+			int draufgabe = 0;
+			
+			basket_html_str += "<tr><td><b>EAN</b></td>"
+					+ "<td><b>Artikel</b></td>"					
+					+ "<td><b>Menge</b></td>"
+					+ "<td style=\"text-align:right;\"><b>Draufgabe</b></td>"
+					+ "<td style=\"text-align:right;\"><b>Preis</b></td>"
+					+ "<td style=\"text-align:right;\"><b>Total</b></td>"
+					+ "<td style=\"text-align:center;\"><b>Löschen</b></td></tr>";
+			
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();
 				String ean_code = article.getEanCode();
-				int quantity = article.getQuantity();
-				subtotal_CHF += calcPrice(article, quantity);
-				// String article_price = String.format("%.2f",  price_CHF);
-				basket_html_str += "<tr id=\"" + ean_code + "\">";
-				basket_html_str += "<td>" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:40px; text-align:right;\"" +
-						" value=\"" + quantity + "\"" + " onkeydown=\"changeQty('Warenkorb',this)\" id=\"" + index + "\" tabindex=\"" + index + "\" />" + "</td>"
-						+ "<td>" + ean_code + "</td>"
-						+ "<td>" + article.getPackTitle() + "</td>"
-						+ "<td style=\"text-align:right;\">" + article.getTotalPrice() + "</td>"
-						// + "<td>" + "<input type=\"image\" src=\"" + images_dir + "trash_icon.png\" onmouseup=\"deleteRow('Warenkorb',this)\" tabindex=\"-1\" />" + "</td>";
-						+ "<td>" + "<button type=\"button\" style=\"border:none;\" tabindex=\"-1\" onclick=\"deleteRow('Warenkorb',this)\"><img src=\"" 
-							+ images_dir + "trash_icon.png\" /></button>" + "</td>";
-				basket_html_str += "</tr>";			
+				// Check if ean code is in conditions map
+				if (m_map_conditions.containsKey(ean_code)) {					
+					Conditions c = m_map_conditions.get(ean_code);
+					TreeMap<Integer, Float> rebate = c.getDiscountDoc('A');
+					String value_str = "";
+					int qty = 0;
+					for (Map.Entry<Integer, Float> e : rebate.entrySet()) {
+						qty = e.getKey();
+						float reb = e.getValue();
+						System.out.println(qty + " -> " + article.getQuantity());
+						if (qty==article.getQuantity()) {
+							value_str += "<option selected=\"selected\" value=\"" + qty + "\">" + qty + "</option>";
+							draufgabe = (int)(qty*reb/100.0f);
+							article.setDraufgabe(draufgabe);
+						} else {
+							value_str += "<option value=\"" + qty + "\">" + qty + "</option>";	
+						}
+					}
+					
+					int quantity = article.getQuantity();
+					article.setPublicPrice(String.valueOf(c.fep_chf));
+					subtotal_CHF += calcTotalPrice(article, quantity);
+					
+					basket_html_str += "<tr id=\"" + ean_code + "\">";
+					basket_html_str += "<td>" + ean_code + "</td>"
+							+ "<td>" + c.name + "</td>"						
+							+ "<td>" + "<select id=\"selected" + index + "\" style=\"width:50px; text-align:right;\" onchange=\"onSelect('Warenkorb',this," + index + ")\"" +
+								" tabindex=\"" + index + "\">" + value_str + "</select></td>"
+							+ "<td style=\"text-align:right;\">+ " + draufgabe + "</td>"	
+							+ "<td style=\"text-align:right;\">" + c.fep_chf + "</td>"	
+							+ "<td style=\"text-align:right;\">" + article.getTotalPrice() + "</td>"
+							+ "<td style=\"text-align:center;\">" + "<button type=\"button\" style=\"border:none;\" tabindex=\"-1\" onclick=\"deleteRow('Warenkorb',this)\"><img src=\"" 
+								+ images_dir + "trash_icon.png\" /></button>" + "</td>";
+					basket_html_str += "</tr>";						
+				} else {
+					int quantity = article.getQuantity();
+					subtotal_CHF += calcTotalPrice(article, quantity);
+
+					basket_html_str += "<tr id=\"" + ean_code + "\">";
+					basket_html_str += "<td>" + ean_code + "</td>"
+							+ "<td>" + article.getPackTitle() + "</td>"						
+							+ "<td>" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:50px; text-align:right;\"" +
+								" value=\"" + quantity + "\"" + " onkeydown=\"changeQty('Warenkorb',this)\" id=\"" + index + "\" tabindex=\"" + index + "\" />" + "</td>"
+							+ "<td style=\"text-align:right;\"></td>"	
+							+ "<td style=\"text-align:right;\">" + calcPrunedPrice(article) + "</td>"	
+							+ "<td style=\"text-align:right;\">" + article.getTotalPrice() + "</td>"
+							// + "<td>" + "<input type=\"image\" src=\"" + images_dir + "trash_icon.png\" onmouseup=\"deleteRow('Warenkorb',this)\" tabindex=\"-1\" />" + "</td>";
+							+ "<td style=\"text-align:center;\">" + "<button type=\"button\" style=\"border:none;\" tabindex=\"-1\" onclick=\"deleteRow('Warenkorb',this)\"><img src=\"" 
+								+ images_dir + "trash_icon.png\" /></button>" + "</td>";
+					basket_html_str += "</tr>";			
+				}
 				index++;
 			}
 			/*
@@ -162,17 +250,23 @@ public class ShoppingCart {
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\">Subtotal</td>"
 					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_CHF) + " CHF</td>"					
 					+ "</tr>";
 			basket_html_str += "<tr id=\"MWSt\">"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\">MWSt (+8%)</td>"
 					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_CHF*0.08) + " CHF</td>"					
 					+ "</tr>";
 			basket_html_str += "<tr id=\"Total\">"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"><b>Total</b></td>"
+					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px; text-align:right;\"><b>" + String.format("%.2f", subtotal_CHF*1.08) + " CHF</b></td>"					
 					+ "</tr>";
