@@ -817,21 +817,28 @@ public class AMiKoDesk {
 								m_shopping_basket.put(row_key, article);	
 								// Update shopping basket
 								m_shopping_cart.setShoppingBasket(m_shopping_basket);
-								// 
+								// 								
 								float subtotal = 0.0f;
 								for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-									Article a = entry.getValue();
+									Article a = entry.getValue();									
 									subtotal += m_shopping_cart.calcTotalPrice(a, a.getQuantity());
 								}
 								// Update shopping cart html
 								String subtotal_CHF = String.format("%.2f", subtotal);
 								String mwst_CHF = String.format("%.2f", subtotal*0.08);
 								String total_CHF = String.format("%.2f", subtotal*1.08);
-								String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[3].innerHTML=\"+ " + article.getDraufgabe() + "\";"  
+								
+								String draufgabe = ""; 
+								int dg = m_shopping_cart.getDraufgabe(row_key, value, 'A');
+								if (dg>0)
+									draufgabe = String.format("%d", dg);
+								
+								String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[3].innerHTML=\"" + draufgabe + "\";"  
 										+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[5].innerHTML=\"" + article.getTotalPrice() + "\";" 
 										+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[5].innerHTML=\"" + subtotal_CHF + "\";"
 										+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[5].innerHTML=\"" + mwst_CHF + "\";"
 										+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[5].innerHTML=\"<b>" + total_CHF + "</b>\";";
+								
 								jWeb.executeJavascript(js);
 							}																
 						} else if (msg.equals("create_pdf")) {

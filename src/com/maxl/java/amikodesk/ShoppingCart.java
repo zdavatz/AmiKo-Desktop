@@ -79,6 +79,8 @@ public class ShoppingCart implements java.io.Serializable {
 	private static String LieferAdresseID = "lieferadresse";
 	private static String RechnungsAdresseID = "rechnungsadresse";
 	
+	private static int m_draufgabe = 0;
+	
 	public ShoppingCart() {
 		// Load javascripts
 		m_jscripts_str = Utilities.readFromFile(Constants.JS_FOLDER + "shopping_callbacks.js");
@@ -111,6 +113,16 @@ public class ShoppingCart implements java.io.Serializable {
 	
 	public void setShoppingBasket(Map<String, Article> shopping_basket) {
 		m_shopping_basket = shopping_basket;
+	}
+	
+	public int getDraufgabe(String ean_code, int units, char category) {
+		if (m_map_conditions!=null) {
+			if (m_map_conditions.containsKey(ean_code))
+				return (int)(units*m_map_conditions.get(ean_code).getDiscountDoc(category).get(units)/100.0f);
+			else
+				return 0;
+		}
+		return 0;
 	}
 	
 	/** Class to add a header and a footer. */
@@ -177,7 +189,6 @@ public class ShoppingCart implements java.io.Serializable {
 
 		if (m_shopping_basket.size()>0) {
 			int index = 1;			
-			int draufgabe = 0;
 			
 			basket_html_str += "<tr><td><b>EAN</b></td>"
 					+ "<td><b>Artikel</b></td>"					
@@ -191,19 +202,23 @@ public class ShoppingCart implements java.io.Serializable {
 				Article article = entry.getValue();
 				String ean_code = article.getEanCode();
 				// Check if ean code is in conditions map
-				if (m_map_conditions.containsKey(ean_code)) {					
+				if (m_map_conditions.containsKey(ean_code)) {
 					Conditions c = m_map_conditions.get(ean_code);
 					TreeMap<Integer, Float> rebate = c.getDiscountDoc('A');
 					String value_str = "";
-					int qty = 0;
+					// Initialize draufgabe
+					int qty = rebate.firstEntry().getKey();
+					float reb = rebate.firstEntry().getValue();
+					m_draufgabe = (int)(qty*reb/100.0f);
+					article.setDraufgabe(m_draufgabe);					
+					// Loop through all possible packages (units -> rebate mapping)					
 					for (Map.Entry<Integer, Float> e : rebate.entrySet()) {
 						qty = e.getKey();
-						float reb = e.getValue();
-						System.out.println(qty + " -> " + article.getQuantity());
+						reb = e.getValue();
 						if (qty==article.getQuantity()) {
 							value_str += "<option selected=\"selected\" value=\"" + qty + "\">" + qty + "</option>";
-							draufgabe = (int)(qty*reb/100.0f);
-							article.setDraufgabe(draufgabe);
+							m_draufgabe = (int)(qty*reb/100.0f);
+							article.setDraufgabe(m_draufgabe);
 						} else {
 							value_str += "<option value=\"" + qty + "\">" + qty + "</option>";	
 						}
@@ -218,7 +233,7 @@ public class ShoppingCart implements java.io.Serializable {
 							+ "<td>" + c.name + "</td>"						
 							+ "<td>" + "<select id=\"selected" + index + "\" style=\"width:50px; text-align:right;\" onchange=\"onSelect('Warenkorb',this," + index + ")\"" +
 								" tabindex=\"" + index + "\">" + value_str + "</select></td>"
-							+ "<td style=\"text-align:right;\">+ " + draufgabe + "</td>"	
+							+ "<td style=\"text-align:right;\">+ " + m_draufgabe + "</td>"	
 							+ "<td style=\"text-align:right;\">" + c.fep_chf + "</td>"	
 							+ "<td style=\"text-align:right;\">" + article.getTotalPrice() + "</td>"
 							+ "<td style=\"text-align:center;\">" + "<button type=\"button\" style=\"border:none;\" tabindex=\"-1\" onclick=\"deleteRow('Warenkorb',this)\"><img src=\"" 
@@ -252,7 +267,7 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_CHF) + " CHF</td>"					
+					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_CHF) + "</td>"					
 					+ "</tr>";
 			basket_html_str += "<tr id=\"MWSt\">"
 					+ "<td style=\"padding-top:10px\"></td>"
@@ -260,7 +275,7 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_CHF*0.08) + " CHF</td>"					
+					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_CHF*0.08) + "</td>"					
 					+ "</tr>";
 			basket_html_str += "<tr id=\"Total\">"
 					+ "<td style=\"padding-top:10px\"></td>"
@@ -268,7 +283,7 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px; text-align:right;\"><b>" + String.format("%.2f", subtotal_CHF*1.08) + " CHF</b></td>"					
+					+ "<td style=\"padding-top:10px; text-align:right;\"><b>" + String.format("%.2f", subtotal_CHF*1.08) + "</b></td>"					
 					+ "</tr>";
 						
 			basket_html_str += "</table></form>";
