@@ -115,16 +115,6 @@ public class ShoppingCart implements java.io.Serializable {
 		m_shopping_basket = shopping_basket;
 	}
 	
-	public int getDraufgabe(String ean_code, int units, char category) {
-		if (m_map_conditions!=null) {
-			if (m_map_conditions.containsKey(ean_code))
-				return (int)(units*m_map_conditions.get(ean_code).getDiscountDoc(category).get(units)/100.0f);
-			else
-				return 0;
-		}
-		return 0;
-	}
-	
 	/** Class to add a header and a footer. */
     static class HeaderFooter extends PdfPageEventHelper {
 
@@ -147,30 +137,58 @@ public class ShoppingCart implements java.io.Serializable {
                     		font_norm_10), (rect.getLeft() + rect.getRight())/2, rect.getBottom()-18, 0);
         }
     }	
-    
-    public String calcPrunedPrice(Article article) {
-		String price = article.getPublicPrice();
-		String price_pruned = price.replaceAll("[^\\d.]", "");
-		if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
-			price = price_pruned;
-		else
-			price = "k.A.";
-		return price;
+	
+	public int getDraufgabe(String ean_code, int units, char category) {
+		if (m_map_conditions!=null) {
+			if (m_map_conditions.containsKey(ean_code))
+				return (int)(units*m_map_conditions.get(ean_code).getDiscountDoc(category).get(units)/100.0f);
+			else
+				return 0;
+		}
+		return 0;
+	}
+
+	public int calcProfit(float tot_buying, float tot_selling) {
+		if (tot_buying>0.0f)
+			return (int)((tot_selling/tot_buying-1.0f)*100.0f);
+		else 
+			return 0;
     }
     
-    public float calcTotalPrice(Article article, int quantity) {
-    	article.setQuantity(quantity);
-		String price = article.getPublicPrice();
-		String price_pruned = price.replaceAll("[^\\d.]", "");
-		float price_CHF = 0.0f;
-		if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {
-			price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-			price = String.format("%.2f", price_CHF);		// No "CHF"
-		} else {
-			price = "k.A.";
-		}	
-		article.setTotalPrice(price);
-		return price_CHF;
+	public int totQuantity() {
+		int qty = 0;
+		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+			Article article = entry.getValue();
+			qty += article.getQuantity();
+		}
+		return qty;
+	}	
+    
+	public int totDraufgabe() {
+		int draufgabe = 0;
+		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+			Article article = entry.getValue();
+			draufgabe += article.getDraufgabe();
+		}
+		return draufgabe;
+	}
+    	 	
+	public float totBuyingPrice() {
+		float tot_buying = 0.0f;
+		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+			Article article = entry.getValue();
+			tot_buying += article.getQuantity()*article.getBuyingPrice();
+		}
+		return tot_buying;
+	}
+	
+    public float totSellingPrice() {
+		float tot_selling = 0.0f;
+		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+			Article article = entry.getValue();
+			tot_selling += article.getQuantity()*article.getSellingPrice();
+		}
+		return tot_selling;
     }
     
 	public String updateShoppingCartHtml(Map<String, Article> shopping_basket) {
@@ -181,8 +199,9 @@ public class ShoppingCart implements java.io.Serializable {
 		String delete_all_text = "";		
 		String generate_pdf_text = "";
 		String generate_csv_text = "";
-		float subtotal_CHF = 0.0f;
-
+		float subtotal_buying_CHF = 0.0f;
+		float subtotal_selling_CHF = 0.0f;
+		
 		m_shopping_basket = shopping_basket;
 				
 		String images_dir = System.getProperty("user.dir") + "/images/";	
@@ -194,24 +213,31 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<td><b>Artikel</b></td>"					
 					+ "<td><b>Menge</b></td>"
 					+ "<td style=\"text-align:right;\"><b>Draufgabe</b></td>"
-					+ "<td style=\"text-align:right;\"><b>Preis</b></td>"
-					+ "<td style=\"text-align:right;\"><b>Total</b></td>"
+					+ "<td style=\"text-align:right;\"><b>Einkauf</b></td>"
+					+ "<td style=\"text-align:right;\"><b>Tot Einkauf</b></td>"
+					+ "<td style=\"text-align:right;\"><b>Verkauf</b></td>"
+					+ "<td style=\"text-align:right;\"><b>Tot Verkauf</b></td>"					
+					+ "<td style=\"text-align:right;\"><b>Gewinn</b></td>"
+					+ "<td style=\"text-align:right;\"><b>Gewinn(%)</b></td>"					
 					+ "<td style=\"text-align:center;\"><b>Löschen</b></td></tr>";
 			
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();
 				String ean_code = article.getEanCode();
-				// Check if ean code is in conditions map
+				// Check if ean code is in conditions map (special treatment)
 				if (m_map_conditions.containsKey(ean_code)) {
+					article.setSpecial(true);
 					Conditions c = m_map_conditions.get(ean_code);
+					// Extract rebate conditions for particular doctor/pharmacy
 					TreeMap<Integer, Float> rebate = c.getDiscountDoc('A');
-					String value_str = "";
 					// Initialize draufgabe
-					int qty = rebate.firstEntry().getKey();
-					float reb = rebate.firstEntry().getValue();
+					int qty = rebate.firstEntry().getKey();		
+					float reb = rebate.firstEntry().getValue(); // [%]
 					m_draufgabe = (int)(qty*reb/100.0f);
-					article.setDraufgabe(m_draufgabe);					
+					article.setDraufgabe(m_draufgabe);	
 					// Loop through all possible packages (units -> rebate mapping)					
+					boolean qty_found = false;
+					String value_str = "";					
 					for (Map.Entry<Integer, Float> e : rebate.entrySet()) {
 						qty = e.getKey();
 						reb = e.getValue();
@@ -219,38 +245,66 @@ public class ShoppingCart implements java.io.Serializable {
 							value_str += "<option selected=\"selected\" value=\"" + qty + "\">" + qty + "</option>";
 							m_draufgabe = (int)(qty*reb/100.0f);
 							article.setDraufgabe(m_draufgabe);
+							qty_found = true;
 						} else {
 							value_str += "<option value=\"" + qty + "\">" + qty + "</option>";	
 						}
 					}
+
+					if (!qty_found)
+						article.setQuantity(rebate.firstEntry().getKey());
 					
-					int quantity = article.getQuantity();
-					article.setPublicPrice(String.valueOf(c.fep_chf));
-					subtotal_CHF += calcTotalPrice(article, quantity);
+					article.setBuyingPrice(c.fep_chf);
+					article.setSellingPrice(c.fep_chf, 0.8f);
+					subtotal_buying_CHF += article.getTotBuyingPrice();
+					subtotal_selling_CHF += article.getTotSellingPrice();
+					
+					String buying_price_CHF = String.format("%.2f", article.getBuyingPrice());
+					String tot_buying_price_CHF = String.format("%.2f", article.getTotBuyingPrice());
+					String selling_price_CHF = String.format("%.2f", article.getSellingPrice());
+					String tot_selling_price_CHF = String.format("%.2f", article.getTotSellingPrice());
+					String profit_CHF = String.format("%.2f", article.getTotSellingPrice()-article.getTotBuyingPrice());
+					String profit_percent = String.format("%d%%", calcProfit(article.getTotBuyingPrice(), article.getTotSellingPrice()));
 					
 					basket_html_str += "<tr id=\"" + ean_code + "\">";
 					basket_html_str += "<td>" + ean_code + "</td>"
 							+ "<td>" + c.name + "</td>"						
-							+ "<td>" + "<select id=\"selected" + index + "\" style=\"width:50px; text-align:right;\" onchange=\"onSelect('Warenkorb',this," + index + ")\"" +
+							+ "<td>" + "<select id=\"selected" + index + "\" style=\"width:50px; direction:rtl; text-align:right;\" onchange=\"onSelect('Warenkorb',this," + index + ")\"" +
 								" tabindex=\"" + index + "\">" + value_str + "</select></td>"
 							+ "<td style=\"text-align:right;\">+ " + m_draufgabe + "</td>"	
-							+ "<td style=\"text-align:right;\">" + c.fep_chf + "</td>"	
-							+ "<td style=\"text-align:right;\">" + article.getTotalPrice() + "</td>"
+							+ "<td style=\"text-align:right;\">" + buying_price_CHF + "</td>"	
+							+ "<td style=\"text-align:right;\">" + tot_buying_price_CHF + "</td>"
+							+ "<td style=\"text-align:right;\">" + selling_price_CHF + "</td>"
+							+ "<td style=\"text-align:right;\">" + tot_selling_price_CHF + "</td>"							
+							+ "<td style=\"text-align:right; color:green\"><b>" + profit_CHF + "</b></td>"
+							+ "<td style=\"text-align:right; color:green\"><b>" + profit_percent + "</b></td>"							
 							+ "<td style=\"text-align:center;\">" + "<button type=\"button\" style=\"border:none;\" tabindex=\"-1\" onclick=\"deleteRow('Warenkorb',this)\"><img src=\"" 
 								+ images_dir + "trash_icon.png\" /></button>" + "</td>";
 					basket_html_str += "</tr>";						
 				} else {
 					int quantity = article.getQuantity();
-					subtotal_CHF += calcTotalPrice(article, quantity);
+					subtotal_buying_CHF += article.getTotExfactoryPrice();
+					subtotal_selling_CHF += article.getTotPublicPrice();
 
+					String buying_price_CHF = String.format("%.2f", article.getExfactoryPriceAsFloat());
+					String tot_buying_price_CHF = String.format("%.2f", article.getTotExfactoryPrice());
+					String selling_price_CHF = String.format("%.2f", article.getPublicPriceAsFloat());
+					String tot_selling_price_CHF = String.format("%.2f", article.getTotPublicPrice());
+					String profit_CHF = String.format("%.2f", article.getTotPublicPrice()-article.getTotExfactoryPrice());
+					String profit_percent = String.format("%d%%", calcProfit(article.getTotExfactoryPrice(), article.getTotPublicPrice()));
+					
 					basket_html_str += "<tr id=\"" + ean_code + "\">";
 					basket_html_str += "<td>" + ean_code + "</td>"
 							+ "<td>" + article.getPackTitle() + "</td>"						
 							+ "<td>" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:50px; text-align:right;\"" +
 								" value=\"" + quantity + "\"" + " onkeydown=\"changeQty('Warenkorb',this)\" id=\"" + index + "\" tabindex=\"" + index + "\" />" + "</td>"
 							+ "<td style=\"text-align:right;\"></td>"	
-							+ "<td style=\"text-align:right;\">" + calcPrunedPrice(article) + "</td>"	
-							+ "<td style=\"text-align:right;\">" + article.getTotalPrice() + "</td>"
+							+ "<td style=\"text-align:right;\">" + buying_price_CHF + "</td>"	
+							+ "<td style=\"text-align:right;\">" + tot_buying_price_CHF + "</td>"
+							+ "<td style=\"text-align:right;\">" + selling_price_CHF + "</td>"
+							+ "<td style=\"text-align:right;\">" + tot_selling_price_CHF + "</td>"							
+							+ "<td style=\"text-align:right; color:green\"><b>" + profit_CHF + "</b></td>"
+							+ "<td style=\"text-align:right; color:green\"><b>" + profit_percent + "</b></td>"							
 							// + "<td>" + "<input type=\"image\" src=\"" + images_dir + "trash_icon.png\" onmouseup=\"deleteRow('Warenkorb',this)\" tabindex=\"-1\" />" + "</td>";
 							+ "<td style=\"text-align:center;\">" + "<button type=\"button\" style=\"border:none;\" tabindex=\"-1\" onclick=\"deleteRow('Warenkorb',this)\"><img src=\"" 
 								+ images_dir + "trash_icon.png\" /></button>" + "</td>";
@@ -261,29 +315,45 @@ public class ShoppingCart implements java.io.Serializable {
 			/*
 			 * Note: negative tabindex skips element
 			*/
+			float subtotal_profit_CHF = subtotal_selling_CHF-subtotal_buying_CHF;
+			int subtotal_profit_percent = 0;
+			if (subtotal_buying_CHF>0.0f)
+				subtotal_profit_percent = (int)((0.5f+(subtotal_selling_CHF/subtotal_buying_CHF-1.0f)*100.0f));
 			basket_html_str += "<tr id=\"Subtotal\">"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\">Subtotal</td>"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\"></td>"	
+					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_buying_CHF) + "</td>"
+					+ "<td style=\"padding-top:10px\"></td>"					
+					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_selling_CHF) + "</td>"				
 					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_CHF) + "</td>"					
+					+ "<td style=\"padding-top:10px\"></td>"						
 					+ "</tr>";
 			basket_html_str += "<tr id=\"MWSt\">"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\">MWSt (+8%)</td>"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
+					+ "<td style=\"padding-top:10px\"></td>"					
+					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_buying_CHF*0.08) + "</td>"
+					+ "<td style=\"padding-top:10px\"></td>"	
+					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_selling_CHF*0.08) + "</td>"
+					+ "<td style=\"padding-top:10px\"></td>"					
 					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px; text-align:right;\">" + String.format("%.2f", subtotal_CHF*0.08) + "</td>"					
 					+ "</tr>";
 			basket_html_str += "<tr id=\"Total\">"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\"><b>Total</b></td>"
+					+ "<td style=\"padding-top:10px; text-align:right;\"><b>" + totQuantity() + "</b></td>"
+					+ "<td style=\"padding-top:10px; text-align:right;\"><b>+ " + totDraufgabe() + "</b></td>"
 					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px; text-align:right;\"><b>" + String.format("%.2f", subtotal_CHF*1.08) + "</b></td>"					
+					+ "<td style=\"padding-top:10px; text-align:right;\"><b>" + String.format("%.2f", subtotal_buying_CHF*1.08) + "</b></td>"					
+					+ "<td style=\"padding-top:10px\"></td>"	
+					+ "<td style=\"padding-top:10px; text-align:right;\"><b>" + String.format("%.2f", subtotal_selling_CHF*1.08) + "</b></td>"				
+					+ "<td style=\"padding-top:10px; text-align:right; color:green\"><b>" + String.format("%.2f", subtotal_profit_CHF*1.08) + "</b></td>"						
+					+ "<td style=\"padding-top:10px; text-align:right; color:green\"><b>" + String.format("%d%%", subtotal_profit_percent) + "</b></td>"											
 					+ "</tr>";
 						
 			basket_html_str += "</table></form>";
@@ -446,7 +516,7 @@ public class ShoppingCart implements java.io.Serializable {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();				
 				
-				String price_pruned = article.getPublicPrice().replaceAll("[^\\d.]", "");
+				String price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
 
 				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {						
 					table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
@@ -507,7 +577,7 @@ public class ShoppingCart implements java.io.Serializable {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();				
 				
-				String price_pruned = article.getPublicPrice().replaceAll("[^\\d.]", "");
+				String price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
 				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
 					float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
 					shopping_basket_str += (++pos) + "|" 
@@ -579,9 +649,9 @@ public class ShoppingCart implements java.io.Serializable {
 						+ "<td align=\"right\">" + article.getQuantity() + "</td>"
 						+ "<td align=\"right\">" + article.getPharmaCode() + "</td>"
 						+ "<td colspan=\"2\">" + article.getPackTitle() + "</td>"
-						+ "<td align=\"right\">" + article.getPublicPrice() + "</td>";
+						+ "<td align=\"right\">" + article.getExfactoryPrice() + "</td>";
 				basket_html_str += "</tr>";
-				String price_pruned = article.getPublicPrice().replaceAll("[^\\d.]", "");
+				String price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
 				if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
 					total_CHF += article.getQuantity()*Float.parseFloat(price_pruned);
 			}

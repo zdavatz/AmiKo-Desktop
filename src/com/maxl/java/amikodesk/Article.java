@@ -4,15 +4,17 @@ public class Article {
 	private String pack_title;
 	private String pack_size;
 	private String pack_unit;
-	private String public_price;
 	private String exfactory_price;
-	private String total_price;
+	private String public_price;
 	private String additional_info;
 	private String ean_code;
 	private String pharma_code;
-	private int quantity;
-	private int draufgabe;
+	private float buying_price = 0.0f;
+	private float selling_price = 0.0f;;
+	private int quantity = 1;
+	private int draufgabe = 0;
 	private int onstock;
+	private boolean special = false;
 	
 	public Article(String[] entry) {
 		if (entry!=null) {
@@ -85,14 +87,17 @@ public class Article {
 		this.pack_unit = pack_unit;
 	}
 	
-	public String getPublicPrice() {
-		return public_price;
-	}
-
-	public void setPublicPrice(String public_price) {
-		this.public_price = public_price;
+	public boolean isSpecial() {
+		return special;
 	}
 	
+	public void setSpecial(boolean special) {
+		this.special = special;
+	}
+	
+	/**
+	 * Exfactory price
+	*/
 	public String getExfactoryPrice() {
 		return exfactory_price;
 	}
@@ -101,12 +106,91 @@ public class Article {
 		this.exfactory_price = exfactory_price;
 	}
 	
-	public String getTotalPrice() {
-		return total_price;
+	public String getCleanExfactoryPrice() {
+		String price = exfactory_price;
+		String price_pruned = price.replaceAll("[^\\d.]", "");
+		if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
+			price = price_pruned;
+		else
+			price = "k.A.";
+		return price;
 	}
 	
-	public void setTotalPrice(String total_price) {
-		this.total_price = total_price;
+	public float getExfactoryPriceAsFloat() {
+		float exfacto_as_float = 0.0f;
+		String price_pruned = exfactory_price.replaceAll("[^\\d.]", "");
+		if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {
+			exfacto_as_float = Float.parseFloat(price_pruned);
+		}						
+		return exfacto_as_float;
+	}
+
+	public float getTotExfactoryPrice() {
+		return quantity*getExfactoryPriceAsFloat();
+	}
+	
+	/**
+	 * Public price
+	*/	
+	public String getPublicPrice() {
+		return public_price;
+	}	
+	
+	public void setPublicPrice(String public_price) {
+		this.public_price = public_price;
+	}	
+	
+	public String getCleanPublicPrice() {
+		String price = public_price;
+		String price_pruned = price.replaceAll("[^\\d.]", "");
+		if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
+			price = price_pruned;
+		else
+			price = "k.A.";
+		return price;
+	}
+	
+	public float getPublicPriceAsFloat() {
+		float public_as_float = 0.0f;
+		String price_pruned = public_price.replaceAll("[^\\d.]", "");
+		if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {
+			public_as_float = Float.parseFloat(price_pruned);
+		}						
+		return public_as_float;	
+	}
+	
+	public float getTotPublicPrice() {
+		return quantity*getPublicPriceAsFloat();
+	}
+	
+	/**
+	 * Buying price (what the doctor/pharmacy pays, defined by drug company)
+	*/	
+	public float getBuyingPrice() {					
+		return buying_price;
+	}
+	
+	public float getTotBuyingPrice() {
+		return quantity*buying_price;
+	}
+
+	public void setBuyingPrice(float buying_price) {
+		this.buying_price = buying_price;
+	}
+	
+	/**
+	 * Buying price = consumer price (what the consumer pays, defined by doctor/pharmacy)
+	*/		
+	public float getSellingPrice() { 	
+    	return selling_price;
+	}
+
+	public float getTotSellingPrice() {
+		return (quantity+draufgabe)*selling_price;
+	}
+	
+	public void setSellingPrice(float buying_price, float margin) {
+		this.selling_price = (1.0f+margin)*buying_price;;
 	}
 	
 	public String getAdditionalInfo() {
