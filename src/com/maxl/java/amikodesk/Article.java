@@ -193,6 +193,39 @@ public class Article {
 		this.selling_price = (1.0f+margin)*buying_price;;
 	}
 	
+	/**
+	 * Calculates the profit
+	 * @return
+	 */
+	public int getProfit(float tot_buying_price, float tot_selling_price) {
+		if (tot_buying_price>0.0f)
+			return (int)(0.5f+(tot_selling_price/tot_buying_price-1-0f)*100.0f);
+		return 0;
+	}
+	
+	/**
+	 * Calculates  "barrabatt"
+	 * @return
+	 */
+	public int getCashRebate() {
+		/*
+		if (quantity+draufgabe>0) {
+			float buying_rebated = tot_buying_price/(quantity+draufgabe);
+			if (buying_rebated>0.0f) {
+				float diff = buying_price-buying_rebated;
+				if (diff>0.0f)
+					return (int)(0.5f+100.0f*(diff/buying_price));
+				else 
+					return 0;
+			}
+		}
+		*/
+		if (draufgabe>0) {
+			return (int)(0.5f+100.0f*(float)draufgabe/(draufgabe+quantity));
+		}
+		return 0;
+	}
+	
 	public String getAdditionalInfo() {
 		return additional_info;
 	}	
@@ -200,6 +233,20 @@ public class Article {
 	public void setAdditionalInfo(String additional_info) {
 		this.additional_info = additional_info;
 	}
+	
+	
+    public String getCategories() {
+    	String cat = "";    	
+    	String[] c = additional_info.split(",");
+    	for (int i=0; i<3; ++i) {
+    		if (!c[i].isEmpty() && c[i].trim().matches("^[a-zA-Z]+$")) {
+    			cat += (c[i].trim() + ", ");
+    		}
+    	}
+    	if (cat.length()>2)
+    		return cat.substring(0,cat.length()-2);
+    	return "";
+    }
 	
 	public int getQuantity() {
 		return quantity;

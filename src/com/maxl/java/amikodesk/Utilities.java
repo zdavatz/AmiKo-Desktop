@@ -141,4 +141,8 @@ public class Utilities {
 		}
 		return fc;
 	}
+	
+	static public String prettyFormat(float value) {
+		return String.format("%,.2f", value);
+	}
 }

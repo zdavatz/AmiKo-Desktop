@@ -41,7 +41,7 @@ function changeQty(tableID,currentRow) {
 				for (var i=0; i<rowCount; i++) {
 					var row = table.rows[i];
 					if (row==currentRow.parentNode.parentNode) {
-						var qty = row.cells[2].firstChild.value;
+						var qty = row.cells[3].firstChild.value;
 						// Check if value is in safe bounds and call java
 						var eanCode = row.cells[0].innerText;	// used to be row.cells[1]
 						if (qty>=0 && qty<=99999) {
