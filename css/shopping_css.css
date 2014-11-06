@@ -1,8 +1,8 @@
 #shopping {margin-left:5px;margin-right:5px;margin-top:20px;margin-bottom:20px;font-family:"Verdana","Arial","Tahoma","Helvetica","Geneva","sans-serif";color:black;}
-#shopping div p{font-size:0.9em;}
-#shopping table{background-color:#eeeeee;font-family:"Verdana","sans-serif";font-size:0.8em;margin-top:0.9em;margin-bottom:0.9em;}
-#shopping td{font-family:"Verdana","sans-serif";font-size:0.9em;}
-#shopping td p{font-family:"Verdana","sans-serif";font-size:0.9em;}
+#shopping div p{font-size:0.85em;}
+#shopping table{background-color:#eeeeee;font-family:"Verdana","sans-serif";font-size:0.85em;margin-top:0.9em;margin-bottom:0.9em;}
+#shopping td{font-family:"Verdana","sans-serif";font-size:0.85em;}
+#shopping td p{font-family:"Verdana","sans-serif";font-size:0.85em;}
 #shopping .container{background-color:#ffffff;}
 #shopping .left{font-size:0.85em;margin:16px;}
 #shopping .right{font-size:0.85em;margin-right:16px;}

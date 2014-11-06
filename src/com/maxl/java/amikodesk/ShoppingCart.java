@@ -204,18 +204,18 @@ public class ShoppingCart implements java.io.Serializable {
 			int index = 1;			
 			
 			basket_html_str += "<tr>"
-					+ "<td style=\"text-align:left\"; width=\"9%\";><b>EAN</b></td>"				// 9
-					+ "<td style=\"text-align:left\"; width=\"28%\";><b>Artikel</b></td>"			// 36
-					+ "<td style=\"text-align:left\"; width=\"3%\"; ><b>Kat</b></td>"				// 39			
-					+ "<td style=\"text-align:right\"; width=\"7%\";><b>Menge</b></td>"				// 46
-					+ "<td style=\"text-align:right\"; width=\"5%\";><b>Nat Rabatt</b></td>"		// 50
-					+ "<td style=\"text-align:right;\"; width=\"6%\";><b>Einkauf</b></td>"			// 56
-					+ "<td style=\"text-align:right;\"; width=\"6%\";><b>Verkauf</b></td>"			// 62			
-					+ "<td style=\"text-align:right;\"; width=\"9%\";><b>Tot Einkauf</b></td>"		// 71
-					+ "<td style=\"text-align:right;\"; width=\"9%\";><b>Tot Verkauf</b></td>"		// 80				
-					+ "<td style=\"text-align:right;\"; width=\"9%\";><b>Gewinn</b></td>"			// 89
-					+ "<td style=\"text-align:right;\"; width=\"5%\";><b>Bar Rabatt</b></td>"		// 96			
-					+ "<td style=\"text-align:center;\"; width=\"4%\";><b>Löschen</b></td>"			// 100
+					+ "<td style=\"text-align:left\"; width=\"9%\";><b>EAN</b></td>"			// 9
+					+ "<td style=\"text-align:left\"; width=\"28%\";><b>Artikel</b></td>"		// 36
+					+ "<td style=\"text-align:left\"; width=\"3%\"; ><b>Kat</b></td>"			// 39			
+					+ "<td style=\"text-align:right\"; width=\"7%\";><b>Menge</b></td>"			// 46
+					+ "<td style=\"text-align:right\"; width=\"5%\";><b>Bonus</b></td>"			// 50
+					+ "<td style=\"text-align:right;\"; width=\"6%\";><b>Aufwand</b></td>"		// 56
+					+ "<td style=\"text-align:right;\"; width=\"6%\";><b>Erlös</b></td>"		// 62			
+					+ "<td style=\"text-align:right;\"; width=\"9%\";><b>Tot.Aufwand</b></td>"	// 71
+					+ "<td style=\"text-align:right;\"; width=\"9%\";><b>Tot.Erlös</b></td>"	// 80				
+					+ "<td style=\"text-align:right;\"; width=\"9%\";><b>Gewinn</b></td>"		// 89
+					+ "<td style=\"text-align:right;\"; width=\"5%\";><b>Rabatt</b></td>"		// 96			
+					+ "<td style=\"text-align:center;\"; width=\"4%\";><b>Löschen</b></td>"		// 100
 					+ "</tr>";
 			
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
@@ -263,8 +263,7 @@ public class ShoppingCart implements java.io.Serializable {
 					String selling_price_CHF = String.format("%.2f", article.getSellingPrice());
 					String tot_selling_price_CHF = String.format("%.2f", article.getTotSellingPrice());
 					String profit_CHF = String.format("%.2f", article.getTotSellingPrice()-article.getTotBuyingPrice());
-					String profit_percent = String.format("%d%%", article.getProfit(article.getTotBuyingPrice(), article.getTotSellingPrice()));
-					String cash_rebate_percent = String.format("%d%%", article.getCashRebate());
+					String cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
 					
 					basket_html_str += "<tr id=\"" + ean_code + "\">";
 					basket_html_str += "<td>" + ean_code + "</td>"
@@ -294,8 +293,7 @@ public class ShoppingCart implements java.io.Serializable {
 					String selling_price_CHF = Utilities.prettyFormat(article.getPublicPriceAsFloat());
 					String tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
 					String profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
-					String profit_percent = String.format("%d%%", article.getProfit(article.getTotExfactoryPrice(), article.getTotPublicPrice()));
-					String cash_rebate_percent = String.format("%d%%", article.getCashRebate());
+					String cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
 					
 					basket_html_str += "<tr id=\"" + ean_code + "\">";
 					basket_html_str += "<td>" + ean_code + "</td>"
@@ -323,10 +321,8 @@ public class ShoppingCart implements java.io.Serializable {
 			String grand_total_buying_CHF = Utilities.prettyFormat(subtotal_buying_CHF*1.08f);
 			String grand_total_selling_CHF = Utilities.prettyFormat(subtotal_selling_CHF*1.08f);
 			String grand_total_profit_CHF = Utilities.prettyFormat((subtotal_selling_CHF-subtotal_buying_CHF)*1.08f);
+			String grand_total_cash_rebate_percent = String.format("%.1f%%", (0.5f+100.0f*(float)totDraufgabe()/(totDraufgabe()+totQuantity())));
 			float subtotal_profit_CHF = subtotal_selling_CHF-subtotal_buying_CHF;
-			int subtotal_profit_percent = 0;
-			if (subtotal_buying_CHF>0.0f)
-				subtotal_profit_percent = (int)((0.5f+(subtotal_selling_CHF/subtotal_buying_CHF-1.0f)*100.0f));
 			basket_html_str += "<tr id=\"Subtotal\">"
 					+ "<td style=\"padding-top:10px\"></td>"
 					+ "<td style=\"padding-top:10px\">Subtotal</td>"
@@ -338,7 +334,7 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<td style=\"padding-top:10px; text-align:right;\">" + Utilities.prettyFormat(subtotal_buying_CHF) + "</td>"			
 					+ "<td style=\"padding-top:10px; text-align:right;\">" + Utilities.prettyFormat(subtotal_selling_CHF) + "</td>"				
 					+ "<td style=\"padding-top:10px\"></td>"
-					+ "<td style=\"padding-top:10px\"></td>"						
+					+ "<td style=\"padding-top:10px\"></td>"
 					+ "</tr>";
 			basket_html_str += "<tr id=\"MWSt\">"
 					+ "<td style=\"padding-top:10px\"></td>"
@@ -364,7 +360,7 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<td style=\"padding-top:10px; text-align:right;\"><b>" + grand_total_buying_CHF + "</b></td>"					
 					+ "<td style=\"padding-top:10px; text-align:right;\"><b>" + grand_total_selling_CHF + "</b></td>"				
 					+ "<td style=\"padding-top:10px; text-align:right; color:green\"><b>" + Utilities.prettyFormat(subtotal_profit_CHF*1.08f) + "</b></td>"						
-					+ "<td style=\"padding-top:10px; text-align:right; color:green\"><b>" /* + String.format("%d%%", subtotal_profit_percent) */ + "</b></td>"											
+					+ "<td style=\"padding-top:10px; text-align:right; color:green\"><b>" + grand_total_cash_rebate_percent + "</b></td>"											
 					+ "</tr>";
 	
 			// Add bar charts
@@ -384,9 +380,15 @@ public class ShoppingCart implements java.io.Serializable {
 			int totSelling_width = 640;
 			int totProfit_width = (int)(0.5f+640.0f*(subtotal_selling_CHF-subtotal_buying_CHF)/subtotal_selling_CHF)-3;
 			basket_html_str += "<tr style=\"height:20px;\"><td colspan=\"11\"></td></tr>"
-					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Buying_Col\" style=\"width:" + totBuying_width + "px; background-color:firebrick;\">Total Einkauf: " + grand_total_buying_CHF + " CHF</div>" 
+					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Buying_Col\" style=\"width:" + totBuying_width + "px; background-color:firebrick;\">Tot Aufwand: " + grand_total_buying_CHF + " CHF</div>" 
 					+ "<div id=\"Profit_Col\" style=\"width:" + totProfit_width + "px; background-color:blue;\">Gewinn: " + grand_total_profit_CHF + " CHF</div></td></tr>"
-					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + totSelling_width + "px; background-color:forestgreen;\">Total Verkauf: " + grand_total_selling_CHF + " CHF</div></td></tr>";
+					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + totSelling_width + "px; background-color:forestgreen;\">Tot Erlös: " + grand_total_selling_CHF + " CHF</div></td></tr>";
+			
+			basket_html_str += "<tr>"
+					+ "<td>Marge (%)</td>"
+					+ "<td style=\"text-align:left;\"><input type=\"number\" name=\"points\" maxlength=\"3\" min=\"1\" max=\"999\" style=\"width:40px; text-align:right;\"" 
+					+ " value=\"80\" onkeydown=\"changeMarge('Warenkorb',this)\" id=\"marge\" /></td>"
+					+ "</tr>";		
 			
 			basket_html_str += "</table></form>";
 				

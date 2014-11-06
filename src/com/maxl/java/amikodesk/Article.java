@@ -9,6 +9,7 @@ public class Article {
 	private String additional_info;
 	private String ean_code;
 	private String pharma_code;
+	private float margin = 0.8f;
 	private float buying_price = 0.0f;
 	private float selling_price = 0.0f;;
 	private int quantity = 1;
@@ -207,7 +208,7 @@ public class Article {
 	 * Calculates  "barrabatt"
 	 * @return
 	 */
-	public int getCashRebate() {
+	public float getCashRebate() {
 		/*
 		if (quantity+draufgabe>0) {
 			float buying_rebated = tot_buying_price/(quantity+draufgabe);
@@ -221,9 +222,17 @@ public class Article {
 		}
 		*/
 		if (draufgabe>0) {
-			return (int)(0.5f+100.0f*(float)draufgabe/(draufgabe+quantity));
+			return (0.5f+100.0f*(float)draufgabe/(draufgabe+quantity));
 		}
-		return 0;
+		return 0.0f;
+	}
+	
+	public void setMargin(float margin) {
+		this.margin = margin;
+	}
+	
+	public float getMargin() {
+		return margin;
 	}
 	
 	public String getAdditionalInfo() {

@@ -78,3 +78,16 @@ function onSelect(tableID,currentRow,index) {
 		}
 	}
 }
+
+function changeMarge(tableID,currentRow) {
+    try {
+		var key = window.event.keyCode;
+		if (key==9 || key==13) {
+			var selectId = document.getElementById("marge");
+			var marge = selectId.value;
+			invokeJava("change_marge",marge);
+		}
+	} catch(e) {
+		// alert(e);
+	}
+}

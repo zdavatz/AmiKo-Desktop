@@ -809,6 +809,14 @@ public class AMiKoDesk {
 							article.setQuantity(1);
 							m_shopping_basket.remove(row_key);
 							m_web_panel.updateShoppingHtml();
+						} else if (msg.startsWith("change_marge")) {
+							int marge = Integer.parseInt(row_key.trim());
+							for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+								Article article = entry.getValue();
+								String ean_code = article.getEanCode();
+								article.setMargin(marge/100.0f);
+								updateShoppingCart(ean_code, article);
+							}
 						} else if (msg.startsWith("change_qty")) {
 							if (m_shopping_basket.containsKey(row_key)) {
 								Article article = m_shopping_basket.get(row_key);
@@ -817,95 +825,7 @@ public class AMiKoDesk {
 								m_shopping_basket.put(row_key, article);	
 								// Update shopping basket
 								m_shopping_cart.setShoppingBasket(m_shopping_basket);
-								// Update draufgabe 										
-								String draufgabe = ""; 
-								int dg = m_shopping_cart.getDraufgabe(row_key, quantity, 'A');
-								if (dg>0) {
-									article.setDraufgabe(dg);									
-									draufgabe = String.format("+ %d", dg);
-								}
-								//
-								String buying_price_CHF = "";
-								String selling_price_CHF = "";
-								String profit_CHF = "";
-								String profit_percent = "0%";
-								String cash_rebate_percent = "0%";
-								if (article.isSpecial()) {
-									buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice());
-									selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
-									profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice());
-									if (article.getTotBuyingPrice()>0.0f)
-										profit_percent = String.format("%d%%", (int)(0.5f+100.0f*(article.getTotSellingPrice()/article.getTotBuyingPrice()-1.0f)));
-									cash_rebate_percent = String.format("%d%%", article.getCashRebate());
-								} else {
-									buying_price_CHF = Utilities.prettyFormat(article.getTotExfactoryPrice());
-									selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
-									profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
-									if (article.getTotExfactoryPrice()>0.0f)
-										profit_percent = String.format("%d%%", (int)(0.5f+100.0f*(article.getTotPublicPrice()/article.getTotExfactoryPrice()-1.0f)));
-									cash_rebate_percent = String.format("%d%%", article.getCashRebate());
-								}
-								// 
-								float subtotal_buying = 0.0f;
-								float subtotal_selling = 0.0f;
-								for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-									Article a = entry.getValue();
-									if (a.isSpecial()) {
-										subtotal_buying += a.getTotBuyingPrice();
-										subtotal_selling += a.getTotSellingPrice();
-									} else {
-										subtotal_buying += a.getTotExfactoryPrice();
-										subtotal_selling += a.getTotPublicPrice();
-									}
-								}
-								// Update shopping cart html
-								String subtotal_buying_CHF = Utilities.prettyFormat(subtotal_buying);
-								String mwst_buying_CHF = Utilities.prettyFormat(subtotal_buying*0.08f);
-								String total_buying_CHF = Utilities.prettyFormat(subtotal_buying*1.08f);
-								String subtotal_selling_CHF = Utilities.prettyFormat(subtotal_selling);
-								String mwst_selling_CHF = Utilities.prettyFormat(subtotal_selling*0.08f);
-								String total_selling_CHF = Utilities.prettyFormat(subtotal_selling*1.08f);
-								String total_profit_CHF = Utilities.prettyFormat((subtotal_selling-subtotal_buying)*1.08f);
-								String total_profit_percent = "0%";
-								if (subtotal_buying>0)
-									total_profit_percent = String.format("%d%%", (int)(0.5f+100.0f*(subtotal_selling/subtotal_buying-1.0f)));
-
-								// String profit_percent = String.format("%d%%", (int)(m_shopping_cart.calcProfit(article)));
-								String tot_quantity = String.format("%d", m_shopping_cart.totQuantity());
-								String tot_draufgabe = String.format("%d", m_shopping_cart.totDraufgabe());
-								/*
-								int width_tot_buying = (int)(0.5f+subtotal_buying/50.0f);
-								int width_tot_selling = (int)(0.5f+subtotal_selling/50.0f);
-								int width_tot_profit = (int)(0.5f+(subtotal_selling-subtotal_buying)/50.0f)-3;
-								*/
-								int width_tot_buying = (int)(0.5f+640.0f*subtotal_buying/subtotal_selling);
-								int width_tot_selling = 640;
-								int width_tot_profit = (int)(0.5f+640.0f*(subtotal_selling-subtotal_buying)/subtotal_selling)-3;
-							
-								String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[4].innerHTML=\"" + draufgabe + "\";"  
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[7].innerHTML=\"" + buying_price_CHF + "\";" 
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[8].innerHTML=\"" + selling_price_CHF + "\";" 
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[9].innerHTML=\"<b>" + profit_CHF + "</b>\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[10].innerHTML=\"<b>" + cash_rebate_percent /* profit_percent */ + "</b>\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[7].innerHTML=\"" + subtotal_buying_CHF + "\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[8].innerHTML=\"" + subtotal_selling_CHF + "\";"										
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[7].innerHTML=\"" + mwst_buying_CHF + "\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[8].innerHTML=\"" + mwst_selling_CHF + "\";"										
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[3].innerHTML=\"<b>" + tot_quantity + "</b>\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[4].innerHTML=\"<b>" + tot_draufgabe + "</b>\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[7].innerHTML=\"<b>" + total_buying_CHF + "</b>\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[8].innerHTML=\"<b>" + total_selling_CHF + "</b>\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[9].innerHTML=\"<b>" + total_profit_CHF + "</b>\";"
-										+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[10].innerHTML=\"<b>" + /* total_profit_percent + */ "</b>\";"
-										+ "document.getElementById('Buying_Col').style.width=\"" + width_tot_buying + "\";"
-										+ "document.getElementById('Buying_Col').innerHTML=\"Tot Einkauf: " + total_buying_CHF + " CHF\";"
-										+ "document.getElementById('Selling_Col').style.width=\"" + width_tot_selling + "\";"
-										+ "document.getElementById('Selling_Col').innerHTML=\"Tot Verkauf: " + total_selling_CHF + " CHF\";"
-										+ "document.getElementById('Profit_Col').style.width=\"" + width_tot_profit + "\";"
-										+ "document.getElementById('Profit_Col').innerHTML=\"Gewinn: " + total_profit_CHF + " CHF\";";
-										//+ "alert(document.getElementById('Draufgabe_Col').innerHTML)";										
-
-								jWeb.executeJavascript(js);
+								updateShoppingCart(row_key, article);
 							}																
 						} else if (msg.equals("create_pdf")) {
 							SwingUtilities.invokeLater(new Runnable() {
@@ -988,6 +908,90 @@ public class AMiKoDesk {
 			// ---> jWeb.setPreferredSize(new Dimension(640, 600));
 			// jWeb.setBorder(BorderFactory.createLineBorder(Color.GRAY));			
 			add(webBrowserPanel, BorderLayout.CENTER);
+		}
+		
+		public void updateShoppingCart(String row_key, Article article) {
+			// Update draufgabe 										
+			String draufgabe = ""; 
+			int dg = m_shopping_cart.getDraufgabe(row_key, article.getQuantity(), 'A');
+			if (dg>0) {
+				article.setDraufgabe(dg);									
+				draufgabe = String.format("+ %d", dg);
+			}
+			//
+			String buying_price_CHF = "";
+			String selling_price_CHF = "";
+			String profit_CHF = "";
+			String cash_rebate_percent = "0%";
+			if (article.isSpecial()) {
+				buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice());
+				selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
+				profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice());
+				cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
+			} else {
+				buying_price_CHF = Utilities.prettyFormat(article.getTotExfactoryPrice());
+				selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
+				profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
+				cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
+			}
+			// 
+			float subtotal_buying = 0.0f;
+			float subtotal_selling = 0.0f;
+			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+				Article a = entry.getValue();
+				if (a.isSpecial()) {
+					subtotal_buying += a.getTotBuyingPrice();
+					subtotal_selling += a.getTotSellingPrice();
+				} else {
+					subtotal_buying += a.getTotExfactoryPrice();
+					subtotal_selling += a.getTotPublicPrice();
+				}
+			}
+			// Update shopping cart html
+			String subtotal_buying_CHF = Utilities.prettyFormat(subtotal_buying);
+			String mwst_buying_CHF = Utilities.prettyFormat(subtotal_buying*0.08f);
+			String total_buying_CHF = Utilities.prettyFormat(subtotal_buying*1.08f);
+			String subtotal_selling_CHF = Utilities.prettyFormat(subtotal_selling);
+			String mwst_selling_CHF = Utilities.prettyFormat(subtotal_selling*0.08f);
+			String total_selling_CHF = Utilities.prettyFormat(subtotal_selling*1.08f);
+			String total_cash_rebate_percent = String.format("%.1f%%", 
+					(0.5f+100.0f*(float)m_shopping_cart.totDraufgabe()/(m_shopping_cart.totDraufgabe()+m_shopping_cart.totQuantity())));
+			String total_profit_CHF = Utilities.prettyFormat((subtotal_selling-subtotal_buying)*1.08f);
+			String tot_quantity = String.format("%d", m_shopping_cart.totQuantity());
+			String tot_draufgabe = String.format("%d", m_shopping_cart.totDraufgabe());
+			/*
+			int width_tot_buying = (int)(0.5f+subtotal_buying/50.0f);
+			int width_tot_selling = (int)(0.5f+subtotal_selling/50.0f);
+			int width_tot_profit = (int)(0.5f+(subtotal_selling-subtotal_buying)/50.0f)-3;
+			*/
+			int width_tot_buying = (int)(0.5f+640.0f*subtotal_buying/subtotal_selling);
+			int width_tot_selling = 640;
+			int width_tot_profit = (int)(0.5f+640.0f*(subtotal_selling-subtotal_buying)/subtotal_selling)-3;
+		
+			String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[4].innerHTML=\"" + draufgabe + "\";"  
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[7].innerHTML=\"" + buying_price_CHF + "\";" 
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[8].innerHTML=\"" + selling_price_CHF + "\";" 
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[9].innerHTML=\"<b>" + profit_CHF + "</b>\";"
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[10].innerHTML=\"<b>" + cash_rebate_percent /* profit_percent */ + "</b>\";"
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[7].innerHTML=\"" + subtotal_buying_CHF + "\";"
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[8].innerHTML=\"" + subtotal_selling_CHF + "\";"										
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[7].innerHTML=\"" + mwst_buying_CHF + "\";"
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[8].innerHTML=\"" + mwst_selling_CHF + "\";"										
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[3].innerHTML=\"<b>" + tot_quantity + "</b>\";"
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[4].innerHTML=\"<b>" + tot_draufgabe + "</b>\";"
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[7].innerHTML=\"<b>" + total_buying_CHF + "</b>\";"
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[8].innerHTML=\"<b>" + total_selling_CHF + "</b>\";"
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[9].innerHTML=\"<b>" + total_profit_CHF + "</b>\";"
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[10].innerHTML=\"<b>" + total_cash_rebate_percent + "</b>\";"
+					+ "document.getElementById('Buying_Col').style.width=\"" + width_tot_buying + "\";"
+					+ "document.getElementById('Buying_Col').innerHTML=\"Tot Aufwand: " + total_buying_CHF + " CHF\";"
+					+ "document.getElementById('Selling_Col').style.width=\"" + width_tot_selling + "\";"
+					+ "document.getElementById('Selling_Col').innerHTML=\"Tot Erlös: " + total_selling_CHF + " CHF\";"
+					+ "document.getElementById('Profit_Col').style.width=\"" + width_tot_profit + "\";"
+					+ "document.getElementById('Profit_Col').innerHTML=\"Gewinn: " + total_profit_CHF + " CHF\";";
+					//+ "alert(document.getElementById('Draufgabe_Col').innerHTML)";										
+
+			jWeb.executeJavascript(js);
 		}
 		
 		public void setTitle(String title) {
