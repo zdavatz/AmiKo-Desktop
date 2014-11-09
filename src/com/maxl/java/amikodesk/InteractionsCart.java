@@ -32,15 +32,15 @@ public class InteractionsCart {
 	
 	public InteractionsCart() {
 		m_application_data_folder = Utilities.appDataFolder();
-		m_interactions_map = Utilities.readFromCsvToMap(m_application_data_folder + "\\" + Constants.DEFAULT_INTERACTION_CSV_BASE + Utilities.appLanguage() + ".csv");
+		m_interactions_map = FileOps.readFromCsvToMap(m_application_data_folder + "\\" + Constants.DEFAULT_INTERACTION_CSV_BASE + Utilities.appLanguage() + ".csv");
 		if (m_interactions_map==null) {
 			System.out.println("Loading default drug interactions csv file");
-			m_interactions_map = Utilities.readFromCsvToMap("./dbs/" + Constants.DEFAULT_INTERACTION_CSV_BASE + Utilities.appLanguage() + ".csv");
+			m_interactions_map = FileOps.readFromCsvToMap("./dbs/" + Constants.DEFAULT_INTERACTION_CSV_BASE + Utilities.appLanguage() + ".csv");
 		}
 		// Load javascripts
-		m_jscripts_str = Utilities.readFromFile(Constants.JS_FOLDER + "interaction_callbacks.js");
+		m_jscripts_str = FileOps.readFromFile(Constants.JS_FOLDER + "interaction_callbacks.js");
 		// Load interactions css style sheet
-		m_css_interactions_str = "<style>" + Utilities.readFromFile(Constants.INTERACTIONS_SHEET) + "</style>";
+		m_css_interactions_str = "<style>" + FileOps.readFromFile(Constants.INTERACTIONS_SHEET) + "</style>";
 	}
 	
 	public String[] sectionTitles() {

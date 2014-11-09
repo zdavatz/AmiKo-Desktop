@@ -3,6 +3,7 @@
 #shopping table{background-color:#eeeeee;font-family:"Verdana","sans-serif";font-size:0.85em;margin-top:0.9em;margin-bottom:0.9em;}
 #shopping td{font-family:"Verdana","sans-serif";font-size:0.85em;}
 #shopping td p{font-family:"Verdana","sans-serif";font-size:0.85em;}
+#shopping button {cursor:pointer;border:none;background-color:transparent;}
 #shopping .container{background-color:#ffffff;}
 #shopping .left{font-size:0.85em;margin:16px;}
 #shopping .right{font-size:0.85em;margin-right:16px;}

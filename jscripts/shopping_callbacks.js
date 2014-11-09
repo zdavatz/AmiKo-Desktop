@@ -1,8 +1,6 @@
 function deleteRow(tableID,currentRow) {
     try {
-		if (tableID=="Delete_all") {
-			invokeJava("delete_all",0);
-		} else if (tableID=="Warenkorb") {
+		if (tableID=="Warenkorb") {
 			var table = document.getElementById(tableID);
 			var rowCount = table.rows.length;		
 			for (var i=0; i<rowCount; i++) {
@@ -21,6 +19,18 @@ function deleteRow(tableID,currentRow) {
     } catch (e) {
         // alert(e);
     }
+}
+
+function deleteAll(event) {
+	invokeJava("delete_all",0);
+}
+
+function loadCart(event) {
+	invokeJava("load_cart",0);
+}
+
+function saveCart(event) {
+	invokeJava("save_cart",0);
 }
 
 function createPdf(event) {

@@ -1,6 +1,6 @@
 package com.maxl.java.amikodesk;
 
-public class Article {
+public class Article implements java.io.Serializable {
 	private String pack_title;
 	private String pack_size;
 	private String pack_unit;
@@ -9,7 +9,7 @@ public class Article {
 	private String additional_info;
 	private String ean_code;
 	private String pharma_code;
-	private float margin = 0.8f;
+	private float margin = -1.0f;	// <0.0f -> not initialized
 	private float buying_price = 0.0f;
 	private float selling_price = 0.0f;;
 	private int quantity = 1;
@@ -176,31 +176,35 @@ public class Article {
 	}
 
 	public void setBuyingPrice(float buying_price) {
+		if (margin>=0.0f)
+			selling_price = (1.0f+margin)*buying_price;
+		else	// default
+			selling_price = 1.8f*buying_price;
 		this.buying_price = buying_price;
 	}
 	
 	/**
-	 * Buying price = consumer price (what the consumer pays, defined by doctor/pharmacy)
+	 * Selling price = consumer price (what the consumer pays, defined by doctor/pharmacy)
 	*/		
-	public float getSellingPrice() { 	
-    	return selling_price;
+	public float getSellingPrice() {
+		if (margin>=0.0f)
+			selling_price = (1.0f+margin)*buying_price;
+		else	// default
+			selling_price = 1.8f*buying_price;
+		return selling_price;
 	}
 
 	public float getTotSellingPrice() {
 		return (quantity+draufgabe)*selling_price;
 	}
-	
-	public void setSellingPrice(float buying_price, float margin) {
-		this.selling_price = (1.0f+margin)*buying_price;;
-	}
-	
+		
 	/**
 	 * Calculates the profit
 	 * @return
 	 */
 	public int getProfit(float tot_buying_price, float tot_selling_price) {
 		if (tot_buying_price>0.0f)
-			return (int)(0.5f+(tot_selling_price/tot_buying_price-1-0f)*100.0f);
+			return (int)(0.5f+(tot_selling_price/tot_buying_price-1.0f)*100.0f);
 		return 0;
 	}
 	

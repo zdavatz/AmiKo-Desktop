@@ -350,11 +350,11 @@ public class AMiKoDesk {
 			new SplashWindow(Constants.APP_NAME, 3000);
 		}
 		// Load javascript 
-		String jscript_str = Utilities.readFromFile(Constants.JS_FOLDER + "main_callbacks.js");
+		String jscript_str = FileOps.readFromFile(Constants.JS_FOLDER + "main_callbacks.js");
 		m_jscript_str = "<script language=\"javascript\">" + jscript_str + "</script>";
 		
 		// Load css style sheet
-		m_css_str = "<style>" + Utilities.readFromFile(Constants.CSS_SHEET) + "</style>";
+		m_css_str = "<style>" + FileOps.readFromFile(Constants.CSS_SHEET) + "</style>";
 	
 		// Load main database
 		m_sqldb = new SqlDatabase();
@@ -811,11 +811,15 @@ public class AMiKoDesk {
 							m_web_panel.updateShoppingHtml();
 						} else if (msg.startsWith("change_marge")) {
 							int marge = Integer.parseInt(row_key.trim());
-							for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-								Article article = entry.getValue();
-								String ean_code = article.getEanCode();
-								article.setMargin(marge/100.0f);
-								updateShoppingCart(ean_code, article);
+							if (marge>=0) {
+								m_shopping_cart.setMarginPercent(marge);	
+								// Loop through all medis and update
+								for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+									Article article = entry.getValue();
+									String ean_code = article.getEanCode();
+									article.setMargin(marge/100.0f);
+									updateShoppingCart(ean_code, article);
+								}
 							}
 						} else if (msg.startsWith("change_qty")) {
 							if (m_shopping_basket.containsKey(row_key)) {
@@ -826,13 +830,58 @@ public class AMiKoDesk {
 								// Update shopping basket
 								m_shopping_cart.setShoppingBasket(m_shopping_basket);
 								updateShoppingCart(row_key, article);
-							}																
+							}	
+						} else if (msg.equals("load_cart")) {
+							SwingUtilities.invokeLater(new Runnable() {
+								@Override
+								public void run() {	
+									// Open file chooser
+									JFileChooser fc = FileOps.getFileChooser("Warenkorb laden", ".ser", "*.ser");
+									if (fc!=null) {
+										int r = fc.showOpenDialog(jWeb);
+										if (r==JFileChooser.APPROVE_OPTION) {										
+											String filename = fc.getSelectedFile().getPath();
+											// Load and deserialize m_shopping_basket											
+											byte[] serialized_bytes = FileOps.readBytesFromFile(filename);
+											if (serialized_bytes!=null) {
+												m_shopping_basket = (LinkedHashMap<String, Article>)FileOps.deserialize(serialized_bytes);										
+											}
+										}
+									}
+									m_web_panel.updateShoppingHtml();
+								}
+							});
+							m_web_panel.updateShoppingHtml();
+						} else if (msg.equals("save_cart")) {
+							SwingUtilities.invokeLater(new Runnable() {
+								@Override
+								public void run() {	
+									// Open file chooser
+									JFileChooser fc = FileOps.getFileChooser("Warenkorb speichern", ".ser", "*.ser");
+									DateTime dT = new DateTime();
+									DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
+									fc.setSelectedFile(new File("amiko_warenkorb_" + fmt.print(dT) + ".ser"));
+									if (fc!=null) {
+										int r = fc.showSaveDialog(jWeb);
+										if (r==JFileChooser.APPROVE_OPTION) {										
+											String filename = fc.getSelectedFile().getPath();
+											// Serialize and save m_shopping_basket
+											byte[] serialized_bytes = FileOps.serialize(m_shopping_basket);
+											if (serialized_bytes!=null) {
+												FileOps.writeBytesToFile(filename, serialized_bytes);
+											}
+										}
+									}
+									m_web_panel.updateShoppingHtml();	
+								}
+							});
+							m_web_panel.updateShoppingHtml();
 						} else if (msg.equals("create_pdf")) {
 							SwingUtilities.invokeLater(new Runnable() {
 								@Override
 								public void run() {	
 									// Open file chooser
-									JFileChooser fc = Utilities.getFileChooser("Bestellung speichern", ".pdf", "*.pdf");
+									JFileChooser fc = FileOps.getFileChooser("Bestellung speichern", ".pdf", "*.pdf");
 									String gln_code = m_prefs.get("glncode", "7610000000000");
 									DateTime dT = new DateTime();
 									DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
@@ -844,6 +893,7 @@ public class AMiKoDesk {
 											m_shopping_cart.generatePdf(filename);	
 										}
 									}
+									m_web_panel.updateShoppingHtml();
 								}
 							});
 							m_web_panel.updateShoppingHtml();
@@ -852,7 +902,7 @@ public class AMiKoDesk {
 								@Override
 								public void run() {	
 									// Open file chooser
-									JFileChooser fc = Utilities.getFileChooser("Bestellung speichern", ".csv", "*.csv");
+									JFileChooser fc = FileOps.getFileChooser("Bestellung speichern", ".csv", "*.csv");
 									String gln_code = m_prefs.get("glncode", "7610000000000");
 									DateTime dT = new DateTime();
 									DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
@@ -861,9 +911,10 @@ public class AMiKoDesk {
 										int r = fc.showSaveDialog(jWeb);
 										if (r==JFileChooser.APPROVE_OPTION) {										
 											String filename = fc.getSelectedFile().getPath();						
-											m_shopping_cart.generateCsv(filename);	
+											m_shopping_cart.generateCsv(filename);
 										}
 									}
+									m_web_panel.updateShoppingHtml();
 								}
 							});
 							m_web_panel.updateShoppingHtml();
@@ -918,23 +969,27 @@ public class AMiKoDesk {
 				article.setDraufgabe(dg);									
 				draufgabe = String.format("+ %d", dg);
 			}
-			//
-			String buying_price_CHF = "";
+			//		
 			String selling_price_CHF = "";
+			String tot_buying_price_CHF = "";
+			String tot_selling_price_CHF = "";
 			String profit_CHF = "";
 			String cash_rebate_percent = "0%";
+			//
 			if (article.isSpecial()) {
-				buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice());
-				selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
+				selling_price_CHF = Utilities.prettyFormat(article.getSellingPrice());
+				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice());
+				tot_selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
 				profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice());
 				cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
 			} else {
-				buying_price_CHF = Utilities.prettyFormat(article.getTotExfactoryPrice());
-				selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
+				selling_price_CHF = Utilities.prettyFormat(article.getPublicPriceAsFloat());				
+				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotExfactoryPrice());
+				tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
 				profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
 				cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
 			}
-			// 
+			// 			
 			float subtotal_buying = 0.0f;
 			float subtotal_selling = 0.0f;
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
@@ -959,20 +1014,26 @@ public class AMiKoDesk {
 			String total_profit_CHF = Utilities.prettyFormat((subtotal_selling-subtotal_buying)*1.08f);
 			String tot_quantity = String.format("%d", m_shopping_cart.totQuantity());
 			String tot_draufgabe = String.format("%d", m_shopping_cart.totDraufgabe());
-			/*
-			int width_tot_buying = (int)(0.5f+subtotal_buying/50.0f);
-			int width_tot_selling = (int)(0.5f+subtotal_selling/50.0f);
-			int width_tot_profit = (int)(0.5f+(subtotal_selling-subtotal_buying)/50.0f)-3;
-			*/
-			int width_tot_buying = (int)(0.5f+640.0f*subtotal_buying/subtotal_selling);
-			int width_tot_selling = 640;
-			int width_tot_profit = (int)(0.5f+640.0f*(subtotal_selling-subtotal_buying)/subtotal_selling)-3;
-		
+
+			int width_tot_buying = (int)(0.5f+subtotal_buying/20.0f);
+			int width_tot_selling = (int)(0.5f+subtotal_selling/20.0f);
+			int width_tot_profit = (int)(0.5f+(subtotal_selling-subtotal_buying)/20.0f)-3;
+			if (width_tot_selling>800) {
+				width_tot_buying = (int)(0.5f+800.0f*subtotal_buying/subtotal_selling);
+				width_tot_selling = 800;
+				width_tot_profit = (int)(0.5f+800.0f*(subtotal_selling-subtotal_buying)/subtotal_selling)-3;
+			} else if (width_tot_selling<300) {
+				width_tot_buying = (int)(0.5f+300.0f*subtotal_buying/subtotal_selling);
+				width_tot_selling = 300;
+				width_tot_profit = (int)(0.5f+300.0f*(subtotal_selling-subtotal_buying)/subtotal_selling)-3;
+			}
+			
 			String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[4].innerHTML=\"" + draufgabe + "\";"  
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[7].innerHTML=\"" + buying_price_CHF + "\";" 
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[8].innerHTML=\"" + selling_price_CHF + "\";" 
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[6].innerHTML=\"" + selling_price_CHF + "\";" 
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[7].innerHTML=\"" + tot_buying_price_CHF + "\";" 
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[8].innerHTML=\"" + tot_selling_price_CHF + "\";" 
 					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[9].innerHTML=\"<b>" + profit_CHF + "</b>\";"
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[10].innerHTML=\"<b>" + cash_rebate_percent /* profit_percent */ + "</b>\";"
+					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[10].innerHTML=\"<b>" + cash_rebate_percent + "</b>\";"
 					+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[7].innerHTML=\"" + subtotal_buying_CHF + "\";"
 					+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[8].innerHTML=\"" + subtotal_selling_CHF + "\";"										
 					+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[7].innerHTML=\"" + mwst_buying_CHF + "\";"
@@ -984,9 +1045,9 @@ public class AMiKoDesk {
 					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[9].innerHTML=\"<b>" + total_profit_CHF + "</b>\";"
 					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[10].innerHTML=\"<b>" + total_cash_rebate_percent + "</b>\";"
 					+ "document.getElementById('Buying_Col').style.width=\"" + width_tot_buying + "\";"
-					+ "document.getElementById('Buying_Col').innerHTML=\"Tot Aufwand: " + total_buying_CHF + " CHF\";"
+					+ "document.getElementById('Buying_Col').innerHTML=\"Tot.Aufwand: " + total_buying_CHF + " CHF\";"
 					+ "document.getElementById('Selling_Col').style.width=\"" + width_tot_selling + "\";"
-					+ "document.getElementById('Selling_Col').innerHTML=\"Tot Erlös: " + total_selling_CHF + " CHF\";"
+					+ "document.getElementById('Selling_Col').innerHTML=\"Tot.Erlös: " + total_selling_CHF + " CHF\";"
 					+ "document.getElementById('Profit_Col').style.width=\"" + width_tot_profit + "\";"
 					+ "document.getElementById('Profit_Col').innerHTML=\"Gewinn: " + total_profit_CHF + " CHF\";";
 					//+ "alert(document.getElementById('Draufgabe_Col').innerHTML)";										
@@ -1070,7 +1131,7 @@ public class AMiKoDesk {
 						String path_html = System.getProperty ("user.home") + "/" + Constants.APP_NAME +"/htmls/";
 						String _title = m.getTitle();					
 						String file_name = _title.replaceAll("[®,/;.]","_") + ".html";
-						Utilities.writeToFile(content_str.toString(), path_html, file_name, "UTF-16");
+						FileOps.writeToFile(content_str.toString(), path_html, file_name, "UTF-16");
 						jWeb.navigate("file:///" + path_html + file_name);
 					} catch(IOException e) {
 						// Fallback solution (used to be preferred implementation)
@@ -1140,11 +1201,11 @@ public class AMiKoDesk {
 		
 		public void updateShoppingHtml() {
 			// Retrieve main html
-			String html_str = m_shopping_cart.updateShoppingCartHtml(m_shopping_basket);
-			// Update html
-			jWeb.setJavascriptEnabled(true);
+			String html_str = m_shopping_cart.updateShoppingCartHtml(m_shopping_basket);			
+			// Update html	
+			jWeb.setJavascriptEnabled(true);			
 			jWeb.setHTMLContent(html_str);
-			jWeb.setVisible(true);
+			jWeb.setVisible(true);				
 		}
 		
 		public void dispose() {
