@@ -47,6 +47,7 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.geom.RoundRectangle2D;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -59,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -137,6 +139,10 @@ import chrriis.dj.nativeswing.swtimpl.NativeInterface;
 import chrriis.dj.nativeswing.swtimpl.components.JWebBrowser;
 import chrriis.dj.nativeswing.swtimpl.components.WebBrowserFunction;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.maxl.java.shared.Conditions;
+
 public class AMiKoDesk {
 	
 	// Important Constants
@@ -163,6 +169,7 @@ public class AMiKoDesk {
 	private static Map<String, Medication> m_med_basket = new TreeMap<String, Medication>();
 	private static Map<String, Article> m_shopping_basket = new LinkedHashMap<String, Article>();
 	private static List<Article> list_of_articles = new ArrayList<Article>();
+	private static List<String> list_of_carts = new ArrayList<String>();
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
 	private static String m_query_str = null;
@@ -216,6 +223,9 @@ public class AMiKoDesk {
 		"Indications", "Posologie", "Précautions", "Interactions", "Grossesse/All.", 
 		"Conduite", "Effets indésir.", "Surdosage", "Propriétés/Effets", "Cinétique", "Préclinique", 
 		"Remarques", "Numéro d'autorisation", "Présentation", "Titulaire", "Mise à jour"};	
+	
+	// List of med authors
+	private static List<Author> list_of_authors = new ArrayList<Author>();
 	
 	/**
 	 * Adds an option into the command line parser
@@ -382,9 +392,43 @@ public class AMiKoDesk {
 		m_interactions_cart = new InteractionsCart();
 		m_shopping_cart = new ShoppingCart();
 		
+		// Fill list of authors / med owners
+		try {
+			// Load encrypted files
+			byte[] encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"authors.ser");
+			// Decrypt and deserialize
+			if (encrypted_msg!=null) {
+				Crypto crypto = new Crypto();
+				byte[] serialized_bytes = crypto.decrypt(encrypted_msg);			
+				ObjectMapper mapper = new ObjectMapper();
+				TypeReference<HashMap<String,Object>> typeRef = new TypeReference<HashMap<String,Object>>() {};				
+				Map<String,Object> authorData = mapper.readValue(serialized_bytes, typeRef);								
+				@SuppressWarnings("unchecked")
+				ArrayList<HashMap<String,String>> authorList = (ArrayList<HashMap<String,String>>)authorData.get("authors");				 
+				for (HashMap<String,String> al : authorList) {
+					Author auth = new Author();
+					auth.setName(al.get("name"));
+					auth.setEmail(al.get("email"));
+					auth.setEmailCC(al.get("emailcc"));
+					auth.setSalutation(al.get("salutation"));
+					list_of_authors.add(auth);
+				}
+				System.out.println("Loaded and decrypted list of " + authorList.size() + " med owners...");
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}	
+			
+		// Create shop folder in application data folder
+	   	File wdir = new File(m_application_data_folder + "\\shop");
+	   	if (!wdir.exists())
+	   		wdir.mkdirs();
+
 		// Preferences
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
-			
+	   	
 		// UIUtils.setPreferredLookAndFeel();
 		NativeInterface.open();
 		NativeSwing.initialize();
@@ -590,6 +634,8 @@ public class AMiKoDesk {
 		 * Called any time the user selects an item from the list
 		 */
 		public void valueChanged(ListSelectionEvent e) {
+			if (m_curr_uistate.isLoadCart())
+				m_curr_uistate.restoreUseMode();
 			if (e.getSource()==list && !e.getValueIsAdjusting()) {	
 				prev_med_index = med_index;		// Store current index
 				med_index = list.getSelectedIndex();	// Returns -1 if there is no selection
@@ -670,18 +716,30 @@ public class AMiKoDesk {
 				int sel_index = list.getSelectedIndex();
 				if (sel_index>=0) {
 					if (!m_curr_uistate.isShoppingMode())
-						m_web_panel.moveToAnchor(m_section_str.get(sel_index));
+						m_web_panel.moveToAnchor(m_section_str.get(sel_index));						
 					else {
-						if (sel_index<list_of_articles.size()) {
-							Article article = list_of_articles.get(sel_index);
-							String ean_code = article.getEanCode();
-							if (m_shopping_basket.containsKey(ean_code)) {
-								article.incrementQuantity();
+						if (m_curr_uistate.isLoadCart()) {
+							File file = new File(m_application_data_folder + "\\shop\\");
+							if (file.exists() && file.isDirectory() && file.list().length>0) {
+								// Load and deserialize m_shopping_basket
+								String path = m_application_data_folder + "\\shop\\" + list_of_carts.get(sel_index)+".ser";
+								byte[] serialized_bytes = FileOps.readBytesFromFile(path);
+								if (serialized_bytes!=null) {
+									m_shopping_basket = (LinkedHashMap<String, Article>)FileOps.deserialize(serialized_bytes);
+									m_web_panel.updateShoppingHtml();								
+								}
 							}
-							m_shopping_basket.put(ean_code, article);
-							m_web_panel.updateShoppingHtml();
+						} else {
+							if (sel_index<list_of_articles.size()) {
+								Article article = list_of_articles.get(sel_index);
+								String ean_code = article.getEanCode();
+								if (m_shopping_basket.containsKey(ean_code))
+									article.incrementQuantity();
+								m_shopping_basket.put(ean_code, article);
+								m_web_panel.updateShoppingHtml();
+							}
 						}
-					}
+					}						
 				}
 			}
 		}
@@ -832,65 +890,45 @@ public class AMiKoDesk {
 								updateShoppingCart(row_key, article);
 							}	
 						} else if (msg.equals("load_cart")) {
-							SwingUtilities.invokeLater(new Runnable() {
-								@Override
-								public void run() {	
-									// Open file chooser
-									JFileChooser fc = FileOps.getFileChooser("Warenkorb laden", ".ser", "*.ser");
-									if (fc!=null) {
-										int r = fc.showOpenDialog(jWeb);
-										if (r==JFileChooser.APPROVE_OPTION) {										
-											String filename = fc.getSelectedFile().getPath();
-											// Load and deserialize m_shopping_basket											
-											byte[] serialized_bytes = FileOps.readBytesFromFile(filename);
-											if (serialized_bytes!=null) {
-												m_shopping_basket = (LinkedHashMap<String, Article>)FileOps.deserialize(serialized_bytes);										
+							if (row_key.equals("0.0")) {
+								SwingUtilities.invokeLater(new Runnable() {
+									@Override
+									public void run() {
+										// List of all files in directory
+										list_of_carts.clear();
+										File[] files = new File(m_application_data_folder + "\\shop").listFiles();
+										for (File file : files) {
+											if (file.isFile() && file.getName().endsWith(".ser")) {
+												String f = file.getName();
+												list_of_carts.add(f.substring(0,f.lastIndexOf(".")));
 											}
 										}
+										m_curr_uistate.setUseMode("loadcart");
+										String[] file_str = list_of_carts.toArray(new String[list_of_carts.size()]);
+										m_section_titles.updatePanel(file_str);
 									}
-									m_web_panel.updateShoppingHtml();
-								}
-							});
-							m_web_panel.updateShoppingHtml();
-						} else if (msg.equals("save_cart")) {
-							SwingUtilities.invokeLater(new Runnable() {
-								@Override
-								public void run() {	
-									// Open file chooser
-									JFileChooser fc = FileOps.getFileChooser("Warenkorb speichern", ".ser", "*.ser");
-									DateTime dT = new DateTime();
-									DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
-									fc.setSelectedFile(new File("amiko_warenkorb_" + fmt.print(dT) + ".ser"));
-									if (fc!=null) {
-										int r = fc.showSaveDialog(jWeb);
-										if (r==JFileChooser.APPROVE_OPTION) {										
-											String filename = fc.getSelectedFile().getPath();
-											// Serialize and save m_shopping_basket
-											byte[] serialized_bytes = FileOps.serialize(m_shopping_basket);
-											if (serialized_bytes!=null) {
-												FileOps.writeBytesToFile(filename, serialized_bytes);
-											}
-										}
-									}
-									m_web_panel.updateShoppingHtml();	
-								}
-							});
-							m_web_panel.updateShoppingHtml();
+								});
+								m_web_panel.updateShoppingHtml();
+							} else if (row_key.equals("1.0")) {
+								
+							} else if (row_key.equals("2.0")) {
+								
+							} else if (row_key.equals("3.0")) {
+							
+							}
 						} else if (msg.equals("create_pdf")) {
 							SwingUtilities.invokeLater(new Runnable() {
 								@Override
 								public void run() {	
 									// Open file chooser
 									JFileChooser fc = FileOps.getFileChooser("Bestellung speichern", ".pdf", "*.pdf");
-									String gln_code = m_prefs.get("glncode", "7610000000000");
-									DateTime dT = new DateTime();
-									DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
-									fc.setSelectedFile(new File(gln_code + "_" + fmt.print(dT) + ".pdf"));
+									fc.setSelectedFile(new File(orderFileName()+".pdf"));
 									if (fc!=null) {
 										int r = fc.showSaveDialog(jWeb);
 										if (r==JFileChooser.APPROVE_OPTION) {										
-											String filename = fc.getSelectedFile().getPath();						
-											m_shopping_cart.generatePdf(filename);	
+											String filename = fc.getSelectedFile().getPath();
+											SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
+											sbasket.generatePdf("", filename);	
 										}
 									}
 									m_web_panel.updateShoppingHtml();
@@ -903,18 +941,44 @@ public class AMiKoDesk {
 								public void run() {	
 									// Open file chooser
 									JFileChooser fc = FileOps.getFileChooser("Bestellung speichern", ".csv", "*.csv");
-									String gln_code = m_prefs.get("glncode", "7610000000000");
-									DateTime dT = new DateTime();
-									DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
-									fc.setSelectedFile(new File(gln_code + "_" + fmt.print(dT) + ".csv"));
+									fc.setSelectedFile(new File(orderFileName()+".csv"));
 									if (fc!=null) {
 										int r = fc.showSaveDialog(jWeb);
 										if (r==JFileChooser.APPROVE_OPTION) {										
-											String filename = fc.getSelectedFile().getPath();						
-											m_shopping_cart.generateCsv(filename);
+											String filename = fc.getSelectedFile().getPath();
+											SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
+											sbasket.generateCsv("", filename);
 										}
 									}
 									m_web_panel.updateShoppingHtml();
+								}
+							});
+							m_web_panel.updateShoppingHtml();
+						} else if (msg.equals("send_order")) {
+							SwingUtilities.invokeLater(new Runnable() {
+								@Override
+								public void run() {	
+									// Save shopping cart
+									saveShoppingCart();
+									// Generate files
+									String path = m_application_data_folder + "\\shop";									
+									String name = orderFileName();
+									SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());									
+									sbasket.setAuthorList(list_of_authors);
+									for (Author author : list_of_authors) {
+										String auth = author.getShortName();
+										sbasket.generatePdf(auth, path + "\\" + auth + "_" + name + ".pdf");	
+										sbasket.generateCsv(auth, path + "\\" + auth + "_" + name + ".csv");
+										// Send email
+										sendEmailWithAttachment(author, name, path + "\\" + auth + "_" + name);
+										System.out.println("Sent email to " + author.getEmail() + " with cc to " + author.getEmailCC());
+									}
+									// Save the rest on the desktop
+									File desktop = new File(System.getProperty("user.home"), "Desktop");
+									path = desktop.getAbsolutePath();
+									sbasket.generatePdf("", path + "\\" + "amiko_" + name + ".pdf");	
+									sbasket.generateCsv("", path + "\\" + "amiko_" + name + ".csv");									
+									// TODO: Display notification
 								}
 							});
 							m_web_panel.updateShoppingHtml();
@@ -959,6 +1023,57 @@ public class AMiKoDesk {
 			// ---> jWeb.setPreferredSize(new Dimension(640, 600));
 			// jWeb.setBorder(BorderFactory.createLineBorder(Color.GRAY));			
 			add(webBrowserPanel, BorderLayout.CENTER);
+		}
+		
+		public void sendEmailWithAttachment(Author author, String attachment_name, String attachment_path) {
+			String gln_code = m_prefs.get("glncode", "7610000000000");
+			String address = m_prefs.get("bestelladresse", "Keine Bestelladresse");
+			String email_address = m_prefs.get("emailadresse", "amiko@ywesee.com");
+				
+			Emailer em = new Emailer("AmiKo Bestellung " + attachment_name);
+			
+			em.setFrom("amiko@ywesee.com");
+			em.setRecipient(author.getEmail());
+			em.setSingleCC(author.getEmailCC());
+			em.setReplyTo(email_address);			
+			em.setBody(author.getSalutation() + "\n\nSie haben eine neue Bestellung erhalten.\n\n"
+					+ "GLN code: " + gln_code + "\n\n" 
+					+ "Bestelladresse:\n" + address + "\n\n"
+					+ "Siehe PDF Attachment.\n\nMit freundlichen Grüssen\nZeno Davatz");
+			em.addAttachment(attachment_name + ".pdf", attachment_path + ".pdf");
+			em.addAttachment(attachment_name + ".csv", attachment_path + ".csv");
+			
+			em.send();
+		}
+		
+		public String orderFileName() {
+			String gln_code = m_prefs.get("glncode", "7610000000000");
+			DateTime dT = new DateTime();
+			DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
+			return (gln_code + "_" + fmt.print(dT));			
+		}
+		
+		public void saveShoppingCart() {
+			SwingUtilities.invokeLater(new Runnable() {
+				@Override
+				public void run() {	
+					DateTime dT = new DateTime();
+					DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
+					String dir_name = m_application_data_folder+"\\shop";
+				   	File wdir = new File(dir_name);
+				   	if (!wdir.exists())
+				   		wdir.mkdirs();
+					File file = new File(dir_name+"\\warenkorb_" + fmt.print(dT) + ".ser");
+					if (file!=null) {
+						String filename = file.getAbsolutePath();
+						System.out.println("Saved shopping cart to " + filename);
+						byte[] serialized_bytes = FileOps.serialize(m_shopping_basket);
+						if (serialized_bytes!=null) {
+							FileOps.writeBytesToFile(filename, serialized_bytes);
+						}
+					}
+				}
+			});
 		}
 		
 		public void updateShoppingCart(String row_key, Article article) {
@@ -1178,17 +1293,20 @@ public class AMiKoDesk {
 		
 		public void updateListOfPackages() {
 			String[] packages = {"Packungen"};
+			String author = "";
 			if (med_index<med_id.size() && med_index>=0) {
 				// Get full info on selected medication
 				Medication m =  m_sqldb.getMediWithId(med_id.get(med_index));
 				list_of_articles.clear();
-				// Get packages
+				// Get packages and author
 				packages = m.getPackages().split("\n");
+				author = m.getAuth();
 				if (packages!=null) {
 					for (int i=0; i<packages.length; ++i) {
 						if (!packages[i].isEmpty()) {
 							String[] entry = packages[i].split("\\|");
 							Article article = new Article(entry);
+							article.setAuthor(author);
 							list_of_articles.add(article);
 							packages[i] = article.getPackTitle() + " [" + article.getPublicPrice() + "]";
 						}
@@ -2242,7 +2360,9 @@ public class AMiKoDesk {
 				//invokeLater potentially in the wrong place... more testing required
 				SwingUtilities.invokeLater(new Runnable() {
 					@Override
-					public void run() {							
+					public void run() {
+						if (m_curr_uistate.isLoadCart())
+							m_curr_uistate.restoreUseMode();
 						m_start_time = System.currentTimeMillis();
 						m_query_str = searchField.getText();
 						// Queries for SQLite DB
@@ -2296,6 +2416,8 @@ public class AMiKoDesk {
 		but_title.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
+				if (m_curr_uistate.isLoadCart())
+					m_curr_uistate.restoreUseMode();
 				searchField.setText(final_search + " " + final_title);
 				m_curr_uistate.setQueryType(m_query_type = 0);
 				sTitle();
@@ -2305,6 +2427,8 @@ public class AMiKoDesk {
 		but_auth.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
+				if (m_curr_uistate.isLoadCart())
+					m_curr_uistate.restoreUseMode();
 				searchField.setText(final_search + " " + final_author);
 				m_curr_uistate.setQueryType(m_query_type = 1);
 				sAuth();
@@ -2314,6 +2438,8 @@ public class AMiKoDesk {
 		but_atccode.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
+				if (m_curr_uistate.isLoadCart())
+					m_curr_uistate.restoreUseMode();
 				searchField.setText(final_search + " " + final_atccode);
 				m_curr_uistate.setQueryType(m_query_type = 2);
 				sATC();
@@ -2323,6 +2449,8 @@ public class AMiKoDesk {
 		but_regnr.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
+				if (m_curr_uistate.isLoadCart())
+					m_curr_uistate.restoreUseMode();
 				searchField.setText(final_search + " " + final_regnr);
 				m_curr_uistate.setQueryType(m_query_type = 3);
 				sRegNr();
@@ -2332,6 +2460,8 @@ public class AMiKoDesk {
 		but_therapy.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent ae) {
+				if (m_curr_uistate.isLoadCart())
+					m_curr_uistate.restoreUseMode();
 				searchField.setText(final_search + " " + final_therapy);
 				m_curr_uistate.setQueryType(m_query_type = 4);
 				sTherapy();

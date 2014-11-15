@@ -562,7 +562,7 @@ public class SettingsPage extends JDialog {
 		mailServerProperties = System.getProperties();
 		mailServerProperties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
 		mailServerProperties.put("mail.transport.protocol", "smtps");
-		mailServerProperties.put("mail.smtps.host", "smtp.ifi.uzh.ch");
+		mailServerProperties.put("mail.smtps.host", "smtp.gmail.com");
 		mailServerProperties.put("mail.smtps.auth", "true"); // Enable Authentication
 
 		// Step2

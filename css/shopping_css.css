@@ -8,3 +8,4 @@
 #shopping .left{font-size:0.85em;margin:16px;}
 #shopping .right{font-size:0.85em;margin-right:16px;}
 #shopping .chart div {display:inline;font:10px sans-serif;text-align:right;padding:3px;margin:1px;color:white;}
+#buttons button {cursor:pointer;background-color:transparent;}

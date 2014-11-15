@@ -3,6 +3,7 @@ package com.maxl.java.amikodesk;
 public class UIState {
 
 	static String use_mode = "aips";
+	static String prev_use_mode = "aips";
 	static String database_used = "aips";
 	static int query_type = 0;
 	static int med_index = -1;
@@ -23,10 +24,10 @@ public class UIState {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = true;
 			shopping_mode = false;
-		} else if (use_mode.equals("shopping")) {
+		} else if (use_mode.equals("shopping") || use_mode.equals("loadcart")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = false;
-			shopping_mode = true;
+			shopping_mode = true;	
 		} else {
 			database_used = "aips";
 			seek_interactions = false;
@@ -35,6 +36,7 @@ public class UIState {
 	}
 
 	public void setUseMode(String use) {
+		prev_use_mode = use_mode;
 		use_mode = use;
 		if (use_mode.equals("aips")) {
 			database_used = "aips";
@@ -48,7 +50,7 @@ public class UIState {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = true;
 			shopping_mode = false;
-		} else if (use_mode.equals("shopping")) {
+		} else if (use_mode.equals("shopping") || use_mode.equals("loadcart")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = false;
 			shopping_mode = true;
@@ -57,6 +59,10 @@ public class UIState {
 			seek_interactions = false;
 			shopping_mode = false;
 		}
+	}
+	
+	public void restoreUseMode() {
+		use_mode = prev_use_mode;
 	}
 	
 	public String getUseMode() {
@@ -73,6 +79,10 @@ public class UIState {
 	
 	public boolean isShoppingMode() {
 		return shopping_mode;
+	}
+	
+	public boolean isLoadCart() {
+		return use_mode.equals("loadcart");
 	}
 	
 	public void setDatabaseUsed(String database) {

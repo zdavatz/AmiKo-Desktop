@@ -19,16 +19,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
-import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.OutputStreamWriter;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetEncoder;
-import java.nio.charset.CodingErrorAction;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -40,44 +30,19 @@ import java.util.prefs.Preferences;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Entities.EscapeMode;
 
-import com.itextpdf.text.Chunk;
-import com.itextpdf.text.Document;
-import com.itextpdf.text.DocumentException;
-import com.itextpdf.text.Element;
-import com.itextpdf.text.Font;
-import com.itextpdf.text.FontFactory;
-import com.itextpdf.text.Image;
-import com.itextpdf.text.PageSize;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.Phrase;
-import com.itextpdf.text.Rectangle;
-import com.itextpdf.text.pdf.BarcodeEAN;
-import com.itextpdf.text.pdf.ColumnText;
-import com.itextpdf.text.pdf.PdfContentByte;
-import com.itextpdf.text.pdf.PdfPCell;
-import com.itextpdf.text.pdf.PdfPTable;
-import com.itextpdf.text.pdf.PdfPageEventHelper;
-import com.itextpdf.text.pdf.PdfWriter;
-import com.itextpdf.text.pdf.draw.LineSeparator;
 import com.maxl.java.shared.Conditions;
 
 public class ShoppingCart implements java.io.Serializable {
 	
 	private static Map<String, Article> m_shopping_basket = null;
 	private static Map<String, Conditions> m_map_conditions = null;
+	private static Map<String, String> m_map_glns = null;
 	
 	private static String m_html_str = "";
 	private static String m_jscripts_str = null;
 	private static String m_css_shopping_cart_str = null;		
 	
-	private static Font font_norm_10 = FontFactory.getFont("Helvetica", 10, Font.NORMAL);
-	private static Font font_bold_10 = FontFactory.getFont("Helvetica", 10, Font.BOLD);
-	private static Font font_bold_16 = FontFactory.getFont("Helvetica", 16, Font.BOLD);
-
-	private static String LogoImageID = "logo";
-	private static String BestellAdresseID = "bestelladresse";
-	private static String LieferAdresseID = "lieferadresse";
-	private static String RechnungsAdresseID = "rechnungsadresse";
+	private static Preferences m_prefs;
 	
 	private static int m_draufgabe = 0;
 	private static int m_margin_percent = 80;	// default
@@ -87,17 +52,23 @@ public class ShoppingCart implements java.io.Serializable {
 		m_jscripts_str = FileOps.readFromFile(Constants.JS_FOLDER + "shopping_callbacks.js");
 		// Load shopping cart css style sheet
 		m_css_shopping_cart_str = "<style type=\"text/css\">" + FileOps.readFromFile(Constants.SHOPPING_SHEET) + "</style>";
-		// Load key
-		String key = FileOps.readFromFile(Constants.SHOP_FOLDER+"secret.txt").trim();
-		// Load encrypted files
+		// Preferences
+		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
+		// Load encrypted conditions files
 		byte[] encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"ibsa_conditions.ser");
 		// Decrypt and deserialize
 		if (encrypted_msg!=null) {
 			Crypto crypto = new Crypto();
 			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
-			System.out.println(Arrays.toString(plain_msg).substring(0, 128));
-			// m_map_conditions = new TreeMap<String, Conditions>();
 			m_map_conditions = (TreeMap<String, Conditions>)FileOps.deserialize(plain_msg);
+		}
+		// Load encrypted glns files
+		encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"ibsa_glns.ser");
+		// Decrypt and deserialize
+		if (encrypted_msg!=null) {
+			Crypto crypto = new Crypto();
+			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
+			m_map_glns = (TreeMap<String, String>)FileOps.deserialize(plain_msg);
 		}
 	}
 	
@@ -108,30 +79,11 @@ public class ShoppingCart implements java.io.Serializable {
 	public void setShoppingBasket(Map<String, Article> shopping_basket) {
 		m_shopping_basket = shopping_basket;
 	}
-	
-	/** Class to add a header and a footer. */
-    static class HeaderFooter extends PdfPageEventHelper {
-
-        public void onEndPage(PdfWriter writer, Document document) {
-            Rectangle rect = writer.getBoxSize("art");
-            switch(writer.getPageNumber() % 2) {
-                case 0:
-                    ColumnText.showTextAligned(writer.getDirectContent(),
-                        Element.ALIGN_RIGHT, new Phrase("Generiert mit AmiKo. Bestell-Modul gesponsort von IBSA.", 
-                        		font_norm_10), rect.getRight()-18, rect.getTop(), 0);
-                    break;
-                case 1:
-                    ColumnText.showTextAligned(writer.getDirectContent(),
-                        Element.ALIGN_LEFT, new Phrase("Generiert mit AmiKo. Bestell-Modul gesponsort von IBSA.",
-                        		font_norm_10), rect.getLeft(), rect.getTop(), 0);
-                    break;
-            }
-            ColumnText.showTextAligned(writer.getDirectContent(),
-                    Element.ALIGN_CENTER, new Phrase(String.format("Seite %d", writer.getPageNumber()), 
-                    		font_norm_10), (rect.getLeft() + rect.getRight())/2, rect.getBottom()-18, 0);
-        }
-    }	
     
+	Map<String, Article> getShoppingBasket() {
+		return m_shopping_basket;
+	}
+	
 	public int getDraufgabe(String ean_code, int units, char category) {
 		if (m_map_conditions!=null) {
 			if (m_map_conditions.containsKey(ean_code)) {
@@ -183,17 +135,20 @@ public class ShoppingCart implements java.io.Serializable {
 		String basket_html_str = "<form id=\"my_form\"><table id=\"Warenkorb\" width=\"99%25\">";
 		String bar_charts_str = "";
 		
-		String load_cart_str = "";
-		String save_cart_str = "";
+		String load_order_str = "";
+		String fast_order_1_str = "";
+		String fast_order_2_str = "";
+		String fast_order_3_str = "";
+		
 		String delete_all_button_str = "";
 		String generate_pdf_str = "";
 		String generate_csv_str = "";
+		String send_order_str = "";
 		
-		String load_cart_text = "";
-		String save_cart_text = "";
 		String delete_all_text = "";	
 		String generate_pdf_text = "";
 		String generate_csv_text = "";
+		String send_order_text = "";
 		
 		float subtotal_buying_CHF = 0.0f;
 		float subtotal_selling_CHF = 0.0f;
@@ -219,13 +174,17 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<td style=\"text-align:right;\"; width=\"5%\";><b>Rabatt</b></td>"		// 96			
 					+ "<td style=\"text-align:center;\"; width=\"4%\";><b>Löschen</b></td>"		// 100
 					+ "</tr>";
-			
+						
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();
 				String ean_code = article.getEanCode();
 				// Check if ean code is in conditions map (special treatment)
 				if (m_map_conditions.containsKey(ean_code)) {
 					article.setSpecial(true);
+					// Get category
+					String gln_code = m_prefs.get("glncode", "7610000000000");
+					System.out.println("Category for " + gln_code + " -> "+ m_map_glns.get(gln_code));
+					// 
 					Conditions c = m_map_conditions.get(ean_code);
 					// Extract rebate conditions for particular doctor/pharmacy
 					TreeMap<Integer, Float> rebate = c.getDiscountDoc('A');
@@ -429,28 +388,29 @@ public class ShoppingCart implements java.io.Serializable {
 			
 			basket_html_str += "</table></form>";
 			
-			// Warenkorb laden
-			load_cart_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Delete_all\">"
-					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadCart(this)\"><img src=\"" + images_dir + "load_cart_icon.png\" /></button></div></td>";
-			// Warenkorb speichern
-			save_cart_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Delete_all\">"
-					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"saveCart(this)\"><img src=\"" + images_dir + "save_cart_icon.png\" /></button></div></td>";
+			// Bestellungen und Schnellebestellungen
+			load_order_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,0)\">Alle Bestellungen</button>";			
+			fast_order_1_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,'1')\">Schnellbestellung 1</button>";
+			fast_order_2_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,'2')\">Schnellbestellung 2</button>";	
+			fast_order_3_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,'3')\">Schnellbestellung 3</button>";
+						
 			// Warenkorb löschen
-			delete_all_button_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Delete_all\">"
+			delete_all_button_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"delete_all\">"
 					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"deleteAll(this)\"><img src=\"" + images_dir + "delete_all_icon.png\" /></button></div></td>";
-			// Generate pdf button string
-			generate_pdf_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Delete_all\">"
+			// Generate pdf
+			generate_pdf_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Generate_pdf\">"
 					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"createPdf(this)\"><img src=\"" + images_dir + "pdf_save_icon.png\" /></button></div></td>";
-			// Generate csv button string
-			generate_csv_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Delete_all\">"
+			// Generate csv
+			generate_csv_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Generate_csv\">"
 					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"createCsv(this)\"><img src=\"" + images_dir + "csv_save_icon.png\" /></button></div></td>";		
-			//			
-			load_cart_text = "<td><div class=\"right\">Korb laden</div></td>";
-			save_cart_text = "<td><div class=\"right\">Korb speichern</div></td>";
-			delete_all_text = "<td><div class=\"right\">Korb löschen</div></td>";		
+			// Send order 
+			send_order_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Send_order\">"
+					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"sendOrder(this)\"><img src=\"" + images_dir + "order_send_icon.png\" /></button></div></td>";;
+			// Subtitles	
+			delete_all_text = "<td><div class=\"right\">Korb leeren</div></td>";		
 			generate_pdf_text = "<td><div class=\"right\">PDF generieren</div></td>";
 			generate_csv_text = "<td><div class=\"right\">CSV generieren</div></td>";
-			
+			send_order_text = "<td><div class=\"right\">Bestellung senden</div></td>";			
 		} else {	
 			// Warenkorb ist leer
 			if (Utilities.appLanguage().equals("de"))
@@ -458,247 +418,23 @@ public class ShoppingCart implements java.io.Serializable {
 			else if (Utilities.appLanguage().equals("fr"))
 				basket_html_str = "<div>Votre panier d'achat est vide.<br><br></div>";
 			
-			// Warenkorb laden
-			load_cart_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Delete_all\">"
-					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadCart(this)\"><img src=\"" + images_dir + "load_cart_icon.png\" /></button></div></td>";
-			//
-			load_cart_text = "<td><div class=\"right\">Korb laden</div></td>";
+			load_order_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,0)\">Alle Bestellungen</button>";			
+			fast_order_1_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,1)\">Schnellbestellung 1</button>";
+			fast_order_2_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,2)\">Schnellbestellung 2</button>";	
+			fast_order_3_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,3)\">Schnellbestellung 3</button>";	
 		}
 		
 		String jscript_str = "<script language=\"javascript\">" + m_jscripts_str+ "</script>";
 		m_html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_shopping_cart_str + "</head>"
-				+ "<body><div id=\"shopping\">" 
-				+ basket_html_str
-				+ bar_charts_str + "<br />"
-				+ "<form><table class=\"container\"><tr>" + load_cart_str + save_cart_str + delete_all_button_str + generate_pdf_str + generate_csv_str + "</tr>"
-				+ "<tr>" + load_cart_text + save_cart_text + delete_all_text + generate_pdf_text + generate_csv_text + "</tr></table></form>"
+				+ "<body>"
+				+ "<div id=\"buttons\">" + load_order_str + fast_order_1_str + fast_order_2_str + fast_order_3_str + "</div>"
+				+ "<div id=\"shopping\">" + basket_html_str + bar_charts_str + "<br />"
+				+ "<form><table class=\"container\"><tr>" + delete_all_button_str + generate_pdf_str + generate_csv_str + send_order_str + "</tr>"
+				+ "<tr>" + delete_all_text + generate_pdf_text + generate_csv_text + send_order_text + "</tr></table></form>"
 				+ "</div></body></html>";		
 		
 		return m_html_str;
 	}
-	
-	public void generatePdf(String filename) {
-		// A4: 8.267in x 11.692in => 595.224units x 841.824units (72units/inch)
-		
-		// marginLeft, marginRight, marginTop, marginBottom
-        Document document = new Document(PageSize.A4, 50, 50, 80, 50);
-        try {
-        	if (!m_html_str.isEmpty()) {
-        		/*
-        		String html_str = prettyHtml(createHtml());
-        		Utilities.writeToFile(html_str, "", "test.html");
-        		*/
-        		
-        		Preferences mPrefs = Preferences.userRoot().node(SettingsPage.class.getName());
-        		        		
-        		PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream(filename));        		
-        		writer.setBoxSize("art", new Rectangle(50, 50, 560, 790));
-        		
-        		HeaderFooter event = new HeaderFooter();
-                writer.setPageEvent(event);        		
-        		
-        		document.open();
-        		
-        		PdfContentByte cb = writer.getDirectContent();
-        		
-        		document.addAuthor("ywesee GmbH");
-        		document.addCreator("AmiKo for Windows");
-        		document.addCreationDate();
-        		
-        		// Logo
-        		String logoImageStr = mPrefs.get(LogoImageID, Constants.IMG_FOLDER + "empty_logo.png");	
-        		File logoFile = new File(logoImageStr);
-        		if (!logoFile.exists())
-        			logoImageStr = Constants.IMG_FOLDER + "empty_logo.png";        		
-        		
-        		Image logo = Image.getInstance(logoImageStr);
-        		logo.scalePercent(30);
-        		logo.setAlignment(Rectangle.ALIGN_RIGHT);
-        		document.add(logo);        		
-
-        		document.add(Chunk.NEWLINE);
-        		
-        		// Bestelladresse
-        		String bestellAdrStr = mPrefs.get(BestellAdresseID, "Keine Bestelladresse");
-        		Paragraph p = new Paragraph(12);
-        		// p.setIndentationLeft(60);
-        		p.add(new Chunk(bestellAdrStr, font_norm_10));
-        		document.add(p);
-
-        		document.add(Chunk.NEWLINE);
-        		
-        		// Title
-        		p = new Paragraph("Bestellung", font_bold_16);
-        		document.add(p);
-                
-                // Date
-        		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-        		Date date = new Date();
-        		p = new Paragraph("Datum: " + dateFormat.format(date), font_bold_10);
-        		p.setSpacingAfter(20);
-        		document.add(p);
-
-        		// document.add(Chunk.NEWLINE);
-        		
-        		// Add addresses (Lieferadresse + Rechnungsadresse)
-        		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
-        		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");        		
-        		
-                PdfPTable addressTable = new PdfPTable(new float[] {1,1});
-                addressTable.setWidthPercentage(100f);
-                addressTable.getDefaultCell().setPadding(5);
-                addressTable.setSpacingAfter(5f);
-                addressTable.addCell(getStringCell("Lieferadresse", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-                addressTable.addCell(getStringCell("Rechnungsdresse", font_bold_10,	PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));     		
-                addressTable.addCell(getStringCell(lieferAdrStr, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-                addressTable.addCell(getStringCell(rechnungsAdrStr, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-                document.add(addressTable);
-                
-        		document.add(Chunk.NEWLINE);                
-                
-        		// Add shopping basket
-        		document.add(getShoppingBasket(cb));    
-        		
-        		LineSeparator separator = new LineSeparator();
-        		document.add(separator);
-        		/*
-        		XMLWorkerHelper worker = XMLWorkerHelper.getInstance();
-        		worker.parseXHtml(writer, document, new StringReader(html_str));
-        		*/
-        	}
-        } catch (IOException e) {
-        	
-        } catch (DocumentException e) {
-        	
-        }
-        
-        document.close();        
-        System.out.println( "PDF Created!" );
-	}	
-	
-	public PdfPTable getShoppingBasket(PdfContentByte cb) {
-		int position = 0;
-		float total_CHF = 0.0f;
-		float rebate_percent = 0.05f;
-
-		BarcodeEAN codeEAN = new BarcodeEAN();
-		
-		// Pos | Menge | Eancode | Bezeichnung | Preis
-        PdfPTable table = new PdfPTable(new float[] {1,1,3,6,2});
-        table.setWidthPercentage(100f);
-        table.getDefaultCell().setPadding(5);
-        table.setSpacingAfter(5f);
-        
-		PdfPCell cell = new PdfPCell();	
-        
-        table.addCell(getStringCell("Pos.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
-		table.addCell(getStringCell("Anz.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("GTIN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("Bezeichnung", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("Preis (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
-		        
-        if (m_shopping_basket.size()>0) {
-			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-				Article article = entry.getValue();				
-				
-				String price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
-
-				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {						
-					table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-					table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-					
-			        codeEAN.setCode(article.getEanCode());
-			        Image img = codeEAN.createImageWithBarcode(cb, null, null);
-			        img.scalePercent(120);
-			        cell = new PdfPCell(img);
-			        cell.setBorder(Rectangle.NO_BORDER);
-			        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-			        cell.setUseBorderPadding(true);
-			        cell.setBorderWidth(5);
-			        if (position==1)
-			        	cell.setPaddingTop(8);
-			        else
-			        	cell.setPaddingTop(0);
-			        cell.setPaddingBottom(8);
-			        table.addCell(cell);
-			        
-					table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
-					
-					float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-					total_CHF += price_CHF;					
-					table.addCell(getStringCell(String.format("%.2f", price_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));						
-				}
-			}
-			
-			table.addCell(getStringCell("Warenwert", font_norm_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell("", font_norm_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", total_CHF), font_norm_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));
-
-			table.addCell(getStringCell("Rabatt (" + 100*rebate_percent + "%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("-%.2f", total_CHF*rebate_percent), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
-			
-			float zwischen_total_CHF = total_CHF*(1.0f-rebate_percent);
-
-			table.addCell(getStringCell("Zwischentotal", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));					
-			
-			table.addCell(getStringCell("MwSt (8%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF*0.08f), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
-			
-			table.addCell(getStringCell("Total", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF*1.08f), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
-		}
-        return table;
-	}
-	
-	public void generateCsv(String filename) {
-        if (m_shopping_basket.size()>0) {
-        	int pos = 0;
-        	String shopping_basket_str = "";
-			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-				Article article = entry.getValue();				
-				
-				String price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
-				if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
-					float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-					shopping_basket_str += (++pos) + "|" 
-							+ article.getQuantity() + "|" 
-							+ article.getEanCode() + "|" 
-							+ article.getPackTitle() + "|" 
-							+ price_pruned + "|"
-							+ price_CHF + "\n"; 
-				}
-			}
-			try {
-				CharsetEncoder encoder = Charset.forName("UTF-8").newEncoder();
-			   	encoder.onMalformedInput(CodingErrorAction.REPORT);
-			   	encoder.onUnmappableCharacter(CodingErrorAction.REPORT);
-				OutputStreamWriter osw = new OutputStreamWriter(new FileOutputStream(filename), encoder);
-				BufferedWriter bw = new BufferedWriter(osw);      			
-				bw.write(shopping_basket_str);
-				bw.close();
-	        } catch(IOException e) {
-	        	System.out.println("Could not save the csv file...");
-	        }
-        }
-	}
-	
-	private PdfPCell getStringCell(String str, Font font, int border, int align, int colspan) {
-		PdfPCell cell = new PdfPCell(new Paragraph(str, font));
-		cell.setPaddingTop(5);
-		cell.setPaddingBottom(5);
-		cell.setBorderWidth(1);
-		cell.setBorder(border);
-		cell.setHorizontalAlignment(align);
-		cell.setVerticalAlignment(Element.ALIGN_MIDDLE /*.ALIGN_CENTER*/);
-		cell.setColspan(colspan);
-
-		return cell;
-	}	
 	
 	public String createHtml() {
 		String clean_html_str = "";	

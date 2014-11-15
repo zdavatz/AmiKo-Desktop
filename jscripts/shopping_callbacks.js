@@ -25,12 +25,8 @@ function deleteAll(event) {
 	invokeJava("delete_all",0);
 }
 
-function loadCart(event) {
-	invokeJava("load_cart",0);
-}
-
-function saveCart(event) {
-	invokeJava("save_cart",0);
+function loadOrder(event,index) {
+	invokeJava("load_cart",index);
 }
 
 function createPdf(event) {
@@ -39,6 +35,10 @@ function createPdf(event) {
 
 function createCsv(event) {
 	invokeJava("create_csv",0);
+}
+
+function sendOrder(event) {
+	invokeJava("send_order",0);
 }
 
 function changeQty(tableID,currentRow) {

@@ -9,6 +9,7 @@ public class Article implements java.io.Serializable {
 	private String additional_info;
 	private String ean_code;
 	private String pharma_code;
+	private String author;
 	private float margin = -1.0f;	// <0.0f -> not initialized
 	private float buying_price = 0.0f;
 	private float selling_price = 0.0f;;
@@ -62,6 +63,14 @@ public class Article implements java.io.Serializable {
 
 	public void setPharmaCode(String pharma_code) {
 		this.pharma_code = pharma_code;
+	}
+	
+	public String getAuthor() {
+		return author;
+	}
+	
+	public void setAuthor(String author) {
+		this.author = author;
 	}
 	
 	public String getPackTitle() {

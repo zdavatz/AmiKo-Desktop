@@ -9,7 +9,8 @@ public class User {
 	private String post_code;
 	private String city;
 	private String country;
-	private String type;	
+	private String type;
+	private String category;
 	private boolean is_human;	// human/corporation
 	private boolean dispensation_permit;
 	private boolean anaesthesia_permit;
@@ -84,6 +85,14 @@ public class User {
 	
 	public void setType(String type) {
 		this.type = type;
+	}
+	
+	public String getCategory() {
+		return category;
+	}
+	
+	public void setCategory(String category) {
+		this.category = category;
 	}
 	
 	public boolean isHuman() {
