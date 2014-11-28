@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2014 Max Lungarella <cybrmx@gmail.com>
+
+This file is part of AmiKoDesk for Windows.
+
+AmiKoDesk is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package com.maxl.java.amikodesk;
 
 public class Article implements java.io.Serializable {
@@ -15,6 +34,7 @@ public class Article implements java.io.Serializable {
 	private float selling_price = 0.0f;;
 	private int quantity = 1;
 	private int draufgabe = 0;
+	private float cash_rebate = 0.0f; // [%]
 	private int onstock;
 	private boolean special = false;
 	
@@ -216,6 +236,10 @@ public class Article implements java.io.Serializable {
 			return (int)(0.5f+(tot_selling_price/tot_buying_price-1.0f)*100.0f);
 		return 0;
 	}
+
+	public void setCashRebate(float cash_rebate) {
+		this.cash_rebate = cash_rebate;
+	}
 	
 	/**
 	 * Calculates  "barrabatt"
@@ -234,10 +258,10 @@ public class Article implements java.io.Serializable {
 			}
 		}
 		*/
-		if (draufgabe>0) {
-			return (0.5f+100.0f*(float)draufgabe/(draufgabe+quantity));
-		}
-		return 0.0f;
+		if (draufgabe>0)
+			return (100.0f*(float)draufgabe/(draufgabe+quantity));
+		else 
+			return cash_rebate;
 	}
 	
 	public void setMargin(float margin) {
@@ -293,7 +317,10 @@ public class Article implements java.io.Serializable {
 	}
 	
 	public void setDraufgabe(int draufgabe) {
-		this.draufgabe = draufgabe;
+		if (draufgabe>0)
+			this.draufgabe = draufgabe;
+		else
+			this.draufgabe = 0;
 	}
 	
 	public void setItemsOnStock(int onstock) {

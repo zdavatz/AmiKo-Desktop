@@ -21,8 +21,8 @@ package com.maxl.java.amikodesk;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
@@ -35,8 +35,8 @@ import com.maxl.java.shared.Conditions;
 public class ShoppingCart implements java.io.Serializable {
 	
 	private static Map<String, Article> m_shopping_basket = null;
-	private static Map<String, Conditions> m_map_conditions = null;
-	private static Map<String, String> m_map_glns = null;
+	private static Map<String, Conditions> m_map_ibsa_conditions = null;
+	private static Map<String, String> m_map_ibsa_glns = null;
 	
 	private static String m_html_str = "";
 	private static String m_jscripts_str = null;
@@ -44,8 +44,9 @@ public class ShoppingCart implements java.io.Serializable {
 	
 	private static Preferences m_prefs;
 	
-	private static int m_draufgabe = 0;
 	private static int m_margin_percent = 80;	// default
+	
+	private static int m_cart_index = -1;
 	
 	public ShoppingCart() {
 		// Load javascripts
@@ -60,7 +61,7 @@ public class ShoppingCart implements java.io.Serializable {
 		if (encrypted_msg!=null) {
 			Crypto crypto = new Crypto();
 			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
-			m_map_conditions = (TreeMap<String, Conditions>)FileOps.deserialize(plain_msg);
+			m_map_ibsa_conditions = (TreeMap<String, Conditions>)FileOps.deserialize(plain_msg);
 		}
 		// Load encrypted glns files
 		encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"ibsa_glns.ser");
@@ -68,8 +69,16 @@ public class ShoppingCart implements java.io.Serializable {
 		if (encrypted_msg!=null) {
 			Crypto crypto = new Crypto();
 			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
-			m_map_glns = (TreeMap<String, String>)FileOps.deserialize(plain_msg);
+			m_map_ibsa_glns = (TreeMap<String, String>)FileOps.deserialize(plain_msg);
 		}
+	}
+	
+	public void setCartIndex(int index) {
+		m_cart_index = index;
+	}
+	
+	public int getCartIndex() {
+		return m_cart_index;
 	}
 	
 	public void setMarginPercent(int margin) {
@@ -84,17 +93,102 @@ public class ShoppingCart implements java.io.Serializable {
 		return m_shopping_basket;
 	}
 	
-	public int getDraufgabe(String ean_code, int units, char category) {
-		if (m_map_conditions!=null) {
-			if (m_map_conditions.containsKey(ean_code)) {
-				TreeMap<Integer, Float> ddoc = m_map_conditions.get(ean_code).getDiscountDoc(category);
-				if (ddoc.size()>0)
-					return (int)(units*ddoc.get(units)/100.0f);
+	public TreeMap<Integer, Float> getRebateMap(String ean_code) {
+		TreeMap<Integer, Float> rebate_map = null;
+		String gln_code = m_prefs.get("glncode", "7610000000000");
+
+		if (m_map_ibsa_glns.containsKey(gln_code)) {
+			char user_class = m_map_ibsa_glns.get(gln_code).charAt(0);
+			// Is the user human or corporate?
+			String user_type = m_prefs.get("type", "arzt");
+			// Get rebate conditions
+			Conditions c = m_map_ibsa_conditions.get(ean_code);
+			// Extract rebate conditions for particular doctor/pharmacy	
+			if (user_type.equals("arzt")) {
+				rebate_map = c.getDiscountDoc(user_class);
+			} else {
+				if (user_type.equals("spital") || user_type.equals("wissenschaft") || user_type.equals("behörde")) {
+					rebate_map = c.getDiscountHospital(user_class);
+				} else if (user_type.equals("apotheke")) {
+					if (c.isPromoTime(user_class))
+						rebate_map = c.getDiscountPromo(user_class);
+					else
+						rebate_map = c.getDiscountFarma(user_class);
+				}
+			}
+		}
+		return rebate_map;
+	}
+
+	public List<String> getAssortList(String ean_code) {
+		List<String> assort_list = null;
+		String gln_code = m_prefs.get("glncode", "7610000000000");
+
+		if (m_map_ibsa_glns.containsKey(gln_code)) {
+			char user_class = m_map_ibsa_glns.get(gln_code).charAt(0);
+			// Is the user human or corporate?			
+			String user_type = m_prefs.get("type", "arzt");
+			// System.out.println("Category for GLN " + gln_code + ": " + user_class + "-" + user_type);
+			// Get rebate conditions
+			Conditions c = m_map_ibsa_conditions.get(ean_code);			
+			if (user_type.equals("arzt")) {
+				assort_list = c.getAssortDoc();
+			} else {
+				if (user_type.equals("apotheke")) {
+					if (c.isPromoTime(user_class))
+						assort_list = c.getAssortPromo();
+					else
+						assort_list = c.getAssortFarma();
+				}
+			}		
+		}
+		return assort_list;
+	}
+	
+	public int getDraufgabe(String ean_code, int units) {
+		if (m_map_ibsa_conditions!=null) {
+			if (m_map_ibsa_conditions.containsKey(ean_code)) {
+				TreeMap<Integer, Float> rebate = getRebateMap(ean_code);
+				if (rebate.size()>0) {
+					// if rebate.get(units)>0 -> Warenrabatt [#]
+					if (rebate.get(units)>0)
+						return (int)(units*rebate.get(units)/100.0f);
+				}
 			}
 		}
 		return 0;
 	}
     
+	public float getCashRebate(String ean_code, int units) {
+		if (m_map_ibsa_conditions!=null) {
+			if (m_map_ibsa_conditions.containsKey(ean_code)) {
+				TreeMap<Integer, Float> rebate = getRebateMap(ean_code);
+				if (rebate.size()>0) {
+					// if rebate.get(units)<0 -> Barrabatt [%]
+					if (rebate.get(units)<=0)
+						return -rebate.get(units);
+				}
+			}
+		}
+		return 0.0f;
+	}
+	
+	public float getGrandTotalCashRebate() {	
+		// float sum_weighted_draufgabe = 0.0f;
+		float sum_weighted_tot_quantity = 0.0f;
+		float sum_weighted_cash_rebate = 0.0f;
+		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+			Article article = entry.getValue();
+			// sum_weighted_draufgabe += article.getBuyingPrice()*article.getDraufgabe();
+			sum_weighted_tot_quantity += article.getBuyingPrice()*(article.getDraufgabe()+article.getQuantity());		
+			if (article.getDraufgabe()>0)
+				sum_weighted_cash_rebate += article.getBuyingPrice()*article.getQuantity();
+			else
+				sum_weighted_cash_rebate += article.getBuyingPrice()*article.getQuantity()*(1.0f-article.getCashRebate()/100.0f);
+		}				
+		return (100.0f*(sum_weighted_tot_quantity-sum_weighted_cash_rebate)/sum_weighted_tot_quantity);
+	}
+	
 	public int totQuantity() {
 		int qty = 0;
 		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
@@ -131,6 +225,22 @@ public class ShoppingCart implements java.io.Serializable {
 		return tot_selling;
     }
     
+    public void updateAssortedCart() {
+		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+			Article article = entry.getValue();
+			String ean_code = article.getEanCode();
+			// Get assort list
+			List<String> assort_list = getAssortList(ean_code);
+			int assort_qty = 0;
+			for (String al : assort_list) {
+				if (m_shopping_basket.containsKey(al)) {
+					assort_qty += m_shopping_basket.get(al).getQuantity();
+					System.out.println("Assort: " + al + " -> " + m_shopping_basket.get(al).getQuantity() + " / " + m_shopping_basket.get(al).getDraufgabe());
+				}
+			}
+		}
+    }
+    
 	public String updateShoppingCartHtml(Map<String, Article> shopping_basket) {
 		String basket_html_str = "<form id=\"my_form\"><table id=\"Warenkorb\" width=\"99%25\">";
 		String bar_charts_str = "";
@@ -139,6 +249,8 @@ public class ShoppingCart implements java.io.Serializable {
 		String fast_order_1_str = "";
 		String fast_order_2_str = "";
 		String fast_order_3_str = "";
+		String fast_order_4_str = "";
+		String fast_order_5_str = "";
 		
 		String delete_all_button_str = "";
 		String generate_pdf_str = "";
@@ -157,11 +269,11 @@ public class ShoppingCart implements java.io.Serializable {
 				
 		String images_dir = System.getProperty("user.dir") + "/images/";	
 		
-		if (m_shopping_basket.size()>0) {
+		if (m_shopping_basket!=null && m_shopping_basket.size()>0) {
 			int index = 1;			
 			
 			basket_html_str += "<tr>"
-					+ "<td style=\"text-align:left\"; width=\"9%\";><b>EAN</b></td>"			// 9
+					+ "<td style=\"text-align:left\"; width=\"10%\";><b>EAN</b></td>"			// 9
 					+ "<td style=\"text-align:left\"; width=\"28%\";><b>Artikel</b></td>"		// 36
 					+ "<td style=\"text-align:left\"; width=\"3%\"; ><b>Kat</b></td>"			// 39			
 					+ "<td style=\"text-align:right\"; width=\"7%\";><b>Menge</b></td>"			// 46
@@ -172,52 +284,65 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<td style=\"text-align:right;\"; width=\"9%\";><b>Tot.Erlös</b></td>"	// 80				
 					+ "<td style=\"text-align:right;\"; width=\"9%\";><b>Gewinn</b></td>"		// 89
 					+ "<td style=\"text-align:right;\"; width=\"5%\";><b>Rabatt</b></td>"		// 96			
-					+ "<td style=\"text-align:center;\"; width=\"4%\";><b>Löschen</b></td>"		// 100
+					+ "<td style=\"text-align:center;\"; width=\"3%\";></td>"					// 100
 					+ "</tr>";
 						
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();
 				String ean_code = article.getEanCode();
+				int draufgabe = 0;
 				// Check if ean code is in conditions map (special treatment)
-				if (m_map_conditions.containsKey(ean_code)) {
+				if (m_map_ibsa_conditions.containsKey(ean_code)) {
 					article.setSpecial(true);
-					// Get category
-					String gln_code = m_prefs.get("glncode", "7610000000000");
-					System.out.println("Category for " + gln_code + " -> "+ m_map_glns.get(gln_code));
-					// 
-					Conditions c = m_map_conditions.get(ean_code);
+					// Get rebate conditions
+					Conditions c = m_map_ibsa_conditions.get(ean_code);
+					System.out.println(index + ": " + ean_code + " - " + c.name);					
 					// Extract rebate conditions for particular doctor/pharmacy
-					TreeMap<Integer, Float> rebate = c.getDiscountDoc('A');
+					TreeMap<Integer, Float> rebate_map = getRebateMap(ean_code);
 					// --> These medis have a drop-down menu with the given "Naturalrabatt"
-					if (rebate.size()>0) {
+					if (rebate_map!=null && rebate_map.size()>0) {
 						// Initialize draufgabe
-						int qty = rebate.firstEntry().getKey();		
-						float reb = rebate.firstEntry().getValue(); // [%]
-						m_draufgabe = (int)(qty*reb/100.0f);
-						article.setDraufgabe(m_draufgabe);	
-						// Loop through all possible packages (units -> rebate mapping)					
+						int qty = rebate_map.firstEntry().getKey();
+						float reb = rebate_map.firstEntry().getValue(); // [%]
+						if (reb>0) {	
+							draufgabe = (int)(qty*reb/100.0f);		
+							article.setDraufgabe(draufgabe);
+						} else {
+							article.setDraufgabe(0);					
+							article.setCashRebate(-reb);
+						}
+						// Loop through all possible packages (units -> rebate mapping)	
 						boolean qty_found = false;
 						String value_str = "";					
-						for (Map.Entry<Integer, Float> e : rebate.entrySet()) {
+						for (Map.Entry<Integer, Float> e : rebate_map.entrySet()) {
 							qty = e.getKey();
 							reb = e.getValue();
 							if (qty==article.getQuantity()) {
 								value_str += "<option selected=\"selected\" value=\"" + qty + "\">" + qty + "</option>";
-								m_draufgabe = (int)(qty*reb/100.0f);
-								article.setDraufgabe(m_draufgabe);
+								if (reb>0) {
+									draufgabe = (int)(qty*reb/100.0f);
+									article.setDraufgabe(draufgabe);
+								} else {		
+									article.setDraufgabe(0);
+									article.setCashRebate(-reb);
+								}
 								qty_found = true;
 							} else {
 								value_str += "<option value=\"" + qty + "\">" + qty + "</option>";	
 							}
 						}
-	
+						
 						if (!qty_found)
-							article.setQuantity(rebate.firstEntry().getKey());
+							article.setQuantity(rebate_map.firstEntry().getKey());
 						
 						article.setMargin(m_margin_percent/100.0f);
-						article.setBuyingPrice(c.fep_chf);
-						subtotal_buying_CHF += article.getTotBuyingPrice();
-						subtotal_selling_CHF += article.getTotSellingPrice();
+						
+						article.setBuyingPrice(c.fep_chf);	
+						if (article.getDraufgabe()>0)
+							subtotal_buying_CHF += article.getTotBuyingPrice();							
+						else
+							subtotal_buying_CHF += article.getTotBuyingPrice()*(1.0f-article.getCashRebate()/100.0f);
+						subtotal_selling_CHF += article.getTotSellingPrice();					
 						
 						String category = article.getCategories();
 						
@@ -227,6 +352,9 @@ public class ShoppingCart implements java.io.Serializable {
 						String tot_selling_price_CHF = String.format("%.2f", article.getTotSellingPrice());
 						String profit_CHF = String.format("%.2f", article.getTotSellingPrice()-article.getTotBuyingPrice());
 						String cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
+						String bonus = "";
+						if (article.getDraufgabe()>0)
+							bonus = String.format("+ %d", article.getDraufgabe());
 						
 						basket_html_str += "<tr id=\"" + ean_code + "\">";
 						basket_html_str += "<td>" + ean_code + "</td>"
@@ -234,7 +362,7 @@ public class ShoppingCart implements java.io.Serializable {
 								+ "<td>" + category + "</td>"
 								+ "<td style=\"text-align:right;\">" + "<select id=\"selected" + index + "\" style=\"width:50px; direction:rtl; text-align:right;\" onchange=\"onSelect('Warenkorb',this," + index + ")\"" +
 									" tabindex=\"" + index + "\">" + value_str + "</select></td>"
-								+ "<td style=\"text-align:right;\">+ " + m_draufgabe + "</td>"	
+								+ "<td style=\"text-align:right;\">" + bonus + "</td>"	
 								+ "<td style=\"text-align:right;\">" + buying_price_CHF + "</td>"	
 								+ "<td style=\"text-align:right;\">" + selling_price_CHF + "</td>"							
 								+ "<td style=\"text-align:right;\">" + tot_buying_price_CHF + "</td>"
@@ -245,7 +373,7 @@ public class ShoppingCart implements java.io.Serializable {
 									+ images_dir + "trash_icon.png\" /></button>" + "</td>";
 						basket_html_str += "</tr>";	
 					} else {
-						// --> These medis are tread like any other medi, the prices, however, come from the IBSA Excel file
+						// --> These medis are like any other medi, the prices, however, come from the IBSA Excel file
 						int quantity = article.getQuantity();
 						
 						article.setBuyingPrice(c.fep_chf);
@@ -319,7 +447,8 @@ public class ShoppingCart implements java.io.Serializable {
 			String grand_total_buying_CHF = Utilities.prettyFormat(subtotal_buying_CHF*1.08f);
 			String grand_total_selling_CHF = Utilities.prettyFormat(subtotal_selling_CHF*1.08f);
 			String grand_total_profit_CHF = Utilities.prettyFormat((subtotal_selling_CHF-subtotal_buying_CHF)*1.08f);
-			String grand_total_cash_rebate_percent = String.format("%.1f%%", (0.5f+100.0f*(float)totDraufgabe()/(totDraufgabe()+totQuantity())));
+			// String grand_total_cash_rebate_percent = String.format("%.1f%%", (0.5f+100.0f*(float)totDraufgabe()/(totDraufgabe()+totQuantity())));
+			String grand_total_cash_rebate_percent = String.format("%.1f%%", getGrandTotalCashRebate());
 			float subtotal_profit_CHF = subtotal_selling_CHF-subtotal_buying_CHF;
 			basket_html_str += "<tr id=\"Subtotal\">"
 					+ "<td style=\"padding-top:10px\"></td>"
@@ -381,19 +510,13 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + totSelling_width + "px; background-color:forestgreen;\">Tot.Erlös: " + grand_total_selling_CHF + " CHF</div></td></tr>";
 			
 			basket_html_str += "<tr>"
-					+ "<td>Marge (%)</td>"
+					+ "<td>Vertriebsanteil (%)</td>"
 					+ "<td style=\"text-align:left;\"><input type=\"number\" name=\"points\" maxlength=\"3\" min=\"1\" max=\"999\" style=\"width:40px; text-align:right;\"" 
 					+ " value=\"" + m_margin_percent + "\" onkeydown=\"changeMarge('Warenkorb',this)\" id=\"marge\" /></td>"
 					+ "</tr>";		
 			
 			basket_html_str += "</table></form>";
 			
-			// Bestellungen und Schnellebestellungen
-			load_order_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,0)\">Alle Bestellungen</button>";			
-			fast_order_1_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,'1')\">Schnellbestellung 1</button>";
-			fast_order_2_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,'2')\">Schnellbestellung 2</button>";	
-			fast_order_3_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,'3')\">Schnellbestellung 3</button>";
-						
 			// Warenkorb löschen
 			delete_all_button_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"delete_all\">"
 					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"deleteAll(this)\"><img src=\"" + images_dir + "delete_all_icon.png\" /></button></div></td>";
@@ -408,8 +531,8 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"sendOrder(this)\"><img src=\"" + images_dir + "order_send_icon.png\" /></button></div></td>";;
 			// Subtitles	
 			delete_all_text = "<td><div class=\"right\">Korb leeren</div></td>";		
-			generate_pdf_text = "<td><div class=\"right\">PDF generieren</div></td>";
-			generate_csv_text = "<td><div class=\"right\">CSV generieren</div></td>";
+			generate_pdf_text = "<td><div class=\"right\">PDF erstellen</div></td>";
+			generate_csv_text = "<td><div class=\"right\">CSV erstellen</div></td>";
 			send_order_text = "<td><div class=\"right\">Bestellung senden</div></td>";			
 		} else {	
 			// Warenkorb ist leer
@@ -417,17 +540,20 @@ public class ShoppingCart implements java.io.Serializable {
 				basket_html_str = "<div>Ihr Warenkorb ist leer.<br><br></div>";
 			else if (Utilities.appLanguage().equals("fr"))
 				basket_html_str = "<div>Votre panier d'achat est vide.<br><br></div>";
-			
-			load_order_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,0)\">Alle Bestellungen</button>";			
-			fast_order_1_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,1)\">Schnellbestellung 1</button>";
-			fast_order_2_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,2)\">Schnellbestellung 2</button>";	
-			fast_order_3_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,3)\">Schnellbestellung 3</button>";	
 		}
+		
+		// Bestellungen und Schnellebestellungen
+		load_order_str = "<button type=\"button\" class=\"buttonStyle\" tabindex=\"-1\" onmouseup=\"loadOrder(this,0)\">Alle Bestellungen</button>";			
+		fast_order_1_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,1)\">Warenkorb 1</button>";
+		fast_order_2_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,2)\">Warenkorb 2</button>";	
+		fast_order_3_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,3)\">Warenkorb 3</button>";	
+		fast_order_4_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,4)\">Warenkorb 4</button>";	
+		fast_order_5_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,5)\">Warenkorb 5</button>";
 		
 		String jscript_str = "<script language=\"javascript\">" + m_jscripts_str+ "</script>";
 		m_html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_shopping_cart_str + "</head>"
 				+ "<body>"
-				+ "<div id=\"buttons\">" + load_order_str + fast_order_1_str + fast_order_2_str + fast_order_3_str + "</div>"
+				+ "<div id=\"buttons\">" + load_order_str + fast_order_1_str + fast_order_2_str + fast_order_3_str + fast_order_4_str + fast_order_5_str + "</div>"
 				+ "<div id=\"shopping\">" + basket_html_str + bar_charts_str + "<br />"
 				+ "<form><table class=\"container\"><tr>" + delete_all_button_str + generate_pdf_str + generate_csv_str + send_order_str + "</tr>"
 				+ "<tr>" + delete_all_text + generate_pdf_text + generate_csv_text + send_order_text + "</tr></table></form>"

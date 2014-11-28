@@ -1,3 +1,22 @@
+/*
+Copyright (c) 2014 Max Lungarella <cybrmx@gmail.com>
+
+This file is part of AmiKoDesk for Windows.
+
+AmiKoDesk is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package com.maxl.java.amikodesk;
 
 import java.awt.Color;
@@ -57,6 +76,8 @@ public class SettingsPage extends JDialog {
 	private static String UpdateID = "update";
 	private static String LogoImageID = "logo";
 	private static String GLNCodeID = "glncode";
+	private static String HumanID = "ishuman";
+	private static String TypeID = "type"; 
 	private static String BestellAdresseID = "bestelladresse";
 	private static String LieferAdresseID = "lieferadresse";
 	private static String RechnungsAdresseID = "rechnungsadresse";
@@ -95,7 +116,6 @@ public class SettingsPage extends JDialog {
 			System.out.println("Loading default gln codes file");
 			m_user_map = readFromCsvToMap("./dbs/" + Constants.GLN_CODES_FILE);
 		}
-		
 		
 		this.setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		
@@ -210,7 +230,7 @@ public class SettingsPage extends JDialog {
 		jPanel.add(updateDailyCBox);		
 		jPanel.add(updateWeeklyCBox);
 		jPanel.add(updateMonthlyCBox);
-				
+		
 		return jPanel;
 	}
 	
@@ -292,7 +312,12 @@ public class SettingsPage extends JDialog {
 					mPrefs.put(GLNCodeID, mGLNCodeStr);
 					m_user = m_user_map.get(mGLNCodeStr);
 					if (m_user!=null) {
-						System.out.println(m_user.getGlnCode() + " - " + m_user.getName1() + ", " + m_user.getName2());
+						if (m_user.isHuman())
+							mPrefs.put(HumanID, "yes");	
+						else 
+							mPrefs.put(HumanID, "no");
+						mPrefs.put(TypeID, m_user.getType().toLowerCase());
+						System.out.println(m_user.getGlnCode() + " - " + m_user.getType() + " (" + m_user.isHuman() + ") -> " + m_user.getName1() + ", " + m_user.getName2());
 						mTextFieldGLN.setBorder(new LineBorder(color_white, 5, false));
 						mTextFieldGLN.setBackground(color_white);
 						String address = "";
@@ -479,8 +504,12 @@ public class SettingsPage extends JDialog {
 			BufferedReader br = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
 			String line;
 			while ((line = br.readLine()) != null) {
-				// Human - 7601000900487|Bauer|Wibke Cornelia|8596|Münsterlingen||Ärztin/Arzt|Ja|Nein
-				// Corporate - 7601001059900|Ostschweizer Kinderspital||9006|St. Gallen|Claudiusstrasse 6|Spitalapotheke, Andere|||
+				/*
+					Person  - 7601000900487|Bauer|Wibke Cornelia|8596|Münsterlingen||Ärztin/Arzt|Ja|Nein
+				 	Company - 7601001059900|Ostschweizer Kinderspital||9006|St. Gallen|Claudiusstrasse 6|Spitalapotheke, Andere|||
+				 	Person -> Arzt
+				 	Company -> Apotheke, Spital, Wissenschaft, Behörde
+				*/
 				String token[] = line.split("\\|", -1);	// -1 -> don't discard empty strings at the end				
 				User user = new User();
 				user.setGlnCode(token[0]);
@@ -489,7 +518,7 @@ public class SettingsPage extends JDialog {
 				user.setPostCode(token[3]);
 				user.setCity(token[4]);				
 				user.setStreet(token[5]);
-				user.setType(token[6]);
+				user.setType(token[6]);		// Arzt, Apotheke, Spital, Wissenschaft, Behörde
 				user.setHuman(!token[7].isEmpty()&&!token[8].isEmpty());
 				user.setDispensationPermit(!token[7].isEmpty());
 				user.setAnaesthesiaPermit(!token[8].isEmpty());
