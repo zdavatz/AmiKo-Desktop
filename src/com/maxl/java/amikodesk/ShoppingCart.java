@@ -24,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
 
@@ -120,39 +121,48 @@ public class ShoppingCart implements java.io.Serializable {
 		return rebate_map;
 	}
 
-	public List<String> getAssortList(String ean_code) {
-		List<String> assort_list = null;
-		String gln_code = m_prefs.get("glncode", "7610000000000");
-
-		if (m_map_ibsa_glns.containsKey(gln_code)) {
-			char user_class = m_map_ibsa_glns.get(gln_code).charAt(0);
-			// Is the user human or corporate?			
-			String user_type = m_prefs.get("type", "arzt");
-			// System.out.println("Category for GLN " + gln_code + ": " + user_class + "-" + user_type);
-			// Get rebate conditions
-			Conditions c = m_map_ibsa_conditions.get(ean_code);			
-			if (user_type.equals("arzt")) {
-				assort_list = c.getAssortDoc();
-			} else {
-				if (user_type.equals("apotheke")) {
-					if (c.isPromoTime(user_class))
-						assort_list = c.getAssortPromo();
-					else
-						assort_list = c.getAssortFarma();
-				}
-			}		
+	public List<String> getAssortList(String ean_code) {		
+		if (m_map_ibsa_conditions.containsKey(ean_code)) {
+			List<String> assort_list = null;
+			String gln_code = m_prefs.get("glncode", "7610000000000");
+			if (m_map_ibsa_glns.containsKey(gln_code)) {
+				char user_class = m_map_ibsa_glns.get(gln_code).charAt(0);
+				// Is the user human or corporate?			
+				String user_type = m_prefs.get("type", "arzt");
+				// System.out.println("Category for GLN " + gln_code + ": " + user_class + "-" + user_type);
+				// Get rebate conditions
+				Conditions c = m_map_ibsa_conditions.get(ean_code);			
+				if (user_type.equals("arzt")) {
+					assort_list = c.getAssortDoc();
+				} else {
+					if (user_type.equals("apotheke")) {
+						if (c.isPromoTime(user_class))
+							assort_list = c.getAssortPromo();
+						else
+							assort_list = c.getAssortFarma();
+					}
+				}		
+			}
+			return assort_list;
 		}
-		return assort_list;
+		return null;
 	}
 	
 	public int getDraufgabe(String ean_code, int units) {
 		if (m_map_ibsa_conditions!=null) {
 			if (m_map_ibsa_conditions.containsKey(ean_code)) {
-				TreeMap<Integer, Float> rebate = getRebateMap(ean_code);
+				NavigableMap<Integer, Float> rebate = getRebateMap(ean_code);
 				if (rebate.size()>0) {
-					// if rebate.get(units)>0 -> Warenrabatt [#]
-					if (rebate.get(units)>0)
-						return (int)(units*rebate.get(units)/100.0f);
+					// if rebate.get(units)>0 -> Warenrabatt [#]					
+					if (rebate.containsKey(units)) {
+						if (rebate.get(units)>0)
+							return (int)(units*rebate.get(units)/100.0f);
+					} else {
+						System.out.println(rebate.containsKey(units) + " / " + rebate.get(units));
+						int floor_units = rebate.floorKey(units);
+						System.out.println(ean_code + " - draufgabe units (" + units + ") not in map, selecting " + floor_units);						
+						return (int)(floor_units*rebate.get(floor_units)/100.0f);
+					}
 				}
 			}
 		}
@@ -162,11 +172,17 @@ public class ShoppingCart implements java.io.Serializable {
 	public float getCashRebate(String ean_code, int units) {
 		if (m_map_ibsa_conditions!=null) {
 			if (m_map_ibsa_conditions.containsKey(ean_code)) {
-				TreeMap<Integer, Float> rebate = getRebateMap(ean_code);
+				NavigableMap<Integer, Float> rebate = getRebateMap(ean_code);
 				if (rebate.size()>0) {
 					// if rebate.get(units)<0 -> Barrabatt [%]
-					if (rebate.get(units)<=0)
-						return -rebate.get(units);
+					if (rebate.containsKey(units)) {
+						if (rebate.get(units)<=0)
+							return -rebate.get(units);
+					} else {
+						int floor_units = rebate.floorKey(units);
+						System.out.println(ean_code + " - cashrebate units (" + units + ") not in map, selecting " + floor_units);						
+						return -rebate.get(floor_units);
+					}
 				}
 			}
 		}
@@ -186,7 +202,10 @@ public class ShoppingCart implements java.io.Serializable {
 			else
 				sum_weighted_cash_rebate += article.getBuyingPrice()*article.getQuantity()*(1.0f-article.getCashRebate()/100.0f);
 		}				
-		return (100.0f*(sum_weighted_tot_quantity-sum_weighted_cash_rebate)/sum_weighted_tot_quantity);
+		if (sum_weighted_tot_quantity>0.0f)
+			return (100.0f*(sum_weighted_tot_quantity-sum_weighted_cash_rebate)/sum_weighted_tot_quantity);
+		else 
+			return 0.0f;
 	}
 	
 	public int totQuantity() {
@@ -226,17 +245,20 @@ public class ShoppingCart implements java.io.Serializable {
     }
     
     public void updateAssortedCart() {
+    	// Loop through the complete list
 		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 			Article article = entry.getValue();
 			String ean_code = article.getEanCode();
-			// Get assort list
-			List<String> assort_list = getAssortList(ean_code);
-			int assort_qty = 0;
-			for (String al : assort_list) {
-				if (m_shopping_basket.containsKey(al)) {
-					assort_qty += m_shopping_basket.get(al).getQuantity();
-					System.out.println("Assort: " + al + " -> " + m_shopping_basket.get(al).getQuantity() + " / " + m_shopping_basket.get(al).getDraufgabe());
+			if (m_map_ibsa_conditions.containsKey(ean_code)) {
+				// Get assort list for this particular ean_code
+				List<String> assort_list = getAssortList(ean_code);
+				int assort_qty = 0;
+				for (String al : assort_list) {
+					if (m_shopping_basket.containsKey(al)) {
+						assort_qty += m_shopping_basket.get(al).getQuantity();
+					}
 				}
+				article.setAssortedQuantity(assort_qty);
 			}
 		}
     }
@@ -270,8 +292,7 @@ public class ShoppingCart implements java.io.Serializable {
 		String images_dir = System.getProperty("user.dir") + "/images/";	
 		
 		if (m_shopping_basket!=null && m_shopping_basket.size()>0) {
-			int index = 1;			
-			
+			int index = 1;						
 			basket_html_str += "<tr>"
 					+ "<td style=\"text-align:left\"; width=\"10%\";><b>EAN</b></td>"			// 9
 					+ "<td style=\"text-align:left\"; width=\"28%\";><b>Artikel</b></td>"		// 36
@@ -286,7 +307,7 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<td style=\"text-align:right;\"; width=\"5%\";><b>Rabatt</b></td>"		// 96			
 					+ "<td style=\"text-align:center;\"; width=\"3%\";></td>"					// 100
 					+ "</tr>";
-						
+			
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();
 				String ean_code = article.getEanCode();
@@ -296,7 +317,7 @@ public class ShoppingCart implements java.io.Serializable {
 					article.setSpecial(true);
 					// Get rebate conditions
 					Conditions c = m_map_ibsa_conditions.get(ean_code);
-					System.out.println(index + ": " + ean_code + " - " + c.name);					
+					System.out.println(index + ": " + ean_code + " - " + c.name);
 					// Extract rebate conditions for particular doctor/pharmacy
 					TreeMap<Integer, Float> rebate_map = getRebateMap(ean_code);
 					// --> These medis have a drop-down menu with the given "Naturalrabatt"
@@ -317,6 +338,7 @@ public class ShoppingCart implements java.io.Serializable {
 						for (Map.Entry<Integer, Float> e : rebate_map.entrySet()) {
 							qty = e.getKey();
 							reb = e.getValue();
+							// Chose option that has been selected before
 							if (qty==article.getQuantity()) {
 								value_str += "<option selected=\"selected\" value=\"" + qty + "\">" + qty + "</option>";
 								if (reb>0) {
@@ -331,13 +353,32 @@ public class ShoppingCart implements java.io.Serializable {
 								value_str += "<option value=\"" + qty + "\">" + qty + "</option>";	
 							}
 						}
-						
+
 						if (!qty_found)
-							article.setQuantity(rebate_map.firstEntry().getKey());
-						
-						article.setMargin(m_margin_percent/100.0f);
-						
-						article.setBuyingPrice(c.fep_chf);	
+							article.setQuantity(rebate_map.firstEntry().getKey());															
+						article.setBuyingPrice(c.fep_chf);
+						article.setMargin(m_margin_percent/100.0f);	
+						article.setDropDownStr(value_str);						
+					} else {
+						// --> These medis are like any other medis, the prices, however, come from the IBSA Excel file	
+						article.setBuyingPrice(c.fep_chf);
+					}
+				}
+				index++;				
+			}
+
+			updateAssortedCart();
+			
+			index = 1;
+			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+				Article article = entry.getValue();
+				String ean_code = article.getEanCode();
+				// Check if ean code is in conditions map (special treatment)
+				if (m_map_ibsa_conditions.containsKey(ean_code)) {	
+					// Extract rebate conditions for particular doctor/pharmacy
+					TreeMap<Integer, Float> rebate_map = getRebateMap(ean_code);
+					// --> These medis have a drop-down menu with the given "Naturalrabatt"
+					if (rebate_map!=null && rebate_map.size()>0) {
 						if (article.getDraufgabe()>0)
 							subtotal_buying_CHF += article.getTotBuyingPrice();							
 						else
@@ -351,17 +392,26 @@ public class ShoppingCart implements java.io.Serializable {
 						String selling_price_CHF = String.format("%.2f", article.getSellingPrice());
 						String tot_selling_price_CHF = String.format("%.2f", article.getTotSellingPrice());
 						String profit_CHF = String.format("%.2f", article.getTotSellingPrice()-article.getTotBuyingPrice());
-						String cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
+						// Update draufgabe 	
 						String bonus = "";
-						if (article.getDraufgabe()>0)
-							bonus = String.format("+ %d", article.getDraufgabe());
+						int dg = getDraufgabe(ean_code, article.getQuantity()+article.getAssortedQuantity());
+						if (dg>0) {
+							article.setDraufgabe(dg);									
+							bonus = String.format("+ %d", dg);
+						}						
+						// Update cash rebate
+						String cash_rebate_percent = "0%";
+						float cr = getCashRebate(ean_code, article.getQuantity()+article.getAssortedQuantity());
+						if (cr>0.0f)
+							article.setCashRebate(cr);				
+						cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
 						
 						basket_html_str += "<tr id=\"" + ean_code + "\">";
 						basket_html_str += "<td>" + ean_code + "</td>"
-								+ "<td>" + c.name + "</td>"	
+								+ "<td>" + article.getPackTitle() + "</td>"	
 								+ "<td>" + category + "</td>"
 								+ "<td style=\"text-align:right;\">" + "<select id=\"selected" + index + "\" style=\"width:50px; direction:rtl; text-align:right;\" onchange=\"onSelect('Warenkorb',this," + index + ")\"" +
-									" tabindex=\"" + index + "\">" + value_str + "</select></td>"
+									" tabindex=\"" + index + "\">" + article.getDropDownStr()+ "</select></td>"
 								+ "<td style=\"text-align:right;\">" + bonus + "</td>"	
 								+ "<td style=\"text-align:right;\">" + buying_price_CHF + "</td>"	
 								+ "<td style=\"text-align:right;\">" + selling_price_CHF + "</td>"							
@@ -373,10 +423,8 @@ public class ShoppingCart implements java.io.Serializable {
 									+ images_dir + "trash_icon.png\" /></button>" + "</td>";
 						basket_html_str += "</tr>";	
 					} else {
-						// --> These medis are like any other medi, the prices, however, come from the IBSA Excel file
-						int quantity = article.getQuantity();
+						int quantity = article.getQuantity();	
 						
-						article.setBuyingPrice(c.fep_chf);
 						subtotal_buying_CHF += article.getTotBuyingPrice();
 						subtotal_selling_CHF += article.getTotSellingPrice();
 						

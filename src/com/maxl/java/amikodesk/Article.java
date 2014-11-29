@@ -29,10 +29,12 @@ public class Article implements java.io.Serializable {
 	private String ean_code;
 	private String pharma_code;
 	private String author;
+	private String dropdown_str;
 	private float margin = -1.0f;	// <0.0f -> not initialized
 	private float buying_price = 0.0f;
 	private float selling_price = 0.0f;;
 	private int quantity = 1;
+	private int assorted_quantity = 1;
 	private int draufgabe = 0;
 	private float cash_rebate = 0.0f; // [%]
 	private int onstock;
@@ -115,6 +117,14 @@ public class Article implements java.io.Serializable {
 
 	public void setPackUnit(String pack_unit) {
 		this.pack_unit = pack_unit;
+	}
+	
+	public String getDropDownStr() {
+		return dropdown_str;
+	}
+	
+	public void setDropDownStr(String dropdown_str) {
+		this.dropdown_str = dropdown_str;
 	}
 	
 	public boolean isSpecial() {
@@ -310,6 +320,14 @@ public class Article implements java.io.Serializable {
 		quantity--;
 		if (quantity<0)
 			quantity = 0;
+	}
+	
+	public int getAssortedQuantity() {
+		return assorted_quantity;
+	}
+	
+	public void setAssortedQuantity(int assorted_quantity) {
+		this.assorted_quantity = assorted_quantity;
 	}
 	
 	public int getDraufgabe() {
