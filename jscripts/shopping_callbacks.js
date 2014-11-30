@@ -25,7 +25,7 @@ function deleteAll(event) {
 	invokeJava("delete_all",0);
 }
 
-function loadOrder(event,index) {
+function loadCart(event,index) {
 	invokeJava("load_cart",index);
 }
 

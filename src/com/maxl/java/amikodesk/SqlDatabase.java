@@ -269,7 +269,7 @@ public class SqlDatabase {
 		m_app_lang = db_lang;
 		m_customization = custom;
 		m_operationCancelled = false;
-		if (isInternetReachable())
+		if (Utilities.isInternetReachable())
 			new DownloadDialog(db_url, report_url, drug_interactions_url, gln_codes_url,
 					amiko_report, db_unzipped, drug_interactions_unzipped, gln_codes_unzipped);
 		else {
@@ -279,26 +279,6 @@ public class SqlDatabase {
 		}	
 		return db_unzipped;
 	}
-	
-	private static boolean isInternetReachable() {
-        try {
-            // Make a URL to a known source
-            URL url = new URL("http://www.google.com");
-            // Open a connection to that source
-            HttpURLConnection urlConnect = (HttpURLConnection)url.openConnection();
-            // Try to retrieve data from source. If no connection, this line will fail
-            Object objData = urlConnect.getContent();
-        } catch (UnknownHostException e) {
-            // TODO Auto-generated catch block
-            // e.printStackTrace();
-            return false;
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            // e.printStackTrace();
-            return false;
-        }
-        return true;
-    }	
 		
 	private class DownloadDialog extends JFrame implements PropertyChangeListener {
 		

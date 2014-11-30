@@ -19,6 +19,11 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.UnknownHostException;
+
 public class Utilities {
 
 	static public String appDataFolder() {
@@ -56,4 +61,25 @@ public class Utilities {
 	static public String prettyFormat(float value) {
 		return String.format("%,.2f", value);
 	}
+	
+	
+	static public boolean isInternetReachable() {
+        try {
+            // Make a URL to a known source
+            URL url = new URL("http://www.google.com");
+            // Open a connection to that source
+            HttpURLConnection urlConnect = (HttpURLConnection)url.openConnection();
+            // Try to retrieve data from source. If no connection, this line will fail
+            Object objData = urlConnect.getContent();
+        } catch (UnknownHostException e) {
+            // TODO Auto-generated catch block
+            // e.printStackTrace();
+            return false;
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            // e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
 }

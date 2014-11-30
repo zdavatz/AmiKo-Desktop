@@ -332,5 +332,4 @@ public class AmiKoDialogs extends JDialog {
 		
 		this.setVisible(true);
 	}
-		
 }

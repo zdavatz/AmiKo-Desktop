@@ -268,12 +268,8 @@ public class ShoppingCart implements java.io.Serializable {
 		String bar_charts_str = "";
 		
 		String load_order_str = "";
-		String fast_order_1_str = "";
-		String fast_order_2_str = "";
-		String fast_order_3_str = "";
-		String fast_order_4_str = "";
-		String fast_order_5_str = "";
-		
+		String fast_order_str[] = {"", "", "", "", ""};
+	
 		String delete_all_button_str = "";
 		String generate_pdf_str = "";
 		String generate_csv_str = "";
@@ -317,7 +313,7 @@ public class ShoppingCart implements java.io.Serializable {
 					article.setSpecial(true);
 					// Get rebate conditions
 					Conditions c = m_map_ibsa_conditions.get(ean_code);
-					System.out.println(index + ": " + ean_code + " - " + c.name);
+					// System.out.println(index + ": " + ean_code + " - " + c.name);
 					// Extract rebate conditions for particular doctor/pharmacy
 					TreeMap<Integer, Float> rebate_map = getRebateMap(ean_code);
 					// --> These medis have a drop-down menu with the given "Naturalrabatt"
@@ -590,24 +586,131 @@ public class ShoppingCart implements java.io.Serializable {
 				basket_html_str = "<div>Votre panier d'achat est vide.<br><br></div>";
 		}
 		
-		// Bestellungen und Schnellebestellungen
-		load_order_str = "<button type=\"button\" class=\"buttonStyle\" tabindex=\"-1\" onmouseup=\"loadOrder(this,0)\">Alle Bestellungen</button>";			
-		fast_order_1_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,1)\">Warenkorb 1</button>";
-		fast_order_2_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,2)\">Warenkorb 2</button>";	
-		fast_order_3_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,3)\">Warenkorb 3</button>";	
-		fast_order_4_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,4)\">Warenkorb 4</button>";	
-		fast_order_5_str = "<button type=\"button\" tabindex=\"-1\" onmouseup=\"loadOrder(this,5)\">Warenkorb 5</button>";
+		// Bestellungen und Schnellbestellungen
+		load_order_str = "<button id=\"loadCart0\" tabindex=\"-1\" onclick=\"loadCart(this,0)\">Alle Bestellungen</button>";	
+		for (int i=1; i<6; ++i) {
+			String button_pressed = "";
+			if (m_cart_index==i)
+				button_pressed = "class=\"buttonPressed\""; 
+			fast_order_str[i-1] = "<button " + button_pressed + " id=\"loadCart" + i + "\" tabindex=\"-1\" onclick=\"loadCart(this," + i + ")\">Warenkorb " + i + "</button>";
+		}
 		
 		String jscript_str = "<script language=\"javascript\">" + m_jscripts_str+ "</script>";
 		m_html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_shopping_cart_str + "</head>"
 				+ "<body>"
-				+ "<div id=\"buttons\">" + load_order_str + fast_order_1_str + fast_order_2_str + fast_order_3_str + fast_order_4_str + fast_order_5_str + "</div>"
+				+ "<div id=\"buttons\">" + load_order_str + fast_order_str[0] + fast_order_str[1] + fast_order_str[2] + fast_order_str[3] + fast_order_str[4] + "</div>"
 				+ "<div id=\"shopping\">" + basket_html_str + bar_charts_str + "<br />"
 				+ "<form><table class=\"container\"><tr>" + delete_all_button_str + generate_pdf_str + generate_csv_str + send_order_str + "</tr>"
 				+ "<tr>" + delete_all_text + generate_pdf_text + generate_csv_text + send_order_text + "</tr></table></form>"
 				+ "</div></body></html>";		
 		
 		return m_html_str;
+	}
+	
+	public String getRowUpdateJS(String ean_code, Article article) {
+		// Update assorted articles
+		updateAssortedCart();			
+		// Update draufgabe 										
+		String draufgabe = ""; 		
+		int dg = getDraufgabe(ean_code, article.getQuantity()+article.getAssortedQuantity());
+		if (dg>0) {
+			article.setDraufgabe(dg);									
+			draufgabe = String.format("+ %d", dg);
+		}
+		// Update cash rebate
+		String cash_rebate_percent = "0%";
+		float cr = getCashRebate(ean_code, article.getQuantity()+article.getAssortedQuantity());
+		if (cr>0.0f)
+			article.setCashRebate(cr);				
+		cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
+		
+		String buying_price_CHF = "";
+		String selling_price_CHF = "";
+		String tot_buying_price_CHF = "";
+		String tot_selling_price_CHF = "";
+		String profit_CHF = "";
+		//
+		if (article.isSpecial()) {
+			buying_price_CHF = Utilities.prettyFormat(article.getBuyingPrice()*(1.0f-cr/100.0f));
+			selling_price_CHF = Utilities.prettyFormat(article.getSellingPrice());
+			tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice()*(1.0f-cr/100.0f));
+			tot_selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
+			profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice()*(1.0f-cr/100.0f));
+		} else {
+			buying_price_CHF = Utilities.prettyFormat(article.getExfactoryPriceAsFloat());
+			selling_price_CHF = Utilities.prettyFormat(article.getPublicPriceAsFloat());				
+			tot_buying_price_CHF = Utilities.prettyFormat(article.getTotExfactoryPrice());
+			tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
+			profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
+		}
+		
+		String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[4].innerHTML=\"" + draufgabe + "\";"  
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[5].innerHTML=\"" + buying_price_CHF + "\";" 
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[6].innerHTML=\"" + selling_price_CHF + "\";" 
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[7].innerHTML=\"" + tot_buying_price_CHF + "\";" 
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[8].innerHTML=\"" + tot_selling_price_CHF + "\";" 
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[9].innerHTML=\"<b>" + profit_CHF + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[10].innerHTML=\"<b>" + cash_rebate_percent + "</b>\";";
+
+		return js;
+	}
+	
+	public String getTotalsUpdateJS() {
+		float subtotal_buying = 0.0f;
+		float subtotal_selling = 0.0f;
+		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+			Article a = entry.getValue();
+			if (a.isSpecial()) {
+				float cr = a.getCashRebate();
+				subtotal_buying += a.getTotBuyingPrice()*(1.0f-cr/100.0f);
+				subtotal_selling += a.getTotSellingPrice();
+			} else {
+				subtotal_buying += a.getTotExfactoryPrice();
+				subtotal_selling += a.getTotPublicPrice();
+			}
+		}
+		String subtotal_buying_CHF = Utilities.prettyFormat(subtotal_buying);
+		String mwst_buying_CHF = Utilities.prettyFormat(subtotal_buying*0.08f);
+		String total_buying_CHF = Utilities.prettyFormat(subtotal_buying*1.08f);
+		String subtotal_selling_CHF = Utilities.prettyFormat(subtotal_selling);
+		String mwst_selling_CHF = Utilities.prettyFormat(subtotal_selling*0.08f);
+		String total_selling_CHF = Utilities.prettyFormat(subtotal_selling*1.08f);
+		String total_cash_rebate_percent = String.format("%.1f%%", getGrandTotalCashRebate());
+		String total_profit_CHF = Utilities.prettyFormat((subtotal_selling-subtotal_buying)*1.08f);
+		String tot_quantity = String.format("%d", totQuantity());
+		String tot_draufgabe = String.format("%d", totDraufgabe());
+
+		int width_tot_buying = (int)(0.5f+subtotal_buying/20.0f);
+		int width_tot_selling = (int)(0.5f+subtotal_selling/20.0f);
+		int width_tot_profit = (int)(0.5f+(subtotal_selling-subtotal_buying)/20.0f)-3;
+		if (width_tot_selling>800) {
+			width_tot_buying = (int)(0.5f+800.0f*subtotal_buying/subtotal_selling);
+			width_tot_selling = 800;
+			width_tot_profit = (int)(0.5f+800.0f*(subtotal_selling-subtotal_buying)/subtotal_selling)-3;
+		} else if (width_tot_selling<300) {
+			width_tot_buying = (int)(0.5f+300.0f*subtotal_buying/subtotal_selling);
+			width_tot_selling = 300;
+			width_tot_profit = (int)(0.5f+300.0f*(subtotal_selling-subtotal_buying)/subtotal_selling)-3;
+		}
+		
+		String js = "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[7].innerHTML=\"" + subtotal_buying_CHF + "\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[8].innerHTML=\"" + subtotal_selling_CHF + "\";"										
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[7].innerHTML=\"" + mwst_buying_CHF + "\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[8].innerHTML=\"" + mwst_selling_CHF + "\";"										
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[3].innerHTML=\"<b>" + tot_quantity + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[4].innerHTML=\"<b>" + tot_draufgabe + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[7].innerHTML=\"<b>" + total_buying_CHF + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[8].innerHTML=\"<b>" + total_selling_CHF + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[9].innerHTML=\"<b>" + total_profit_CHF + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[10].innerHTML=\"<b>" + total_cash_rebate_percent + "</b>\";"
+				+ "document.getElementById('Buying_Col').style.width=\"" + width_tot_buying + "\";"
+				+ "document.getElementById('Buying_Col').innerHTML=\"Tot.Aufwand: " + total_buying_CHF + " CHF\";"
+				+ "document.getElementById('Selling_Col').style.width=\"" + width_tot_selling + "\";"
+				+ "document.getElementById('Selling_Col').innerHTML=\"Tot.Erlös: " + total_selling_CHF + " CHF\";"
+				+ "document.getElementById('Profit_Col').style.width=\"" + width_tot_profit + "\";"
+				+ "document.getElementById('Profit_Col').innerHTML=\"Gewinn: " + total_profit_CHF + " CHF\";";
+		
+		return js;
 	}
 	
 	public String createHtml() {
@@ -684,6 +787,8 @@ public class ShoppingCart implements java.io.Serializable {
 		
 		return clean_html_str;
 	}
+
+	
 	
 	public String prettyHtml(String str) {
 		org.jsoup.nodes.Document mDoc = Jsoup.parse(str);

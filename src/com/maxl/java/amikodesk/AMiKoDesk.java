@@ -141,7 +141,6 @@ import chrriis.dj.nativeswing.swtimpl.components.WebBrowserFunction;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.maxl.java.shared.Conditions;
 
 public class AMiKoDesk {
 	
@@ -959,32 +958,11 @@ public class AMiKoDesk {
 							});
 							m_web_panel.updateShoppingHtml();
 						} else if (msg.equals("send_order")) {
-							SwingUtilities.invokeLater(new Runnable() {
-								@Override
-								public void run() {	
-									// Save shopping cart
-									saveShoppingCart();
-									// Generate files
-									String path = m_application_data_folder + "\\shop";									
-									String name = orderFileName();
-									SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());									
-									sbasket.setAuthorList(list_of_authors);
-									for (Author author : list_of_authors) {
-										String auth = author.getShortName();
-										sbasket.generatePdf(auth, path + "\\" + auth + "_" + name + ".pdf");	
-										sbasket.generateCsv(auth, path + "\\" + auth + "_" + name + ".csv");
-										// Send email
-										sendEmailWithAttachment(author, name, path + "\\" + auth + "_" + name);
-										System.out.println("Sent email to " + author.getEmail() + " with cc to " + author.getEmailCC());
-									}
-									// Save the rest on the desktop
-									File desktop = new File(System.getProperty("user.home"), "Desktop");
-									path = desktop.getAbsolutePath();
-									sbasket.generatePdf("", path + "\\" + "amiko_" + name + ".pdf");	
-									sbasket.generateCsv("", path + "\\" + "amiko_" + name + ".csv");									
-									// TODO: Display notification
-								}
-							});
+							saveShoppingCart();
+							Emailer em = new Emailer();
+							SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());									
+							sbasket.setAuthorList(list_of_authors);
+							em.sendAllOrders(list_of_authors, sbasket);
 							m_web_panel.updateShoppingHtml();
 						}
 					} else {
@@ -1046,7 +1024,7 @@ public class AMiKoDesk {
 					+ "Siehe PDF Attachment.\n\nMit freundlichen Grüssen\nZeno Davatz");
 			em.addAttachment(attachment_name + ".pdf", attachment_path + ".pdf");
 			em.addAttachment(attachment_name + ".csv", attachment_path + ".csv");
-			
+
 			em.send();
 		}
 		
@@ -1125,113 +1103,12 @@ public class AMiKoDesk {
 		}
 		
 		public void updateShoppingCartRow(String row_key, Article article) {
-			// Update assorted articles
-			m_shopping_cart.updateAssortedCart();			
-			// Update draufgabe 										
-			String draufgabe = ""; 		
-			int dg = m_shopping_cart.getDraufgabe(row_key, article.getQuantity()+article.getAssortedQuantity());
-			if (dg>0) {
-				article.setDraufgabe(dg);									
-				draufgabe = String.format("+ %d", dg);
-			}
-			// Update cash rebate
-			String cash_rebate_percent = "0%";
-			float cr = m_shopping_cart.getCashRebate(row_key, article.getQuantity()+article.getAssortedQuantity());
-			if (cr>0.0f)
-				article.setCashRebate(cr);				
-			cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
-			
-			//		
-			String buying_price_CHF = "";
-			String selling_price_CHF = "";
-			String tot_buying_price_CHF = "";
-			String tot_selling_price_CHF = "";
-			String profit_CHF = "";
-			//
-			if (article.isSpecial()) {
-				buying_price_CHF = Utilities.prettyFormat(article.getBuyingPrice()*(1.0f-cr/100.0f));
-				selling_price_CHF = Utilities.prettyFormat(article.getSellingPrice());
-				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice()*(1.0f-cr/100.0f));
-				tot_selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
-				profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice()*(1.0f-cr/100.0f));
-			} else {
-				buying_price_CHF = Utilities.prettyFormat(article.getExfactoryPriceAsFloat());
-				selling_price_CHF = Utilities.prettyFormat(article.getPublicPriceAsFloat());				
-				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotExfactoryPrice());
-				tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
-				profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
-			}
-			
-			String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[4].innerHTML=\"" + draufgabe + "\";"  
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[5].innerHTML=\"" + buying_price_CHF + "\";" 
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[6].innerHTML=\"" + selling_price_CHF + "\";" 
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[7].innerHTML=\"" + tot_buying_price_CHF + "\";" 
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[8].innerHTML=\"" + tot_selling_price_CHF + "\";" 
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[9].innerHTML=\"<b>" + profit_CHF + "</b>\";"
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"" + row_key + "\").cells[10].innerHTML=\"<b>" + cash_rebate_percent + "</b>\";";
-					//+ "alert(document.getElementById('Draufgabe_Col').innerHTML)";										
-
+			String js = m_shopping_cart.getRowUpdateJS(row_key, article);
 			jWeb.executeJavascript(js);
 		}
 		
 		public void updateShoppingCartTotals() {
-			// 			
-			float subtotal_buying = 0.0f;
-			float subtotal_selling = 0.0f;
-			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-				Article a = entry.getValue();
-				if (a.isSpecial()) {
-					float cr = a.getCashRebate();
-					subtotal_buying += a.getTotBuyingPrice()*(1.0f-cr/100.0f);
-					subtotal_selling += a.getTotSellingPrice();
-				} else {
-					subtotal_buying += a.getTotExfactoryPrice();
-					subtotal_selling += a.getTotPublicPrice();
-				}
-			}
-			// Update shopping cart html
-			String subtotal_buying_CHF = Utilities.prettyFormat(subtotal_buying);
-			String mwst_buying_CHF = Utilities.prettyFormat(subtotal_buying*0.08f);
-			String total_buying_CHF = Utilities.prettyFormat(subtotal_buying*1.08f);
-			String subtotal_selling_CHF = Utilities.prettyFormat(subtotal_selling);
-			String mwst_selling_CHF = Utilities.prettyFormat(subtotal_selling*0.08f);
-			String total_selling_CHF = Utilities.prettyFormat(subtotal_selling*1.08f);
-			String total_cash_rebate_percent = String.format("%.1f%%", m_shopping_cart.getGrandTotalCashRebate());
-			String total_profit_CHF = Utilities.prettyFormat((subtotal_selling-subtotal_buying)*1.08f);
-			String tot_quantity = String.format("%d", m_shopping_cart.totQuantity());
-			String tot_draufgabe = String.format("%d", m_shopping_cart.totDraufgabe());
-
-			int width_tot_buying = (int)(0.5f+subtotal_buying/20.0f);
-			int width_tot_selling = (int)(0.5f+subtotal_selling/20.0f);
-			int width_tot_profit = (int)(0.5f+(subtotal_selling-subtotal_buying)/20.0f)-3;
-			if (width_tot_selling>800) {
-				width_tot_buying = (int)(0.5f+800.0f*subtotal_buying/subtotal_selling);
-				width_tot_selling = 800;
-				width_tot_profit = (int)(0.5f+800.0f*(subtotal_selling-subtotal_buying)/subtotal_selling)-3;
-			} else if (width_tot_selling<300) {
-				width_tot_buying = (int)(0.5f+300.0f*subtotal_buying/subtotal_selling);
-				width_tot_selling = 300;
-				width_tot_profit = (int)(0.5f+300.0f*(subtotal_selling-subtotal_buying)/subtotal_selling)-3;
-			}
-			
-			String js = "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[7].innerHTML=\"" + subtotal_buying_CHF + "\";"
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[8].innerHTML=\"" + subtotal_selling_CHF + "\";"										
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[7].innerHTML=\"" + mwst_buying_CHF + "\";"
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[8].innerHTML=\"" + mwst_selling_CHF + "\";"										
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[3].innerHTML=\"<b>" + tot_quantity + "</b>\";"
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[4].innerHTML=\"<b>" + tot_draufgabe + "</b>\";"
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[7].innerHTML=\"<b>" + total_buying_CHF + "</b>\";"
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[8].innerHTML=\"<b>" + total_selling_CHF + "</b>\";"
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[9].innerHTML=\"<b>" + total_profit_CHF + "</b>\";"
-					+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[10].innerHTML=\"<b>" + total_cash_rebate_percent + "</b>\";"
-					+ "document.getElementById('Buying_Col').style.width=\"" + width_tot_buying + "\";"
-					+ "document.getElementById('Buying_Col').innerHTML=\"Tot.Aufwand: " + total_buying_CHF + " CHF\";"
-					+ "document.getElementById('Selling_Col').style.width=\"" + width_tot_selling + "\";"
-					+ "document.getElementById('Selling_Col').innerHTML=\"Tot.Erlös: " + total_selling_CHF + " CHF\";"
-					+ "document.getElementById('Profit_Col').style.width=\"" + width_tot_profit + "\";"
-					+ "document.getElementById('Profit_Col').innerHTML=\"Gewinn: " + total_profit_CHF + " CHF\";";
-					//+ "alert(document.getElementById('Draufgabe_Col').innerHTML)";										
-
+			String js = m_shopping_cart.getTotalsUpdateJS();
 			jWeb.executeJavascript(js);
 		}
 		

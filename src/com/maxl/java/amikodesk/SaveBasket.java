@@ -86,7 +86,7 @@ public class SaveBasket {
                     break;
                 case 1:
                     ColumnText.showTextAligned(writer.getDirectContent(),
-                        Element.ALIGN_LEFT, new Phrase("Erstellt mit AmiKo. Bestellmodul gesponsort von IBSA",
+                        Element.ALIGN_LEFT, new Phrase("Erstellt mit AmiKo. Bestellmodul gesponsort von IBSA.",
                         		font_norm_10), rect.getLeft(), rect.getTop(), 0);
                     break;
             }
@@ -126,6 +126,10 @@ public class SaveBasket {
     		}
     	}
     }    
+    
+    public List<String> getAuthorList() {
+    	return m_list_of_authors;
+    }
     
 	public void generatePdf(String author, String filename) {
 		// A4: 8.267in x 11.692in => 595.224units x 841.824units (72units/inch)
@@ -215,13 +219,12 @@ public class SaveBasket {
         }
         
         document.close();        
-        System.out.println("Saved PDF to " + filename);
+        // System.out.println("Saved PDF to " + filename);
 	}	
 	
 	public PdfPTable getShoppingBasket(String author, PdfContentByte cb) {
 		int position = 0;
-		float total_CHF = 0.0f;
-		float rebate_percent = 0.05f;
+		float sub_total_CHF = 0.0f;
 
 		BarcodeEAN codeEAN = new BarcodeEAN();
 		
@@ -272,41 +275,30 @@ public class SaveBasket {
 						table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
 						
 						float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-						total_CHF += price_CHF;					
+						sub_total_CHF += price_CHF;					
 						table.addCell(getStringCell(String.format("%.2f", price_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));						
 					}
 				}
 			}
 			
-			table.addCell(getStringCell("Warenwert", font_norm_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell("", font_norm_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", total_CHF), font_norm_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));
-
-			table.addCell(getStringCell("Rabatt (" + 100*rebate_percent + "%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("-%.2f", total_CHF*rebate_percent), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
-			
-			float zwischen_total_CHF = total_CHF*(1.0f-rebate_percent);
-
-			table.addCell(getStringCell("Zwischentotal", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));					
-			
+			table.addCell(getStringCell("Subtotal", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF), font_bold_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));
+					
 			table.addCell(getStringCell("MwSt (8%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF*0.08f), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
+			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*0.08f), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
 			
 			table.addCell(getStringCell("Total", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF*1.08f), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
+			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*1.08f), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
 		}
         return table;
 	}
 	
 	public PdfPTable getFullShoppingBasket(PdfContentByte cb) {
 		int position = 0;
-		float total_CHF = 0.0f;
-		float rebate_percent = 0.05f;
+		float sub_total_CHF = 0.0f;
 
 		BarcodeEAN codeEAN = new BarcodeEAN();
 		
@@ -357,35 +349,23 @@ public class SaveBasket {
 						table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
 						
 						float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-						total_CHF += price_CHF;					
+						sub_total_CHF += price_CHF;					
 						table.addCell(getStringCell(String.format("%.2f", price_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));						
 					}
 				}
 			}
 			
-			if (total_CHF>0.0f) {
-				table.addCell(getStringCell("Warenwert", font_norm_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
-				table.addCell(getStringCell("", font_norm_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
-				table.addCell(getStringCell(String.format("%.2f", total_CHF), font_norm_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));
-	
-				table.addCell(getStringCell("Rabatt (" + 100*rebate_percent + "%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-				table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-				table.addCell(getStringCell(String.format("-%.2f", total_CHF*rebate_percent), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
+			table.addCell(getStringCell("Subtotal", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF), font_bold_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));			
 				
-				float zwischen_total_CHF = total_CHF*(1.0f-rebate_percent);
-	
-				table.addCell(getStringCell("Zwischentotal", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-				table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-				table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));					
+			table.addCell(getStringCell("MwSt (8%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*0.08f), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
 				
-				table.addCell(getStringCell("MwSt (8%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-				table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-				table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF*0.08f), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
-				
-				table.addCell(getStringCell("Total", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-				table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-				table.addCell(getStringCell(String.format("%.2f", zwischen_total_CHF*1.08f), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
-			}
+			table.addCell(getStringCell("Total", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*1.08f), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
 		}
         return table;
 	}
@@ -423,7 +403,7 @@ public class SaveBasket {
 					BufferedWriter bw = new BufferedWriter(osw);      			
 					bw.write(shopping_basket_str);
 					bw.close();
-					System.out.println("Saved CSV to " + filename);
+					// System.out.println("Saved CSV to " + filename);
 		        } catch(IOException e) {
 		        	System.out.println("Could not save CSV file...");
 		        }
@@ -460,12 +440,11 @@ public class SaveBasket {
 					BufferedWriter bw = new BufferedWriter(osw);      			
 					bw.write(shopping_basket_str);
 					bw.close();
-					System.out.println("Saved CSV to " + filename);
+					// System.out.println("Saved CSV to " + filename);
 		        } catch(IOException e) {
 		        	System.out.println("Could not save CSV file...");
 		        }
 	        }
 		}
-	}
-	
+	}	
 }
