@@ -158,9 +158,9 @@ public class ShoppingCart implements java.io.Serializable {
 						if (rebate.get(units)>0)
 							return (int)(units*rebate.get(units)/100.0f);
 					} else {
-						System.out.println(rebate.containsKey(units) + " / " + rebate.get(units));
+						// System.out.println(rebate.containsKey(units) + " / " + rebate.get(units));
 						int floor_units = rebate.floorKey(units);
-						System.out.println(ean_code + " - draufgabe units (" + units + ") not in map, selecting " + floor_units);						
+						// System.out.println(ean_code + " - draufgabe units (" + units + ") not in map, selecting " + floor_units);						
 						return (int)(floor_units*rebate.get(floor_units)/100.0f);
 					}
 				}
@@ -180,7 +180,7 @@ public class ShoppingCart implements java.io.Serializable {
 							return -rebate.get(units);
 					} else {
 						int floor_units = rebate.floorKey(units);
-						System.out.println(ean_code + " - cashrebate units (" + units + ") not in map, selecting " + floor_units);						
+						// System.out.println(ean_code + " - cashrebate units (" + units + ") not in map, selecting " + floor_units);						
 						return -rebate.get(floor_units);
 					}
 				}
@@ -253,9 +253,11 @@ public class ShoppingCart implements java.io.Serializable {
 				// Get assort list for this particular ean_code
 				List<String> assort_list = getAssortList(ean_code);
 				int assort_qty = 0;
-				for (String al : assort_list) {
-					if (m_shopping_basket.containsKey(al)) {
-						assort_qty += m_shopping_basket.get(al).getQuantity();
+				if (assort_list!=null) {
+					for (String al : assort_list) {
+						if (m_shopping_basket.containsKey(al)) {
+							assort_qty += m_shopping_basket.get(al).getQuantity();
+						}
 					}
 				}
 				article.setAssortedQuantity(assort_qty);

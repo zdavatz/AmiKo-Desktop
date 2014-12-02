@@ -248,6 +248,7 @@ public class Article implements java.io.Serializable {
 	}
 
 	public void setCashRebate(float cash_rebate) {
+		draufgabe = 0;
 		this.cash_rebate = cash_rebate;
 	}
 	

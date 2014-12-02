@@ -3,7 +3,7 @@
 
 #define MyAppFolder "01_amikodesk_exe32"
 #define MyAppName "AmiKo Desktop"
-#define MyVersion "1.2.7"
+#define MyVersion "1.2.8"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "amikodesk.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"
@@ -21,6 +21,9 @@ begin
   else
     Result := ExpandConstant('{pf}')
 end;
+
+[Registry]
+Root: HKCU; Subkey: "Software\JavaSoft\Prefs";
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.

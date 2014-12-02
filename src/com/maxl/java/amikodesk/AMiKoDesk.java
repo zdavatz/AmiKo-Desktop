@@ -426,9 +426,9 @@ public class AMiKoDesk {
 	   		wdir.mkdirs();
 
 		// Preferences
-		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
-	   	
-		// UIUtils.setPreferredLookAndFeel();
+   		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
+   		
+		// UIUtils.setPreferredLookAn dFeel();
 		NativeInterface.open();
 		NativeSwing.initialize();
 
