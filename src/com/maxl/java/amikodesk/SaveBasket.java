@@ -131,6 +131,29 @@ public class SaveBasket {
     	return m_list_of_authors;
     }
     
+    public int getMedsForAuthor(String author) {
+    	int tot_med = 0;    	
+    	if (m_shopping_basket!=null && m_shopping_basket.size()>0) {
+    		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+				Article article = entry.getValue();								
+				if (article.getAuthor().trim().toLowerCase().contains(author)) {	
+					tot_med++;
+				}
+    		}
+    	}
+    	return tot_med;
+    }
+    
+    public int getMedsWithNoAuthor() {
+    	if (m_shopping_basket!=null) {
+	    	int tot_med = m_shopping_basket.size();
+	    	for (String a : m_list_of_authors)
+	    		tot_med -= getMedsForAuthor(a);
+	    	return tot_med;
+    	}
+    	return 0;
+    }
+    
 	public void generatePdf(String author, String filename) {
 		// A4: 8.267in x 11.692in => 595.224units x 841.824units (72units/inch)
 		

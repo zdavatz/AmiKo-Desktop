@@ -34,7 +34,7 @@ public class Article implements java.io.Serializable {
 	private float buying_price = 0.0f;
 	private float selling_price = 0.0f;;
 	private int quantity = 1;
-	private int assorted_quantity = 1;
+	private int assorted_quantity = 0;
 	private int draufgabe = 0;
 	private float cash_rebate = 0.0f; // [%]
 	private int onstock;

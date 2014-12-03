@@ -885,7 +885,7 @@ public class AMiKoDesk {
 								article.setQuantity(quantity);
 								m_shopping_basket.put(row_key, article);	
 								// Update shopping basket
-								m_shopping_cart.setShoppingBasket(m_shopping_basket);
+								m_shopping_cart.setShoppingBasket(m_shopping_basket);					
 								updateShoppingCart(row_key, article);
 							}	
 						} else if (msg.equals("load_cart")) {

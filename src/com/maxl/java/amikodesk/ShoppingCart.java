@@ -97,7 +97,6 @@ public class ShoppingCart implements java.io.Serializable {
 	public TreeMap<Integer, Float> getRebateMap(String ean_code) {
 		TreeMap<Integer, Float> rebate_map = null;
 		String gln_code = m_prefs.get("glncode", "7610000000000");
-
 		if (m_map_ibsa_glns.containsKey(gln_code)) {
 			char user_class = m_map_ibsa_glns.get(gln_code).charAt(0);
 			// Is the user human or corporate?
@@ -152,7 +151,7 @@ public class ShoppingCart implements java.io.Serializable {
 		if (m_map_ibsa_conditions!=null) {
 			if (m_map_ibsa_conditions.containsKey(ean_code)) {
 				NavigableMap<Integer, Float> rebate = getRebateMap(ean_code);
-				if (rebate.size()>0) {
+				if (rebate!=null && rebate.size()>0) {
 					// if rebate.get(units)>0 -> Warenrabatt [#]					
 					if (rebate.containsKey(units)) {
 						if (rebate.get(units)>0)
@@ -173,7 +172,7 @@ public class ShoppingCart implements java.io.Serializable {
 		if (m_map_ibsa_conditions!=null) {
 			if (m_map_ibsa_conditions.containsKey(ean_code)) {
 				NavigableMap<Integer, Float> rebate = getRebateMap(ean_code);
-				if (rebate.size()>0) {
+				if (rebate!=null && rebate.size()>0) {
 					// if rebate.get(units)<0 -> Barrabatt [%]
 					if (rebate.containsKey(units)) {
 						if (rebate.get(units)<=0)
