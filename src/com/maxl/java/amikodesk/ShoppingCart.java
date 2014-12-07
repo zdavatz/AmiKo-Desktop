@@ -47,7 +47,7 @@ public class ShoppingCart implements java.io.Serializable {
 	
 	private static int m_margin_percent = 80;	// default
 	
-	private static int m_cart_index = -1;
+	private static int m_cart_index = 1;
 	
 	public ShoppingCart() {
 		// Load javascripts
@@ -147,20 +147,21 @@ public class ShoppingCart implements java.io.Serializable {
 		return null;
 	}
 	
-	public int getDraufgabe(String ean_code, int units) {
+	public int getDraufgabe(Article article) {
 		if (m_map_ibsa_conditions!=null) {
+			String ean_code = article.getEanCode();
 			if (m_map_ibsa_conditions.containsKey(ean_code)) {
 				NavigableMap<Integer, Float> rebate = getRebateMap(ean_code);
 				if (rebate!=null && rebate.size()>0) {
-					// if rebate.get(units)>0 -> Warenrabatt [#]					
-					if (rebate.containsKey(units)) {
-						if (rebate.get(units)>0)
-							return (int)(units*rebate.get(units)/100.0f);
+					int qty = article.getQuantity();
+					int assorted_qty = qty + article.getAssortedQuantity();
+					// If rebate map contains key, get bonus (draufgabe) otherwise get closest possible value using "floorKey"
+					if (rebate.containsKey(assorted_qty)) {
+						if (rebate.get(assorted_qty)>0)
+							return (int)(qty*rebate.get(assorted_qty)/100.0f);
 					} else {
-						// System.out.println(rebate.containsKey(units) + " / " + rebate.get(units));
-						int floor_units = rebate.floorKey(units);
-						// System.out.println(ean_code + " - draufgabe units (" + units + ") not in map, selecting " + floor_units);						
-						return (int)(floor_units*rebate.get(floor_units)/100.0f);
+						int floor_units = rebate.floorKey(assorted_qty);		
+						return (int)(qty*rebate.get(floor_units)/100.0f);
 					}
 				}
 			}
@@ -168,18 +169,20 @@ public class ShoppingCart implements java.io.Serializable {
 		return 0;
 	}
     
-	public float getCashRebate(String ean_code, int units) {
+	public float getCashRebate(Article article) {
 		if (m_map_ibsa_conditions!=null) {
+			String ean_code = article.getEanCode();
 			if (m_map_ibsa_conditions.containsKey(ean_code)) {
 				NavigableMap<Integer, Float> rebate = getRebateMap(ean_code);
 				if (rebate!=null && rebate.size()>0) {
-					// if rebate.get(units)<0 -> Barrabatt [%]
-					if (rebate.containsKey(units)) {
-						if (rebate.get(units)<=0)
-							return -rebate.get(units);
+					int qty = article.getQuantity();
+					int assorted_qty = qty + article.getAssortedQuantity();
+					// If rebate map contains key, get bonus (draufgabe) otherwise get closest possible value using "floorKey"
+					if (rebate.containsKey(assorted_qty)) {
+						if (rebate.get(assorted_qty)<=0)
+							return -rebate.get(assorted_qty);
 					} else {
-						int floor_units = rebate.floorKey(units);
-						// System.out.println(ean_code + " - cashrebate units (" + units + ") not in map, selecting " + floor_units);						
+						int floor_units = rebate.floorKey(assorted_qty);				
 						return -rebate.get(floor_units);
 					}
 				}
@@ -391,14 +394,14 @@ public class ShoppingCart implements java.io.Serializable {
 						String profit_CHF = String.format("%.2f", article.getTotSellingPrice()-article.getTotBuyingPrice());
 						// Update draufgabe 	
 						String bonus = "";
-						int dg = getDraufgabe(ean_code, article.getQuantity()+article.getAssortedQuantity());
+						int dg = getDraufgabe(article); //ean_code, article.getQuantity(), article.getAssortedQuantity());
 						if (dg>0) {
 							article.setDraufgabe(dg);									
 							bonus = String.format("+ %d", dg);
 						}						
 						// Update cash rebate
 						String cash_rebate_percent = "0%";
-						float cr = getCashRebate(ean_code, article.getQuantity()+article.getAssortedQuantity());
+						float cr = getCashRebate(article);
 						if (cr>0.0f)
 							article.setCashRebate(cr);				
 						cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
@@ -536,6 +539,13 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "</tr>";
 	
 			// Add bar charts
+			double buying_percent = 0.0; 
+			if (subtotal_selling_CHF>0.0)
+				buying_percent = Math.floor(99.0f*subtotal_buying_CHF/subtotal_selling_CHF);
+			double profit_percent = 99.0 - buying_percent;
+			double selling_percent = 99.3;
+			
+			/*
 			int totBuying_width = (int)(0.5f+subtotal_buying_CHF/20.0f);
 			int totSelling_width = (int)(0.5f+subtotal_selling_CHF/20.0f);
 			int totProfit_width = (int)(0.5f+(subtotal_selling_CHF-subtotal_buying_CHF)/20.0f)-3;
@@ -548,19 +558,34 @@ public class ShoppingCart implements java.io.Serializable {
 				totSelling_width = 300;
 				totProfit_width = (int)(0.5f+300.0f*(subtotal_selling_CHF-subtotal_buying_CHF)/subtotal_selling_CHF)-3;
 			}
-
-			basket_html_str += "<tr style=\"height:20px;\"><td colspan=\"11\"></td></tr>"
+			*/
+			
+			/*
+			basket_html_str += "<tr style=\"height:20px;\"><td colspan=\"12\"></td></tr>"
 					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Buying_Col\" style=\"width:" + totBuying_width + "px; background-color:firebrick;\">Tot.Aufwand: " + grand_total_buying_CHF + " CHF</div>" 
 					+ "<div id=\"Profit_Col\" style=\"width:" + totProfit_width + "px; background-color:blue;\">Gewinn: " + grand_total_profit_CHF + " CHF</div></td></tr>"
-					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + totSelling_width + "px; background-color:forestgreen;\">Tot.Erlös: " + grand_total_selling_CHF + " CHF</div></td></tr>";
-			
+					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + totSelling_width + "px; background-color:forestgreen;\">Tot.Erlös: " + grand_total_selling_CHF + " CHF</div></td></tr>";			
 			basket_html_str += "<tr>"
 					+ "<td>Vertriebsanteil (%)</td>"
 					+ "<td style=\"text-align:left;\"><input type=\"number\" name=\"points\" maxlength=\"3\" min=\"1\" max=\"999\" style=\"width:40px; text-align:right;\"" 
 					+ " value=\"" + m_margin_percent + "\" onkeydown=\"changeMarge('Warenkorb',this)\" id=\"marge\" /></td>"
 					+ "</tr>";		
-			
+			*/
 			basket_html_str += "</table></form>";
+			
+			bar_charts_str += "<table width=\"99%25\">";
+			
+			bar_charts_str += "<tr style=\"height:10px;\"><td colspan=\"12\"></tr>"
+					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Buying_Col\" style=\"width:" + buying_percent + "%; background-color:firebrick;\">Tot.Aufwand: " + grand_total_buying_CHF + " CHF</div>" 
+					+ "<div style=\"width:0.3%; padding:0px;\"></div><div id=\"Profit_Col\" style=\"width:" + profit_percent + "%; background-color:blue;\">Gewinn: " + grand_total_profit_CHF + " CHF</div></td></tr>"
+					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + selling_percent + "%; background-color:forestgreen;\">Tot.Erlös: " + grand_total_selling_CHF + " CHF</div></td></tr>";
+			
+			bar_charts_str += "<tr><td colspan=\"4\">Vertriebsanteil in % "
+					+ "<input type=\"number\" name=\"points\" maxlength=\"3\" min=\"1\" max=\"999\" style=\"width:40px; text-align:right;\"" 
+					+ " value=\"" + m_margin_percent + "\" onkeydown=\"changeMarge('Warenkorb',this)\" id=\"marge\" /></td>"
+					+ "</tr>";	
+			
+			bar_charts_str += "</table>";
 			
 			// Warenkorb löschen
 			delete_all_button_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"delete_all\">"
@@ -613,14 +638,14 @@ public class ShoppingCart implements java.io.Serializable {
 		updateAssortedCart();			
 		// Update draufgabe 										
 		String draufgabe = ""; 		
-		int dg = getDraufgabe(ean_code, article.getQuantity()+article.getAssortedQuantity());
+		int dg = getDraufgabe(article);
 		if (dg>0) {
 			article.setDraufgabe(dg);									
 			draufgabe = String.format("+ %d", dg);
 		}
 		// Update cash rebate
 		String cash_rebate_percent = "0%";
-		float cr = getCashRebate(ean_code, article.getQuantity()+article.getAssortedQuantity());
+		float cr = getCashRebate(article);
 		if (cr>0.0f)
 			article.setCashRebate(cr);				
 		cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
@@ -681,6 +706,13 @@ public class ShoppingCart implements java.io.Serializable {
 		String tot_quantity = String.format("%d", totQuantity());
 		String tot_draufgabe = String.format("%d", totDraufgabe());
 
+		double buying_percent = 0.0;
+		if (subtotal_selling>0.0)
+			buying_percent = Math.floor(99.0*subtotal_buying/subtotal_selling);
+		double profit_percent = 99.0 - buying_percent;
+		double selling_percent = 99.3;
+		
+		/*
 		int width_tot_buying = (int)(0.5f+subtotal_buying/20.0f);
 		int width_tot_selling = (int)(0.5f+subtotal_selling/20.0f);
 		int width_tot_profit = (int)(0.5f+(subtotal_selling-subtotal_buying)/20.0f)-3;
@@ -693,22 +725,23 @@ public class ShoppingCart implements java.io.Serializable {
 			width_tot_selling = 300;
 			width_tot_profit = (int)(0.5f+300.0f*(subtotal_selling-subtotal_buying)/subtotal_selling)-3;
 		}
+		*/
 		
 		String js = "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[7].innerHTML=\"" + subtotal_buying_CHF + "\";"
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"Subtotal\").cells[8].innerHTML=\"" + subtotal_selling_CHF + "\";"										
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[7].innerHTML=\"" + mwst_buying_CHF + "\";"
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"MWSt\").cells[8].innerHTML=\"" + mwst_selling_CHF + "\";"										
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[3].innerHTML=\"<b>" + tot_quantity + "</b>\";"
-				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[4].innerHTML=\"<b>" + tot_draufgabe + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[4].innerHTML=\"<b>+ " + tot_draufgabe + "</b>\";"
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[7].innerHTML=\"<b>" + total_buying_CHF + "</b>\";"
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[8].innerHTML=\"<b>" + total_selling_CHF + "</b>\";"
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[9].innerHTML=\"<b>" + total_profit_CHF + "</b>\";"
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[10].innerHTML=\"<b>" + total_cash_rebate_percent + "</b>\";"
-				+ "document.getElementById('Buying_Col').style.width=\"" + width_tot_buying + "\";"
+				+ "document.getElementById('Buying_Col').style.width=\"" + buying_percent + "%\";"
 				+ "document.getElementById('Buying_Col').innerHTML=\"Tot.Aufwand: " + total_buying_CHF + " CHF\";"
-				+ "document.getElementById('Selling_Col').style.width=\"" + width_tot_selling + "\";"
+				+ "document.getElementById('Selling_Col').style.width=\"" + selling_percent + "%\";"
 				+ "document.getElementById('Selling_Col').innerHTML=\"Tot.Erlös: " + total_selling_CHF + " CHF\";"
-				+ "document.getElementById('Profit_Col').style.width=\"" + width_tot_profit + "\";"
+				+ "document.getElementById('Profit_Col').style.width=\"" + profit_percent + "%\";"
 				+ "document.getElementById('Profit_Col').innerHTML=\"Gewinn: " + total_profit_CHF + " CHF\";";
 		
 		return js;

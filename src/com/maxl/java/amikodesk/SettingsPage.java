@@ -46,12 +46,6 @@ import java.util.TreeMap;
 import java.util.prefs.Preferences;
 
 import javax.imageio.ImageIO;
-import javax.mail.MessagingException;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
@@ -112,6 +106,7 @@ public class SettingsPage extends JDialog {
 		// Load gln codes file and create map
 		String m_application_data_folder = Utilities.appDataFolder();
 		m_user_map = readFromCsvToMap(m_application_data_folder + "\\" + Constants.GLN_CODES_FILE);
+		// Read default file
 		if (m_user_map==null) {
 			m_user_map = readFromCsvToMap("./shop/" + Constants.GLN_CODES_FILE);
 			System.out.println("Loading default gln codes file from ./shop/" + Constants.GLN_CODES_FILE);
@@ -138,7 +133,7 @@ public class SettingsPage extends JDialog {
 		// Centers the dialog
 		this.setLocationRelativeTo(null);
 		// Set size
-		this.setSize(512,640);		
+		this.setSize(512, 680);		
 		this.setResizable(false);
 		
 		this.addWindowListener(new WindowAdapter() {
@@ -236,7 +231,7 @@ public class SettingsPage extends JDialog {
 	}
 	
 	protected JPanel shoppingBasketSettings() {
-		String GLNCodeStr = mPrefs.get(GLNCodeID, "7610");
+		String GLNCodeStr = mPrefs.get(GLNCodeID, "7610000000000");
 		String bestellAdrStr = mPrefs.get(BestellAdresseID, "Keine Bestelladresse");
 		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
 		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");
@@ -411,6 +406,7 @@ public class SettingsPage extends JDialog {
 		jPanel.add(jlabelEmail, gbc);
 		
 		mTextFieldEmail = new JTextField(EmailStr);
+		// Validate email addres: do a quick sanity check on the email address
 		if (!EmailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
 			mTextFieldEmail.setBorder(new LineBorder(color_red, 5, false));
 			mTextFieldEmail.setBackground(color_red);  
@@ -428,7 +424,7 @@ public class SettingsPage extends JDialog {
 			}
 			@Override
 			public void keyReleased(KeyEvent keyEvent) {
-				// Validate email address
+				// Validate email addres: do a quick sanity check on the email address
 				String mEmailStr = mTextFieldEmail.getText();
 				if (mEmailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
 					mTextFieldEmail.setBorder(new LineBorder(color_white, 5, false));
@@ -452,6 +448,7 @@ public class SettingsPage extends JDialog {
 		jPanel.add(jlabelPhone, gbc);
 		
 		mTextFieldPhone = new JTextField(PhoneNumberStr);
+		// Validate phone number: do a quick sanity check on the phone number
 		if (PhoneNumberStr.matches("[+][\\d]+-[\\d]+")) {
 			mTextFieldPhone.setBorder(new LineBorder(color_white, 5, false));
 			mTextFieldPhone.setBackground(color_white);
@@ -466,7 +463,7 @@ public class SettingsPage extends JDialog {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String mPhoneStr = mTextFieldPhone.getText();
-				// Validate phone number
+				// Validate phone number: do a quick sanity check on the phone number
 				if (mPhoneStr.matches("[+][\\d]+-[\\d]+")) {
 					mTextFieldPhone.setBorder(new LineBorder(color_white, 5, false));
 					mTextFieldPhone.setBackground(color_white);
@@ -582,6 +579,7 @@ public class SettingsPage extends JDialog {
 		}
 	}
 	
+	/*
 	private void generateAndSendEmail() throws AddressException, MessagingException {
 		Properties mailServerProperties;
 		Session getMailSession;
@@ -615,4 +613,5 @@ public class SettingsPage extends JDialog {
 		transport.sendMessage(generateMailMessage, generateMailMessage.getAllRecipients());
 		transport.close();
 	}
+	*/
 }

@@ -188,6 +188,7 @@ public class AMiKoDesk {
 	// private static InteractionsDb m_interdb = null;
 	private static List<String> m_section_str = null;
 	private static String m_application_data_folder = null;
+	private static String m_p = "";
 	
 	// Panels
 	private static ListPanel m_list_titles = null;
@@ -394,7 +395,7 @@ public class AMiKoDesk {
 		// Fill list of authors / med owners
 		try {
 			// Load encrypted files
-			byte[] encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"authors.ser");
+			byte[] encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"authors.ami.ser");
 			// Decrypt and deserialize
 			if (encrypted_msg!=null) {
 				Crypto crypto = new Crypto();
@@ -420,6 +421,17 @@ public class AMiKoDesk {
 			e.printStackTrace();
 		}	
 			
+		// Load encrypted files
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"access.ami.ser");
+		// Decrypt and deserialize
+		if (encrypted_msg!=null) {
+			Crypto crypto = new Crypto();
+			byte[] serialized_bytes = crypto.decrypt(encrypted_msg);
+			TreeMap<String, String> map = new TreeMap<String, String>();
+			map = (TreeMap<String, String>)(FileOps.deserialize(serialized_bytes));
+			m_p = (String)map.get("amiko@ywesee.com");
+		}
+	
 		// Create shop folder in application data folder
 	   	File wdir = new File(m_application_data_folder + "\\shop");
 	   	if (!wdir.exists())
@@ -931,7 +943,7 @@ public class AMiKoDesk {
 										if (r==JFileChooser.APPROVE_OPTION) {										
 											String filename = fc.getSelectedFile().getPath();
 											SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
-											sbasket.generatePdf("", filename);	
+											sbasket.generatePdf("all", filename);	
 										}
 									}
 									m_web_panel.updateShoppingHtml();
@@ -950,7 +962,7 @@ public class AMiKoDesk {
 										if (r==JFileChooser.APPROVE_OPTION) {										
 											String filename = fc.getSelectedFile().getPath();
 											SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
-											sbasket.generateCsv("", filename);
+											sbasket.generateCsv("all", filename);
 										}
 									}
 									m_web_panel.updateShoppingHtml();
@@ -959,7 +971,7 @@ public class AMiKoDesk {
 							m_web_panel.updateShoppingHtml();
 						} else if (msg.equals("send_order")) {
 							saveShoppingCart();
-							Emailer em = new Emailer();
+							Emailer em = new Emailer("amiko@ywesee.com", m_p);
 							SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());									
 							sbasket.setAuthorList(list_of_authors);
 							em.sendAllOrders(list_of_authors, sbasket);
@@ -994,7 +1006,7 @@ public class AMiKoDesk {
 					return "true";					
  				}
 			});
-
+			
 			/*
 			JWebBrowserWindow jWebWindow = WebBrowserWindowFactory.create(jWeb);
 			jWebWindow.setBarsVisible(false);
@@ -1078,11 +1090,11 @@ public class AMiKoDesk {
 				if (serialized_bytes!=null) {
 					// System.out.println("Loaded shopping cart " + n + " from " + filename);
 					m_shopping_basket = (LinkedHashMap<String, Article>)FileOps.deserialize(serialized_bytes);
-					m_web_panel.updateShoppingHtml();								
+					updateShoppingHtml();								
 				}
 			} else {
 				m_shopping_basket = new LinkedHashMap<String, Article>();
-				m_web_panel.updateShoppingHtml();
+				updateShoppingHtml();
 			}
 		}
 		
@@ -2284,7 +2296,12 @@ public class AMiKoDesk {
 							m_web_panel.setTitle("Warenkorb");
 						else if (Utilities.appLanguage().equals("fr"))
 							m_web_panel.setTitle("Panier d'achat");	
-						// Switch to shopping cart
+						// Switch to shopping cart						
+
+						int index = -1;
+						if (m_shopping_cart!=null)
+							index = m_shopping_cart.getCartIndex();
+						m_web_panel.loadShoppingCartWithIndex(index);
 						m_web_panel.updateListOfPackages();
 						m_web_panel.updateShoppingHtml();
 					}

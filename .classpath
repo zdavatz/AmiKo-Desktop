@@ -8,12 +8,6 @@
 	<classpathentry kind="lib" path="libs/swt.jar"/>
 	<classpathentry kind="lib" path="libs/sqlite-jdbc-3.7.2.jar"/>
 	<classpathentry kind="lib" path="libs/commons-cli-1.2.jar"/>
-	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/dsn.jar"/>
-	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/gimap.jar"/>
-	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/imap.jar"/>
-	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/mailapi.jar"/>
-	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/pop3.jar"/>
-	<classpathentry kind="lib" path="E:/Projects/Pharmax/AmiKoWindows/libs/javamail-1.4.7/smtp.jar"/>
 	<classpathentry kind="lib" path="libs/itext-5.5.2/itextpdf-5.5.2.jar"/>
 	<classpathentry kind="lib" path="libs/xmlworker-5.5.2/xmlworker-5.5.2.jar"/>
 	<classpathentry kind="lib" path="libs/joda-time-2.4.jar"/>
@@ -21,5 +15,6 @@
 	<classpathentry kind="lib" path="libs/jackson-annotations-2.2.3.jar"/>
 	<classpathentry kind="lib" path="libs/jackson-core-2.2.3.jar"/>
 	<classpathentry kind="lib" path="libs/jackson-databind-2.2.3.jar"/>
+	<classpathentry kind="lib" path="libs/javax.mail-1.5.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

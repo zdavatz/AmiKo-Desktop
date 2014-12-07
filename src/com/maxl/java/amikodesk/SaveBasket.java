@@ -29,10 +29,10 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.prefs.Preferences;
 
 import com.itextpdf.text.Chunk;
@@ -67,7 +67,7 @@ public class SaveBasket {
 	private static String RechnungsAdresseID = "rechnungsadresse";
 	
 	private static Map<String, Article> m_shopping_basket = null;
-	private static List<String> m_list_of_authors = null;
+	private static TreeSet<String> m_list_of_authors = null;
 
 	public SaveBasket(Map<String, Article> shopping_basket) {
 		m_shopping_basket = shopping_basket;
@@ -96,8 +96,8 @@ public class SaveBasket {
         }
     }	    
     
-    private boolean anyElemIsContained(List<String> list_of_str, String str) {
-    	for (String l : list_of_str) {
+    private boolean anyElemIsContained(TreeSet<String> set_of_str, String str) {
+    	for (String l : set_of_str) {
     		if (str.contains(l)) {
     			return true;
     		}
@@ -120,14 +120,14 @@ public class SaveBasket {
     
     public void setAuthorList(List<Author> authors) {
     	if (authors!=null) {
-    		m_list_of_authors = new ArrayList<String>();
+    		m_list_of_authors = new TreeSet<String>();
     		for (Author a : authors) {
     			m_list_of_authors.add(a.getShortName());
     		}
     	}
     }    
     
-    public List<String> getAuthorList() {
+    public TreeSet<String> getAuthorList() {
     	return m_list_of_authors;
     }
     
@@ -225,12 +225,14 @@ public class SaveBasket {
 	            document.add(addressTable);
 	                
 	      		document.add(Chunk.NEWLINE);                
-	              
+	      		
 	      		// Add shopping basket
-	      		if (!author.isEmpty())
-	      			document.add(getShoppingBasket(author, cb));
-	      		else
-	      			document.add(getFullShoppingBasket(cb));
+	      		if (!author.equals("all") && !author.equals("rest"))
+	      			document.add(getShoppingBasketForAuthor(author, cb));
+	      		else if (author.equals("all"))
+	      			document.add(getFullShoppingBasket(cb, "all"));
+	      		else if (author.equals("rest"))
+	      			document.add(getFullShoppingBasket(cb, "rest"));
 	        		
 	        	LineSeparator separator = new LineSeparator();
 	        	document.add(separator);
@@ -245,7 +247,7 @@ public class SaveBasket {
         // System.out.println("Saved PDF to " + filename);
 	}	
 	
-	public PdfPTable getShoppingBasket(String author, PdfContentByte cb) {
+	public PdfPTable getShoppingBasketForAuthor(String author, PdfContentByte cb) {
 		int position = 0;
 		float sub_total_CHF = 0.0f;
 
@@ -319,7 +321,7 @@ public class SaveBasket {
         return table;
 	}
 	
-	public PdfPTable getFullShoppingBasket(PdfContentByte cb) {
+	public PdfPTable getFullShoppingBasket(PdfContentByte cb, String mode) {
 		int position = 0;
 		float sub_total_CHF = 0.0f;
 
@@ -338,12 +340,13 @@ public class SaveBasket {
         table.addCell(getStringCell("GTIN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell("Bezeichnung", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell("Preis (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
-		        
+        
         if (m_shopping_basket.size()>0) {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 				Article article = entry.getValue();				
 					
-				if (m_list_of_authors==null || !anyElemIsContained(m_list_of_authors, article.getAuthor().trim().toLowerCase())) {	
+				if (mode.equals("all") 
+						|| (mode.equals("rest") && (m_list_of_authors==null || !anyElemIsContained(m_list_of_authors, article.getAuthor().trim().toLowerCase())))) {	
 					String price_pruned = "";
 					if (article.isSpecial()) 
 						price_pruned = String.format("%.2f",article.getBuyingPrice());
@@ -394,13 +397,18 @@ public class SaveBasket {
 	}
 	
 	public void generateCsv(String author, String filename) {
-		if (!author.isEmpty()) {
+		String name_split[] = filename.split("_");
+		String date = name_split[name_split.length-1];		
+		if (date.contains(".")) 
+			date = date.substring(0, date.lastIndexOf("."));
+		Preferences prefs = Preferences.userRoot().node(SettingsPage.class.getName());		
+		String gln_code = prefs.get("glncode", "7610000000000");		
+		if (!author.equals("all") && !author.equals("rest")) {
 	        if (m_shopping_basket.size()>0) {
 	        	int pos = 0;
 	        	String shopping_basket_str = "";
 				for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-					Article article = entry.getValue();	
-					
+					Article article = entry.getValue();									
 					if (article.getAuthor().trim().toLowerCase().contains(author)) {						
 						String price_pruned = "";
 						if (article.isSpecial()) 
@@ -409,7 +417,7 @@ public class SaveBasket {
 							price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
 						if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
 							float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-							shopping_basket_str += (++pos) + "|" 
+							shopping_basket_str += (++pos) + "|" + date + "|" + gln_code + "|"
 									+ article.getQuantity() + "|" 
 									+ article.getEanCode() + "|" 
 									+ article.getPackTitle() + "|" 
@@ -438,7 +446,8 @@ public class SaveBasket {
 				for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 					Article article = entry.getValue();		
 					
-					if (m_list_of_authors.isEmpty() || !anyElemIsContained(m_list_of_authors, article.getAuthor().trim().toLowerCase())) {	
+					if (author.equals("all") 
+							|| (author.equals("rest") && (m_list_of_authors==null || !anyElemIsContained(m_list_of_authors, article.getAuthor().trim().toLowerCase())))) {	
 						String price_pruned = "";
 						if (article.isSpecial()) 
 							price_pruned = String.format("%.2f",article.getBuyingPrice());
@@ -446,7 +455,7 @@ public class SaveBasket {
 							price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
 						if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
 							float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-							shopping_basket_str += (++pos) + "|" 
+							shopping_basket_str += (++pos) + "|" + date + "|" + gln_code + "|"
 									+ article.getQuantity() + "|" 
 									+ article.getEanCode() + "|" 
 									+ article.getPackTitle() + "|" 
