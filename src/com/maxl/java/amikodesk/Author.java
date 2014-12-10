@@ -22,6 +22,7 @@ package com.maxl.java.amikodesk;
 public class Author {
 
 	private String name;
+	private String company;
 	private String email;
 	private String email_cc;
 	private String address;	
@@ -48,6 +49,14 @@ public class Author {
 			return name.toLowerCase().trim().substring(0, 7);
 		else
 			return name.toLowerCase().trim();
+	}
+	
+	public void setCompany(String company) {
+		this.company = company;
+	}
+	
+	public String getCompany() {
+		return company;
 	}
 	
 	public void setEmail(String email) {

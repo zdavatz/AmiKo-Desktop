@@ -251,11 +251,11 @@ public class SqlDatabase {
 		String db_unzipped = app_folder + "\\amiko_db_full_idx_de.db";
 		String amiko_report = app_folder + "\\amiko_report_de.html";
 		String drug_interactions_unzipped = app_folder + "\\drug_interactions_csv_de.csv";
+		String shop_files_zipped = app_folder + "\\shop_files.zip";
 		String db_url = "http://pillbox.oddb.org/amiko_db_full_idx_de.zip";
 		String report_url = "http://pillbox.oddb.org/amiko_report_de.html";
 		String drug_interactions_url = "http://pillbox.oddb.org/drug_interactions_csv_de.zip";
-		String gln_codes_url = "http://pillbox.oddb.org/gln_codes_csv.zip";
-		String gln_codes_unzipped = app_folder + "\\gln_codes_csv.csv";
+		String shop_files_url = "http://pillbox.oddb.org/shop.zip";
 		// ... works also for "fr"
 		if (db_lang.equals("fr")) {
 			db_unzipped = app_folder + "\\amiko_db_full_idx_fr.db";
@@ -270,8 +270,8 @@ public class SqlDatabase {
 		m_customization = custom;
 		m_operationCancelled = false;
 		if (Utilities.isInternetReachable())
-			new DownloadDialog(db_url, report_url, drug_interactions_url, gln_codes_url,
-					amiko_report, db_unzipped, drug_interactions_unzipped, gln_codes_unzipped);
+			new DownloadDialog(db_url, report_url, drug_interactions_url, shop_files_url,
+					amiko_report, db_unzipped, drug_interactions_unzipped, shop_files_zipped);
 		else {
 			AmiKoDialogs cd = new AmiKoDialogs(db_lang, custom);
 			cd.NoInternetDialog();
@@ -288,8 +288,8 @@ public class SqlDatabase {
 	    private JLabel label = new JLabel();
 	    private JButton okButton = new JButton();
 	    
-	    public DownloadDialog(String databaseURL, String reportURL, String drugInteractionsURL, String glnCodesURL,
-	    		String amikoReport, String unzippedDB, String drugInteractionsUnzipped, String glnCodesUnzipped) {
+	    public DownloadDialog(String databaseURL, String reportURL, String drugInteractionsURL, String shopFilesURL,
+	    		String amikoReport, String unzippedDB, String drugInteractionsUnzipped, String shopFilesZipped) {
 	    	progressBar.setPreferredSize(new Dimension(640, 30));
 	    	progressBar.setStringPainted(true);			
 			progressBar.setValue(0);	    	
@@ -313,7 +313,8 @@ public class SqlDatabase {
 			dialog.getContentPane().add(panel);			
 			dialog.pack();
 			dialog.setLocationRelativeTo(null);
-			dialog.setModal(false);			
+			dialog.setModal(false);		
+			dialog.setResizable(false);
 			ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
 			if (m_customization.equals("desitin"))
 				icon = new ImageIcon(Constants.DESITIN_ICON);
@@ -326,9 +327,8 @@ public class SqlDatabase {
 	        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			
 			final DownloadWorker downloadWorker = new DownloadWorker(this, 
-					databaseURL, reportURL, drugInteractionsURL, glnCodesURL,
-					new File(amikoReport), new File(unzippedDB), 
-					new File(drugInteractionsUnzipped), new File(glnCodesUnzipped)); 
+					databaseURL, reportURL, drugInteractionsURL, shopFilesURL, 
+					new File(unzippedDB), new File(amikoReport), new File(drugInteractionsUnzipped), new File(shopFilesZipped)); 
 			// Attach property listener to it
     		downloadWorker.addPropertyChangeListener(this);
     		// Launch SwingWorker
@@ -372,24 +372,24 @@ public class SqlDatabase {
 		private String mDatabaseURL;
 		private String mReportURL;
 		private String mDrugInteractionsURL;
-		private String mGLNCodesURL;
+		private String mShopFilesURL;
 		private File mAmikoDatabase;
 		private File mAmikoReport;
 		private File mDrugInteractions;
-		private File mGLNCodes;
+		private File mShopFiles;
 		private DownloadDialog mDialog;
 
 		public DownloadWorker(DownloadDialog dialog, String databaseURL, String reportURL, 
-				String drugInteractionsURL, String glnCodesURL,
-				File amikoReport, File amikoDatabase, File drugInteractions, File glnCodes) {
+				String drugInteractionsURL, String shopFilesURL,
+				File amikoDatabase, File amikoReport, File drugInteractions, File shopFiles) {
 			mDatabaseURL = databaseURL;
 			mReportURL = reportURL;
-			mDrugInteractionsURL = drugInteractionsURL;
-			mGLNCodesURL = glnCodesURL;
-			mAmikoReport = amikoReport;
+			mDrugInteractionsURL = drugInteractionsURL;			
+			mShopFilesURL = shopFilesURL;
 			mAmikoDatabase = amikoDatabase;
+			mAmikoReport = amikoReport;
 			mDrugInteractions = drugInteractions;
-			mGLNCodes = glnCodes;
+			mShopFiles = shopFiles;
 			mDialog = dialog;
 		}
 		
@@ -403,8 +403,10 @@ public class SqlDatabase {
 			long totBytesRead = 0;
 			int percentCompleted = 0;
 
+			String appDataFolder = Utilities.appDataFolder();
+			
 			// **** Download database ****
-			mDialog.setLabel("Downloading database file...");
+			mDialog.setLabel("Downloading database...");
 			URL url = new URL(mDatabaseURL);
 			InputStream is = url.openStream();
 			// Retrieve file length from http header
@@ -420,7 +422,7 @@ public class SqlDatabase {
 					if (percentCompleted > 100)
 						percentCompleted = 100;
 					setProgress(percentCompleted);
-					mDialog.setLabel("Downloading... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
+					mDialog.setLabel("Downloading database... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
 				}
 				os.close();
 			} catch (IOException e) {
@@ -431,7 +433,7 @@ public class SqlDatabase {
 			}
 				
 			// Unzip database file
-			mDialog.setLabel("Unzipping...");
+			mDialog.setLabel("Unzipping database...");
 			
 			try {
 				if (!isCancelled()) {
@@ -449,12 +451,11 @@ public class SqlDatabase {
 						while (!isCancelled() && (bytesRead = zin.read(buffer)) != -1) {
 							fos.write(buffer, 0, bytesRead);
 							totBytesRead += bytesRead;
-							// Note: 3.9 is a magic compression ratio...
 							percentCompleted = (int) (totBytesRead * 100 / unzippedSize);
 							if (percentCompleted > 100)
 								percentCompleted = 100;
 							setProgress(percentCompleted);
-							mDialog.setLabel("Unzipping... " + totBytesRead/1000 + "kB out of " + (int)(unzippedSize/1000) + "kB");
+							mDialog.setLabel("Unzipping database... " + totBytesRead/1000 + "kB out of " + (int)(unzippedSize/1000) + "kB");
 						}
 						fos.close();
 						zin.close();					
@@ -470,7 +471,7 @@ public class SqlDatabase {
 			
 			// **** Download report file ****
 			if (!isCancelled()) {
-				mDialog.setLabel("Downloading report file...");
+				mDialog.setLabel("Downloading report...");
 				url = new URL(mReportURL);
 				is = url.openStream();
 				// Retrieve file length from http header
@@ -498,7 +499,7 @@ public class SqlDatabase {
 			}
 			
 			// **** Download drug interactions ****
-			mDialog.setLabel("Downloading drug interactions file...");
+			mDialog.setLabel("Downloading drug interactions...");
 			url = new URL(mDrugInteractionsURL);
 			is = url.openStream();
 			// Retrieve file length from http header
@@ -514,7 +515,7 @@ public class SqlDatabase {
 					if (percentCompleted > 100)
 						percentCompleted = 100;
 					setProgress(percentCompleted);
-					mDialog.setLabel("Downloading... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
+					mDialog.setLabel("Downloading drug interactions... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
 				}
 				os.close();
 			} catch (IOException e) {
@@ -524,16 +525,13 @@ public class SqlDatabase {
 				cancel(true);
 			}
 			
-			// Unzip file
-			unzipper(downloadedFile, mDrugInteractions, "drug interactions");
-						
-			// **** Download GLN codes ****
-			mDialog.setLabel("Downloading GLN codes file...");
-			url = new URL(mGLNCodesURL);
+			// **** Download shop files ****
+			mDialog.setLabel("Downloading shopping files...");
+			url = new URL(mShopFilesURL);
 			is = url.openStream();
 			// Retrieve file length from http header
 			sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
-			downloadedFile = new File(mGLNCodes.getAbsolutePath() + ".zip");
+			downloadedFile = new File(mShopFiles.getAbsolutePath());
 			os = new FileOutputStream(downloadedFile);
 
 			try {
@@ -544,30 +542,31 @@ public class SqlDatabase {
 					if (percentCompleted > 100)
 						percentCompleted = 100;
 					setProgress(percentCompleted);
-					mDialog.setLabel("Downloading... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
+					mDialog.setLabel("Downloading shopping files... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
 				}
 				os.close();
 			} catch (IOException e) {
-				mDialog.getLabel().setText("Error downloading GLN codes file: " + e.getMessage());
+				mDialog.getLabel().setText("Error downloading shopping files: " + e.getMessage());
 				e.printStackTrace();
 				setProgress(0);
 				cancel(true);
 			}
 			
-			// Unzip file
-			unzipper(downloadedFile, mGLNCodes, "GLN codes");
+			// Unzip files
+			unzipper(downloadedFile, mShopFiles, appDataFolder);
 			
 			return null;
 		}
 
-		private void unzipper(File downloadedFile, File unzippedFile, String fileName) {
+		private void unzipper(File downloadedFile, File unzippedFile, String dataFolder) {
 			byte buffer[] = new byte[4096];
 			int bytesRead = -1;
 			long totBytesRead = 0;
 			int percentCompleted = 0;
+			String unzippedPath = "";
 			
 			// Unzip database file
-			mDialog.setLabel("Unzipping...");
+			mDialog.setLabel("Unzipping shopping files...");
 
 			try {
 				if (!isCancelled()) {
@@ -580,17 +579,17 @@ public class SqlDatabase {
 						// Zip file inputstream
 						InputStream zin = zipFile.getInputStream(zipEntry);
 						// Copy data from ZipEntry to file
-						FileOutputStream fos = new FileOutputStream(unzippedFile);
+						unzippedPath = dataFolder + "\\" + zipEntry.getName();					
+						FileOutputStream fos = new FileOutputStream( /*unzippedFile*/ unzippedPath);
 						totBytesRead = 0;
 						while (!isCancelled() && (bytesRead = zin.read(buffer)) != -1) {
 							fos.write(buffer, 0, bytesRead);
 							totBytesRead += bytesRead;
-							// Note: 3.9 is a magic compression ratio...
 							percentCompleted = (int) (totBytesRead * 100 / unzippedSize);
 							if (percentCompleted > 100)
 								percentCompleted = 100;
 							setProgress(percentCompleted);
-							mDialog.setLabel("Unzipping... " + totBytesRead/1000 + "kB out of " + (int)(unzippedSize/1000) + "kB");
+							mDialog.setLabel("Unzipping shopping files... " + totBytesRead/1000 + "kB out of " + (int)(unzippedSize/1000) + "kB");
 						}
 						fos.close();
 						zin.close();					
@@ -598,7 +597,7 @@ public class SqlDatabase {
 					zipFile.close();
 				}
 			} catch (IOException e) {
-				mDialog.getLabel().setText("Error unzipping " + fileName + " file: " + e.getMessage());
+				mDialog.getLabel().setText("Error unzipping " + unzippedPath + " file: " + e.getMessage());
 				e.printStackTrace();
 				setProgress(0);
 				cancel(true);

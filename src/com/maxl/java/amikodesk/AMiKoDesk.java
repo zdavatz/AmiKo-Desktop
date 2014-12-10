@@ -392,46 +392,9 @@ public class AMiKoDesk {
 		m_interactions_cart = new InteractionsCart();
 		m_shopping_cart = new ShoppingCart();
 		
-		// Fill list of authors / med owners
-		try {
-			// Load encrypted files
-			byte[] encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"authors.ami.ser");
-			// Decrypt and deserialize
-			if (encrypted_msg!=null) {
-				Crypto crypto = new Crypto();
-				byte[] serialized_bytes = crypto.decrypt(encrypted_msg);			
-				ObjectMapper mapper = new ObjectMapper();
-				TypeReference<HashMap<String,Object>> typeRef = new TypeReference<HashMap<String,Object>>() {};				
-				Map<String,Object> authorData = mapper.readValue(serialized_bytes, typeRef);								
-				@SuppressWarnings("unchecked")
-				ArrayList<HashMap<String,String>> authorList = (ArrayList<HashMap<String,String>>)authorData.get("authors");				 
-				for (HashMap<String,String> al : authorList) {
-					Author auth = new Author();
-					auth.setName(al.get("name"));
-					auth.setEmail(al.get("email"));
-					auth.setEmailCC(al.get("emailcc"));
-					auth.setSalutation(al.get("salutation"));
-					list_of_authors.add(auth);
-				}
-				System.out.println("Loaded and decrypted list of " + authorList.size() + " med owners...");
-			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}	
-			
-		// Load encrypted files
-		byte[] encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"access.ami.ser");
-		// Decrypt and deserialize
-		if (encrypted_msg!=null) {
-			Crypto crypto = new Crypto();
-			byte[] serialized_bytes = crypto.decrypt(encrypted_msg);
-			TreeMap<String, String> map = new TreeMap<String, String>();
-			map = (TreeMap<String, String>)(FileOps.deserialize(serialized_bytes));
-			m_p = (String)map.get("amiko@ywesee.com");
-		}
-	
+		loadAuthors();	
+		loadMap(); 	
+		
 		// Create shop folder in application data folder
 	   	File wdir = new File(m_application_data_folder + "\\shop");
 	   	if (!wdir.exists())
@@ -478,6 +441,59 @@ public class AMiKoDesk {
 
 		NativeInterface.runEventPump();
 	}	
+
+	/**
+	 * Fill list of authors / med owners
+	 */
+	static void loadAuthors() {
+		try {
+			// Load encrypted files
+			byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\authors.ami.ser");
+			if (encrypted_msg==null) {
+				encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "authors.ami.ser");
+				System.out.println("Loading authors.ami.ser from default folder...");
+			}
+			// Decrypt and deserialize
+			if (encrypted_msg!=null) {
+				Crypto crypto = new Crypto();
+				byte[] serialized_bytes = crypto.decrypt(encrypted_msg);			
+				ObjectMapper mapper = new ObjectMapper();
+				TypeReference<HashMap<String,Object>> typeRef = new TypeReference<HashMap<String,Object>>() {};				
+				Map<String,Object> authorData = mapper.readValue(serialized_bytes, typeRef);								
+				@SuppressWarnings("unchecked")
+				ArrayList<HashMap<String,String>> authorList = (ArrayList<HashMap<String,String>>)authorData.get("authors");				 
+				for (HashMap<String,String> al : authorList) {
+					Author auth = new Author();
+					auth.setName(al.get("name"));
+					auth.setCompany(al.get("company"));
+					auth.setEmail(al.get("email"));
+					auth.setEmailCC(al.get("emailcc"));
+					auth.setSalutation(al.get("salutation"));
+					list_of_authors.add(auth);
+				}
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}	
+	}
+	
+	static void loadMap() {
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\access.ami.ser");
+		if (encrypted_msg==null) {		
+			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "access.ami.ser");
+			System.out.println("Loading access.ami.ser from default folder...");
+		}
+		// Decrypt and deserialize
+		if (encrypted_msg!=null) {
+			Crypto crypto = new Crypto();
+			byte[] serialized_bytes = crypto.decrypt(encrypted_msg);
+			TreeMap<String, String> map = new TreeMap<String, String>();
+			map = (TreeMap<String, String>)(FileOps.deserialize(serialized_bytes));
+			m_p = (String)map.get("amiko@ywesee.com");
+		}
+	}
 	
 	static class CheckListRenderer extends JCheckBox implements ListCellRenderer<Object> {
 		
@@ -872,11 +888,17 @@ public class AMiKoDesk {
 					} else if (m_curr_uistate.isShoppingMode()) {
 						if (msg.equals("delete_all")) {
 							m_shopping_basket.clear();
+							int index = m_shopping_cart.getCartIndex();
+							if (index>0)
+								saveShoppingCartWithIndex(index);
 							m_web_panel.updateShoppingHtml();
 						} else if (msg.equals("delete_row")) {
 							Article article = m_shopping_basket.get(row_key);
 							article.setQuantity(1);
 							m_shopping_basket.remove(row_key);
+							int index = m_shopping_cart.getCartIndex();
+							if (index>0)
+								saveShoppingCartWithIndex(index);							
 							m_web_panel.updateShoppingHtml();
 						} else if (msg.startsWith("change_marge")) {
 							int marge = Integer.parseInt(row_key.trim());
@@ -885,9 +907,11 @@ public class AMiKoDesk {
 								// Loop through all medis and update
 								for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 									Article article = entry.getValue();
-									String ean_code = article.getEanCode();
-									article.setMargin(marge/100.0f);
-									updateShoppingCart(ean_code, article);
+									if (!article.isSpecial()) {
+										String ean_code = article.getEanCode();
+										article.setMargin(marge/100.0f);
+										updateShoppingCart(ean_code, article);
+									}
 								}
 							}
 						} else if (msg.startsWith("change_qty")) {
@@ -919,7 +943,7 @@ public class AMiKoDesk {
 										String[] file_str = list_of_carts.toArray(new String[list_of_carts.size()]);
 										m_section_titles.updatePanel(file_str);
 									}
-								});
+								});						
 								m_web_panel.updateShoppingHtml();
 							} else { 								
 								// Save old cart with index = index
@@ -977,26 +1001,26 @@ public class AMiKoDesk {
 							em.sendAllOrders(list_of_authors, sbasket);
 							m_web_panel.updateShoppingHtml();
 						}
-					} else {
-						if (msg.equals("add_to_shopping_cart")) {
-							if (m_shopping_basket.containsKey(row_key)) {
-								Article article = m_shopping_basket.get(row_key);
-								article.incrementQuantity();
-							} else {
-								if (med_index>=0) {
-									// Get full info on selected medication
-									Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
-									// Get its packages
-									String[] packages = m.getPackages().split("\n");
-									if (packages!=null) {
-										// Loop through all packages and find the right one, add it to the basket
-										for (int i=0; i<packages.length; ++i) {
-											if (!packages[i].isEmpty() && packages[i].contains(row_key)) {
-												String[] entry = packages[i].split("\\|");
-												Article article = new Article(entry);
-												article.setQuantity(1);
-												m_shopping_basket.put(row_key, article);
-											}
+					}					
+					if (msg.equals("add_to_shopping_cart")) {
+						m_shopping_basket = m_shopping_cart.getShoppingBasket();
+						if (m_shopping_basket.containsKey(row_key)) {
+							Article article = m_shopping_basket.get(row_key);
+							article.incrementQuantity();
+						} else {
+							if (med_index>=0) {
+								// Get full info on selected medication
+								Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
+								// Get its packages
+								String[] packages = m.getPackages().split("\n");
+								if (packages!=null) {
+									// Loop through all packages and find the right one, add it to the basket
+									for (int i=0; i<packages.length; ++i) {
+										if (!packages[i].isEmpty() && packages[i].contains(row_key)) {
+											String[] entry = packages[i].split("\\|");
+											Article article = new Article(entry);
+											article.setQuantity(1);
+											m_shopping_basket.put(row_key, article);
 										}
 									}
 								}
@@ -1088,7 +1112,7 @@ public class AMiKoDesk {
 				String filename = file.getAbsolutePath();
 				byte[] serialized_bytes = FileOps.readBytesFromFile(filename);
 				if (serialized_bytes!=null) {
-					// System.out.println("Loaded shopping cart " + n + " from " + filename);
+					System.out.println("Loaded shopping cart " + n + " from " + filename);
 					m_shopping_basket = (LinkedHashMap<String, Article>)FileOps.deserialize(serialized_bytes);
 					updateShoppingHtml();								
 				}
@@ -2289,21 +2313,20 @@ public class AMiKoDesk {
 					selectShoppingCartButton.setSelected(true);
 					
 					if (!m_curr_uistate.getUseMode().equals("shopping")) {
-						m_curr_uistate.setUseMode("shopping");
-						
+						m_curr_uistate.setUseMode("shopping");						
 						// Set right panel title
 						if (Utilities.appLanguage().equals("de"))
 							m_web_panel.setTitle("Warenkorb");
 						else if (Utilities.appLanguage().equals("fr"))
 							m_web_panel.setTitle("Panier d'achat");	
 						// Switch to shopping cart						
-
-						int index = -1;
-						if (m_shopping_cart!=null)
-							index = m_shopping_cart.getCartIndex();
-						m_web_panel.loadShoppingCartWithIndex(index);
-						m_web_panel.updateListOfPackages();
-						m_web_panel.updateShoppingHtml();
+						int index = 1;
+						if (m_shopping_cart!=null) {
+							index = m_shopping_cart.getCartIndex();				
+							m_web_panel.loadShoppingCartWithIndex(index);	
+						}
+						// m_web_panel.updateShoppingHtml();
+						m_web_panel.updateListOfPackages();									
 					}
 				} else {
 					selectShoppingCartButton.setSelected(false);
@@ -2486,13 +2509,23 @@ public class AMiKoDesk {
 		m_sqldb.addObserver(new Observer() {
 			public void update(Observable o, Object arg) {
 				System.out.println(arg);
+				// Refresh some stuff after update
+				loadAuthors();
+				loadMap();
+				if (m_shopping_cart!=null) {
+					m_shopping_cart.load_conditions();
+					m_shopping_cart.load_glns();
+				}				
 				// Refresh search results
+				/*
 				selectAipsButton.setSelected(true);
 				selectFavoritesButton.setSelected(false);
 				m_curr_uistate.setUseMode("aips");
 				med_search = m_sqldb.searchTitle("");
+				// 
 				sTitle();	// Used instead of sTitle (which is slow)
 				cardl.show(p_results, final_title);						
+				*/
 			}
 		});
 		

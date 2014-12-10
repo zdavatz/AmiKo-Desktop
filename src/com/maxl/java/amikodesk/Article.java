@@ -30,6 +30,7 @@ public class Article implements java.io.Serializable {
 	private String pharma_code;
 	private String author;
 	private String dropdown_str;
+	private String author_code;
 	private float margin = -1.0f;	// <0.0f -> not initialized
 	private float buying_price = 0.0f;
 	private float selling_price = 0.0f;;
@@ -38,7 +39,6 @@ public class Article implements java.io.Serializable {
 	private int draufgabe = 0;
 	private float cash_rebate = 0.0f; // [%]
 	private int onstock;
-	private boolean special = false;
 	
 	public Article(String[] entry) {
 		if (entry!=null) {
@@ -95,6 +95,14 @@ public class Article implements java.io.Serializable {
 		this.author = author;
 	}
 	
+	public String getCode() {
+		return author_code;
+	}
+	
+	public void setCode(String code) {
+		this.author_code = code;
+	}
+	
 	public String getPackTitle() {
 		return pack_title;
 	}
@@ -127,12 +135,31 @@ public class Article implements java.io.Serializable {
 		this.dropdown_str = dropdown_str;
 	}
 	
-	public boolean isSpecial() {
-		return special;
+	
+	public String getAdditionalInfo() {
+		return additional_info;
+	}	
+	
+	public void setAdditionalInfo(String additional_info) {
+		this.additional_info = additional_info;
 	}
 	
-	public void setSpecial(boolean special) {
-		this.special = special;
+	
+    public String getCategories() {
+    	String cat = "";    	
+    	String[] c = additional_info.split(",");
+    	for (int i=0; i<3; ++i) {
+    		if (!c[i].isEmpty() && c[i].trim().matches("^[a-zA-Z]+$")) {
+    			cat += (c[i].trim() + ", ");
+    		}
+    	}
+    	if (cat.length()>2)
+    		return cat.substring(0,cat.length()-2);
+    	return "";
+    }
+	
+	public boolean isSpecial() {
+		return additional_info.contains("SL");
 	}
 	
 	/**
@@ -282,28 +309,6 @@ public class Article implements java.io.Serializable {
 	public float getMargin() {
 		return margin;
 	}
-	
-	public String getAdditionalInfo() {
-		return additional_info;
-	}	
-	
-	public void setAdditionalInfo(String additional_info) {
-		this.additional_info = additional_info;
-	}
-	
-	
-    public String getCategories() {
-    	String cat = "";    	
-    	String[] c = additional_info.split(",");
-    	for (int i=0; i<3; ++i) {
-    		if (!c[i].isEmpty() && c[i].trim().matches("^[a-zA-Z]+$")) {
-    			cat += (c[i].trim() + ", ");
-    		}
-    	}
-    	if (cat.length()>2)
-    		return cat.substring(0,cat.length()-2);
-    	return "";
-    }
 	
 	public int getQuantity() {
 		return quantity;

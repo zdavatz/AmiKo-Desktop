@@ -103,6 +103,8 @@ public class FileOps {
 			
 	static public byte[] readBytesFromFile(String path) {
 		File file = new File(path);
+		if (!file.exists())
+			return null;
 		byte[] buf = new byte[(int)file.length()];
 		try {
 			DataInputStream dis = new DataInputStream(new FileInputStream(file));

@@ -109,9 +109,8 @@ public class SettingsPage extends JDialog {
 		// Read default file
 		if (m_user_map==null) {
 			m_user_map = readFromCsvToMap("./shop/" + Constants.GLN_CODES_FILE);
-			System.out.println("Loading default gln codes file from ./shop/" + Constants.GLN_CODES_FILE);
-		} else 
-			System.out.println("Loading default gln codes file from " + m_application_data_folder + "/" + Constants.GLN_CODES_FILE);
+			System.out.println("Loading gln codes from default folder...");
+		}
 		
 		this.setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		
