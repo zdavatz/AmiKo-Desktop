@@ -68,6 +68,8 @@ public class SaveBasket {
 	
 	private static Map<String, Article> m_shopping_basket = null;
 	private static TreeSet<String> m_list_of_authors = null;
+	
+	private static float total_price_CHF = 0.0f;
 
 	public SaveBasket(Map<String, Article> shopping_basket) {
 		m_shopping_basket = shopping_basket;
@@ -233,7 +235,6 @@ public class SaveBasket {
 	      			document.add(getFullShoppingBasket(cb, "all"));
 	      		else if (author.equals("rest"))
 	      			document.add(getFullShoppingBasket(cb, "rest"));
-	        		
 	        	LineSeparator separator = new LineSeparator();
 	        	document.add(separator);
             }
@@ -262,9 +263,9 @@ public class SaveBasket {
 		PdfPCell cell = new PdfPCell();	
         
         table.addCell(getStringCell("Pos.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
-		table.addCell(getStringCell("Anz.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("GTIN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("Bezeichnung", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+		table.addCell(getStringCell("Menge", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell("EAN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell("Artikel", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell("Preis (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
 		        
         if (m_shopping_basket.size()>0 && !author.isEmpty()) {
@@ -273,11 +274,15 @@ public class SaveBasket {
 				
 				if (article.getAuthor().trim().toLowerCase().contains(author)) {	
 					String price_pruned = "";
-					if (article.isSpecial()) 
-						price_pruned = String.format("%.2f",article.getBuyingPrice());
-					else
-						price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
-
+					if (article.getCode()!=null && article.getCode().equals("ibsa")) {
+						float cr = article.getCashRebate();
+						if (article.getDraufgabe()>0)
+							price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
+						else
+							price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
+					} else {
+						price_pruned = article.getCleanExfactoryPrice();						
+					}
 					if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {						
 						table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
 						table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
@@ -336,9 +341,9 @@ public class SaveBasket {
 		PdfPCell cell = new PdfPCell();	
         
         table.addCell(getStringCell("Pos.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
-		table.addCell(getStringCell("Anz.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("GTIN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("Bezeichnung", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+		table.addCell(getStringCell("Menge", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell("EAN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell("Artikel", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell("Preis (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
         
         if (m_shopping_basket.size()>0) {
@@ -347,12 +352,17 @@ public class SaveBasket {
 					
 				if (mode.equals("all") 
 						|| (mode.equals("rest") && (m_list_of_authors==null || !anyElemIsContained(m_list_of_authors, article.getAuthor().trim().toLowerCase())))) {	
-					String price_pruned = "";
-					if (article.isSpecial()) 
-						price_pruned = String.format("%.2f",article.getBuyingPrice());
-					else
-						price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
-	
+					String price_pruned = "";					
+					if (article.getCode()!=null && article.getCode().equals("ibsa")) {
+						float cr = article.getCashRebate();
+						if (article.getDraufgabe()>0)
+							price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
+						else
+							price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
+					} else {
+						price_pruned = article.getCleanExfactoryPrice();						
+					}
+					
 					if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {						
 						table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
 						table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
@@ -402,7 +412,8 @@ public class SaveBasket {
 		if (date.contains(".")) 
 			date = date.substring(0, date.lastIndexOf("."));
 		Preferences prefs = Preferences.userRoot().node(SettingsPage.class.getName());		
-		String gln_code = prefs.get("glncode", "7610000000000");		
+		String gln_code = prefs.get("glncode", "7610000000000");	
+		String email_address = prefs.get("emailadresse", "");
 		if (!author.equals("all") && !author.equals("rest")) {
 	        if (m_shopping_basket.size()>0) {
 	        	int pos = 0;
@@ -410,15 +421,23 @@ public class SaveBasket {
 				for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 					Article article = entry.getValue();									
 					if (article.getAuthor().trim().toLowerCase().contains(author)) {						
-						String price_pruned = "";
-						if (article.isSpecial()) 
-							price_pruned = String.format("%.2f",article.getBuyingPrice());
-						else
-							price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
+						String price_pruned = "";				
+						if (article.getCode()!=null && article.getCode().equals("ibsa")) {
+							float cr = article.getCashRebate();
+							if (article.getDraufgabe()>0)
+								price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
+							else
+								price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
+						} else {
+							price_pruned = article.getCleanExfactoryPrice();						
+						}
 						if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
-							float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-							shopping_basket_str += (++pos) + "|" + date + "|" + gln_code + "|"
-									+ article.getQuantity() + "|" 
+							double price = Math.ceil(article.getQuantity()*Float.parseFloat(price_pruned)*100.0f)/100.0f;
+							String price_CHF = String.format("%.2f", price);
+							shopping_basket_str += (++pos) + "|" + date + "|" 
+									+ gln_code + "|" + email_address + "|"
+									+ "B " + article.getQuantity() + "|" 
+									+ "G " + article.getDraufgabe() + "|"
 									+ article.getEanCode() + "|" 
 									+ article.getPackTitle() + "|" 
 									+ price_pruned + "|"
@@ -444,18 +463,23 @@ public class SaveBasket {
 	        	int pos = 0;
 	        	String shopping_basket_str = "";
 				for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-					Article article = entry.getValue();		
-					
+					Article article = entry.getValue();							
 					if (author.equals("all") 
 							|| (author.equals("rest") && (m_list_of_authors==null || !anyElemIsContained(m_list_of_authors, article.getAuthor().trim().toLowerCase())))) {	
 						String price_pruned = "";
-						if (article.isSpecial()) 
-							price_pruned = String.format("%.2f",article.getBuyingPrice());
-						else
-							price_pruned = article.getExfactoryPrice().replaceAll("[^\\d.]", "");
+						if (article.getCode()!=null && article.getCode().equals("ibsa")) {
+							float cr = article.getCashRebate();
+							if (article.getDraufgabe()>0)
+								price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
+							else
+								price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
+						} else {
+							price_pruned = article.getCleanExfactoryPrice();						
+						}
 						if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
 							float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-							shopping_basket_str += (++pos) + "|" + date + "|" + gln_code + "|"
+							shopping_basket_str += (++pos) + "|" + date + "|" 
+									+ gln_code + "|" + email_address + "|"
 									+ article.getQuantity() + "|" 
 									+ article.getEanCode() + "|" 
 									+ article.getPackTitle() + "|" 

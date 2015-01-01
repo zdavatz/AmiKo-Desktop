@@ -19,9 +19,11 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
+import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -108,6 +110,28 @@ public class ShoppingCart implements java.io.Serializable {
 		return m_shopping_basket;
 	}
 	
+	public boolean loadShoppingCartWithIndex(final int n) {
+		int index = n;
+		// If n<0 then load default cart
+		if (index<0)
+			index = m_cart_index;
+		File file = new File(Utilities.appDataFolder() + "\\shop\\korb" + index + ".ser");
+		if (file.exists()) {
+			// Load and deserialize m_shopping_basket
+			String filename = file.getAbsolutePath();
+			byte[] serialized_bytes = FileOps.readBytesFromFile(filename);
+			if (serialized_bytes!=null) {
+				System.out.println("Loaded shopping cart " + index + " from " + filename);
+				m_shopping_basket = (LinkedHashMap<String, Article>)FileOps.deserialize(serialized_bytes);
+				return true;							
+			}
+		} else {
+			m_shopping_basket = new LinkedHashMap<String, Article>();
+			return true;
+		}
+		return false;
+	}
+	
 	public TreeMap<Integer, Float> getRebateMap(String ean_code) {
 		TreeMap<Integer, Float> rebate_map = null;
 		String gln_code = m_prefs.get("glncode", "7610000000000");
@@ -119,15 +143,20 @@ public class ShoppingCart implements java.io.Serializable {
 			Conditions c = m_map_ibsa_conditions.get(ean_code);
 			// Extract rebate conditions for particular doctor/pharmacy	
 			if (user_type.equals("arzt")) {
-				rebate_map = c.getDiscountDoc(user_class);
+				rebate_map = c.getDiscountDoctor(user_class);
 			} else {
-				if (user_type.equals("spital") || user_type.equals("wissenschaft") || user_type.equals("behörde")) {
+				if (user_type.equals("spital")) {
 					rebate_map = c.getDiscountHospital(user_class);
 				} else if (user_type.equals("apotheke")) {
-					if (c.isPromoTime(user_class))
-						rebate_map = c.getDiscountPromo(user_class);
-					else
-						rebate_map = c.getDiscountFarma(user_class);
+					boolean is_promo_time = c.isPromoTime("pharmacy", user_class);
+					rebate_map = c.getDiscountPharmacy(user_class, is_promo_time);
+				} else if (user_type.equals("drogerie")) {
+					boolean is_promo_time = c.isPromoTime("drugstore", user_class);
+					rebate_map = c.getDiscountDrugstore(user_class, is_promo_time);
+				} else if (user_type.equals("grossist")) {
+					rebate_map = c.getDiscountHospital(user_class);
+				} else if (user_type.equals("wissenschaft") || user_type.equals("behörde")) {
+					rebate_map = c.getDiscountHospital(user_class);
 				}
 			}
 		}
@@ -146,15 +175,22 @@ public class ShoppingCart implements java.io.Serializable {
 				// Get rebate conditions
 				Conditions c = m_map_ibsa_conditions.get(ean_code);			
 				if (user_type.equals("arzt")) {
-					assort_list = c.getAssortDoc();
-				} else {
-					if (user_type.equals("apotheke")) {
-						if (c.isPromoTime(user_class))
-							assort_list = c.getAssortPromo();
-						else
-							assort_list = c.getAssortFarma();
-					}
-				}		
+					assort_list = c.getAssort("doctor");
+				} else if (user_type.equals("apotheke")) {
+					boolean is_promo_time = c.isPromoTime("pharmacy", user_class);
+					if (!is_promo_time)
+						assort_list = c.getAssort("pharmacy");
+					else 
+						assort_list = c.getAssort("pharmacy-promo");
+				} else if (user_type.equals("drogerie")) {
+					boolean is_promo_time = c.isPromoTime("drugstore", user_class);
+					if (!is_promo_time)
+						assort_list = c.getAssort("drugstore");
+					else 
+						assort_list = c.getAssort("drugstore-promo");
+				} else if (user_type.equals("spital")) {
+					assort_list = c.getAssort("hospital");
+				}
 			}
 			return assort_list;
 		}
@@ -212,11 +248,13 @@ public class ShoppingCart implements java.io.Serializable {
 		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 			Article article = entry.getValue();
 			// sum_weighted_draufgabe += article.getBuyingPrice()*article.getDraufgabe();
-			sum_weighted_tot_quantity += article.getBuyingPrice()*(article.getDraufgabe()+article.getQuantity());		
+			sum_weighted_tot_quantity += article.getBuyingPrice(0.0f)*(article.getDraufgabe()+article.getQuantity());		
 			if (article.getDraufgabe()>0)
-				sum_weighted_cash_rebate += article.getBuyingPrice()*article.getQuantity();
-			else
-				sum_weighted_cash_rebate += article.getBuyingPrice()*article.getQuantity()*(1.0f-article.getCashRebate()/100.0f);
+				sum_weighted_cash_rebate += article.getBuyingPrice(0.0f)*article.getQuantity();
+			else {
+				float cr = article.getCashRebate();
+				sum_weighted_cash_rebate += article.getBuyingPrice(cr)*article.getQuantity();
+			}
 		}				
 		if (sum_weighted_tot_quantity>0.0f)
 			return (100.0f*(sum_weighted_tot_quantity-sum_weighted_cash_rebate)/sum_weighted_tot_quantity);
@@ -246,7 +284,7 @@ public class ShoppingCart implements java.io.Serializable {
 		float tot_buying = 0.0f;
 		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 			Article article = entry.getValue();
-			tot_buying += article.getQuantity()*article.getBuyingPrice();
+			tot_buying += article.getQuantity()*article.getBuyingPrice(0.0f);
 		}
 		return tot_buying;
 	}
@@ -408,24 +446,26 @@ public class ShoppingCart implements java.io.Serializable {
 							article.setCashRebate(cr);				
 						cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
 
-						if (article.getDraufgabe()>0)
-							subtotal_buying_CHF += article.getTotBuyingPrice();							
-						else
-							subtotal_buying_CHF += article.getTotBuyingPrice()*(1.0f-cr/100.0f);
+						cr = 0.0f;
+						if (dg<=0)
+							cr = getCashRebate(article);
+
+						subtotal_buying_CHF += (article.getTotBuyingPrice(cr));
+						
 						if (article.isSpecial())	// article is in SL Liste
 							subtotal_selling_CHF += article.getTotPublicPrice();
 						else	// article is OTC (over-the-counter)
 							subtotal_selling_CHF += article.getTotSellingPrice();					
 						
-						String buying_price_CHF = String.format("%.2f", article.getBuyingPrice()*(1.0f-cr/100.0f));
-						String tot_buying_price_CHF = String.format("%.2f", article.getTotBuyingPrice()*(1.0f-cr/100.0f));
+						String buying_price_CHF = String.format("%.2f", article.getBuyingPrice(cr));
+						String tot_buying_price_CHF = String.format("%.2f", article.getTotBuyingPrice(cr));
 						String selling_price_CHF = String.format("%.2f", article.getSellingPrice());
 						String tot_selling_price_CHF = String.format("%.2f", article.getTotSellingPrice());
-						String profit_CHF = String.format("%.2f", article.getTotSellingPrice()-article.getTotBuyingPrice());
+						String profit_CHF = String.format("%.2f", article.getTotSellingPrice()-article.getTotBuyingPrice(cr));
 						if (article.isSpecial()) {
-							selling_price_CHF = String.format("%.2f", article.getPublicPriceAsFloat());
+							selling_price_CHF = String.format("%.2f", article.getPublicPriceAsFloat()); 
 							tot_selling_price_CHF = String.format("%.2f", article.getTotPublicPrice());
-							profit_CHF = String.format("%.2f", article.getTotPublicPrice()-article.getTotBuyingPrice());
+							profit_CHF = String.format("%.2f", article.getTotPublicPrice()-article.getTotBuyingPrice(cr));
 						}
 						
 						basket_html_str += "<tr id=\"" + ean_code + "\">";
@@ -447,23 +487,24 @@ public class ShoppingCart implements java.io.Serializable {
 					} else {
 						int quantity = article.getQuantity();	
 						
-						subtotal_buying_CHF += article.getTotBuyingPrice();
+						subtotal_buying_CHF += article.getTotBuyingPrice(0.0f);
+						
 						if (article.isSpecial())	// article is in SL Liste
 							subtotal_selling_CHF += article.getTotPublicPrice();
 						else	// article is OTC (over-the-counter)
 							subtotal_selling_CHF += article.getTotSellingPrice();
 						
-						String buying_price_CHF = String.format("%.2f", article.getBuyingPrice());
-						String tot_buying_price_CHF = String.format("%.2f", article.getTotBuyingPrice());
+						String buying_price_CHF = String.format("%.2f", article.getBuyingPrice(0.0f));
+						String tot_buying_price_CHF = String.format("%.2f", article.getTotBuyingPrice(0.0f));
 						String selling_price_CHF = String.format("%.2f", article.getSellingPrice());
 						String tot_selling_price_CHF = String.format("%.2f", article.getTotSellingPrice());
-						String profit_CHF = String.format("%.2f", article.getTotSellingPrice()-article.getTotBuyingPrice());
+						String profit_CHF = String.format("%.2f", article.getTotSellingPrice()-article.getTotBuyingPrice(0.0f));
 						String cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
 						
 						if (article.isSpecial()) {
 							selling_price_CHF = String.format("%.2f", article.getPublicPriceAsFloat());
 							tot_selling_price_CHF = String.format("%.2f", article.getTotPublicPrice());
-							profit_CHF = String.format("%.2f", article.getTotPublicPrice()-article.getTotBuyingPrice());
+							profit_CHF = String.format("%.2f", article.getTotPublicPrice()-article.getTotBuyingPrice(0.0f));
 						}
 						
 						basket_html_str += "<tr id=\"" + ean_code + "\">";
@@ -656,20 +697,23 @@ public class ShoppingCart implements java.io.Serializable {
 		String tot_buying_price_CHF = "";
 		String tot_selling_price_CHF = "";
 		String profit_CHF = "";
-		//
-		if (article.getCode().equals("ibsa")) {
+		
+		if (article.getCode()!=null && article.getCode().equals("ibsa")) {
+			cr = 0.0f;
+			if (dg<=0)
+				cr = getCashRebate(article);
 			if (article.isSpecial()) {
-				buying_price_CHF = Utilities.prettyFormat(article.getBuyingPrice()*(1.0f-cr/100.0f));
+				buying_price_CHF = Utilities.prettyFormat(article.getBuyingPrice(cr));
 				selling_price_CHF = Utilities.prettyFormat(article.getPublicPriceAsFloat());
-				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice()*(1.0f-cr/100.0f));
+				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice(cr));
 				tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
-				profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotBuyingPrice()*(1.0f-cr/100.0f));
+				profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotBuyingPrice(cr));
 			} else {
-				buying_price_CHF = Utilities.prettyFormat(article.getBuyingPrice()*(1.0f-cr/100.0f));
+				buying_price_CHF = Utilities.prettyFormat(article.getBuyingPrice(cr));
 				selling_price_CHF = Utilities.prettyFormat(article.getSellingPrice());
-				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice()*(1.0f-cr/100.0f));
+				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice(cr));
 				tot_selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
-				profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice()*(1.0f-cr/100.0f));
+				profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice(cr));
 			}
 		} else {
 			buying_price_CHF = Utilities.prettyFormat(article.getExfactoryPriceAsFloat());
@@ -694,19 +738,22 @@ public class ShoppingCart implements java.io.Serializable {
 		float subtotal_buying = 0.0f;
 		float subtotal_selling = 0.0f;
 		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-			Article a = entry.getValue();
-			if (a.getCode().equals("ibsa")) {
-				float cr = a.getCashRebate();				
-				if (a.isSpecial()) {
-					subtotal_buying += a.getTotBuyingPrice()*(1.0f-cr/100.0f);
-					subtotal_selling += a.getTotPublicPrice();
+			Article article = entry.getValue();
+			if (article.getCode()!=null && article.getCode().equals("ibsa")) {
+				float cr = 0.0f;		
+				int dg = getDraufgabe(article);
+				if (dg<=0)
+					cr = article.getCashRebate();
+				if (article.isSpecial()) {
+					subtotal_buying += article.getTotBuyingPrice(cr);
+					subtotal_selling += article.getTotPublicPrice();
 				} else {
-					subtotal_buying += a.getTotBuyingPrice()*(1.0f-cr/100.0f);
-					subtotal_selling += a.getTotSellingPrice();					
+					subtotal_buying += article.getTotBuyingPrice(cr);
+					subtotal_selling += article.getTotSellingPrice();					
 				}
 			} else {
-				subtotal_buying += a.getTotExfactoryPrice();
-				subtotal_selling += a.getTotPublicPrice();
+				subtotal_buying += article.getTotExfactoryPrice();
+				subtotal_selling += article.getTotPublicPrice();
 			}
 		}
 		String subtotal_buying_CHF = Utilities.prettyFormat(subtotal_buying);

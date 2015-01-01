@@ -19,6 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Desktop;
 import java.awt.Dimension;
@@ -37,6 +38,8 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 
 public class AmiKoDialogs extends JDialog {
@@ -331,5 +334,34 @@ public class AmiKoDialogs extends JDialog {
 		this.setResizable(false);
 		
 		this.setVisible(true);
+	}
+	
+	public void ShoppingCartDialog(String ean) {
+        final JDialog dialog = new JDialog(this, "Warenkorb", true);
+		JPanel panel = new JPanel();
+		JLabel label = new JLabel();		
+		label.setText(ean + " in Warenkorb...");
+		
+        Timer timer = new Timer(2000, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                dialog.setVisible(false);
+                dialog.dispose();
+            }
+        });
+        timer.setRepeats(false);
+        timer.start();
+        
+		panel = new JPanel(new BorderLayout(5, 5));
+		panel.add(label, BorderLayout.NORTH);
+		panel.setBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7));
+
+		dialog.getContentPane().add(panel);
+		dialog.pack();
+		dialog.setLocationRelativeTo(null);
+		dialog.setModal(false);
+		dialog.setSize(220, 60);
+		dialog.setResizable(false);
+		dialog.setAlwaysOnTop(true);
+        dialog.setVisible(true); 	// If modal, application will pause here
 	}
 }

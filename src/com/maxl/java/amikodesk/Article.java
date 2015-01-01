@@ -23,14 +23,16 @@ public class Article implements java.io.Serializable {
 	private String pack_title;
 	private String pack_size;
 	private String pack_unit;
-	private String exfactory_price;
-	private String public_price;
+	private String exfactory_price = "";
+	private String public_price = "";
+	private String fap_price = "";
+	private String fep_price = "";
 	private String additional_info;
 	private String ean_code;
 	private String pharma_code;
-	private String author;
+	private String author = "";
 	private String dropdown_str;
-	private String author_code;
+	private String author_code = "";
 	private float margin = -1.0f;	// <0.0f -> not initialized
 	private float buying_price = 0.0f;
 	private float selling_price = 0.0f;;
@@ -40,7 +42,7 @@ public class Article implements java.io.Serializable {
 	private float cash_rebate = 0.0f; // [%]
 	private int onstock;
 	
-	public Article(String[] entry) {
+	public Article(String[] entry, String author) {
 		if (entry!=null) {
 			if (Utilities.appLanguage().equals("de")) {
 				ean_code = pharma_code = pack_title = pack_size 
@@ -49,23 +51,30 @@ public class Article implements java.io.Serializable {
 				ean_code = pharma_code = pack_title = pack_size 
 						= pack_unit = public_price = exfactory_price = additional_info = "p.c.";
 			}
+			if (author!=null && !author.isEmpty())
+				this.author = author;
+			// efp + "|" + pup + "|" + fap + "|" + fep 
 			if (entry.length>7) {
 				if (!entry[0].isEmpty())
 					pack_title = entry[0];
 				if (!entry[1].isEmpty())
 					pack_size = entry[1];
 				if (!entry[2].isEmpty())
-					pack_unit = entry[2];
+					pack_unit = entry[2];				
 				if (!entry[3].isEmpty())
-					public_price = entry[3];
+					exfactory_price = entry[3];
 				if (!entry[4].isEmpty())
-					exfactory_price = entry[4];
-				if (!entry[5].isEmpty())				
-					additional_info = entry[5];				
+					public_price = entry[4];
+				if (!entry[5].isEmpty())
+					fap_price = entry[5];
 				if (!entry[6].isEmpty())
-					ean_code = entry[6];
-				if (!entry[7].isEmpty())
-					pharma_code = entry[7];
+					fep_price = entry[6];								
+				if (!entry[7].isEmpty())				
+					additional_info = entry[7];				
+				if (!entry[8].isEmpty())
+					ean_code = entry[8];
+				if (!entry[9].isEmpty())
+					pharma_code = entry[9];
 			}
 			quantity = 1;
 		}
@@ -163,6 +172,24 @@ public class Article implements java.io.Serializable {
 	}
 	
 	/**
+	 * Price dependent on customer category
+	 */
+	public String getPrice(String user_category) {
+		if (author.toLowerCase().contains("ibsa")) {
+			if (user_category.equals("spital")) {
+				if (fap_price.isEmpty())
+					return exfactory_price;
+				return fap_price;
+			} else {
+				if (fep_price.isEmpty())
+					return exfactory_price;
+				return fep_price;
+			}
+		}
+		return exfactory_price;
+	}
+	
+	/**
 	 * Exfactory price
 	*/
 	public String getExfactoryPrice() {
@@ -231,14 +258,28 @@ public class Article implements java.io.Serializable {
 	}
 	
 	/**
-	 * Buying price (what the doctor/pharmacy pays, defined by drug company)
-	*/	
-	public float getBuyingPrice() {					
-		return buying_price;
+	 * FAP
+	 */
+	public String getFapPrice() {
+		return this.fep_price;
 	}
 	
-	public float getTotBuyingPrice() {
-		return quantity*buying_price;
+	/**
+	 * FEP
+	 */
+	public String getFepPrice() {
+		return this.fap_price;
+	}
+		
+	/**
+	 * Buying price (what the doctor/pharmacy pays, defined by drug company)
+	*/	
+	public float getBuyingPrice(float cr) {					
+		return buying_price*(1.0f-cr/100.0f);
+	}
+	
+	public float getTotBuyingPrice(float cr) {
+		return quantity*buying_price*(1.0f-cr/100.0f);
 	}
 
 	public void setBuyingPrice(float buying_price) {
