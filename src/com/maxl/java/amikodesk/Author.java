@@ -27,9 +27,26 @@ public class Author {
 	private String email_cc;
 	private String address;	
 	private String salutation;
+	private float subtotal_CHF;
+	private float vat25_CHF;
+	private float vat80_CHF;
+	private float shipping_CHF;
 	
 	public Author() {
 		//
+	}
+	
+	public Author(Author another) {
+		this.name = another.name;
+		this.company = another.company;
+		this.email = another.email;
+		this.email_cc = another.email_cc;
+		this.address = another.address;
+		this.salutation = another.salutation;
+		this.subtotal_CHF = another.subtotal_CHF;
+		this.vat25_CHF = another.vat25_CHF;
+		this.vat80_CHF = another.vat80_CHF;			
+		this.shipping_CHF = another.shipping_CHF;
 	}
 	
 	boolean isAuthor(String n) {
@@ -91,4 +108,18 @@ public class Author {
 		return salutation;
 	}
 	
+	public void setCosts(float subtotal, float vat25, float vat80, float shipping) {
+		subtotal_CHF = subtotal;
+		vat25_CHF = vat25;
+		vat80_CHF = vat80;
+		shipping_CHF = shipping;
+	}
+	
+	public float getSubtotal() {
+		return subtotal_CHF;
+	}
+	
+	public float getShippingCosts() {
+		return shipping_CHF;
+	}
 }

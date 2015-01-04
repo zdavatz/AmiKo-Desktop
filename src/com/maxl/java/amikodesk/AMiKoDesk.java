@@ -56,6 +56,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.acl.Owner;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -952,7 +953,7 @@ public class AMiKoDesk {
 										if (r==JFileChooser.APPROVE_OPTION) {										
 											String filename = fc.getSelectedFile().getPath();
 											SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
-											sbasket.generatePdf("all", filename);	
+											sbasket.generatePdf(null, filename, "all");	
 										}
 									}
 									m_web_panel.updateShoppingHtml();
@@ -971,19 +972,33 @@ public class AMiKoDesk {
 										if (r==JFileChooser.APPROVE_OPTION) {										
 											String filename = fc.getSelectedFile().getPath();
 											SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
-											sbasket.generateCsv("all", filename);
+											sbasket.generateCsv(null, filename, "all");
 										}
 									}
 									m_web_panel.updateShoppingHtml();
 								}
 							});
 							m_web_panel.updateShoppingHtml();
+						} else if (msg.startsWith("change_shipping")) {
+							// Extract shipping type (known types: free delivery, A-Post, B-Post, Express delivery)
+							char shipping_type = msg.replace("change_shipping", "").charAt(0);
+							updateCheckoutTable(row_key, shipping_type);
+						} else if (msg.equals("check_out")) {
+							saveShoppingCart();
+							m_web_panel.showCheckoutHtml();
+						} else if (msg.equals("agbs_accepted")) {
+							boolean a = Boolean.valueOf(row_key);
+							m_shopping_cart.setAgbsAccepted(a);
 						} else if (msg.equals("send_order")) {
 							saveShoppingCart();
-							SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());		
-							sbasket.setAuthorList(list_of_authors);
-							m_emailer.sendAllOrders(list_of_authors, sbasket);
-							m_web_panel.updateShoppingHtml();
+							if (m_shopping_cart.getAgbsAccepted()) {
+								SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
+								// Update authors list with subtotals, vats and shipping costs
+								list_of_authors = m_shopping_cart.updateAuthors(list_of_authors);
+								sbasket.setAuthorList(list_of_authors);
+								m_emailer.sendAllOrders(list_of_authors, sbasket);
+								m_web_panel.updateShoppingHtml();
+							}
 						}
 					}					
 					if (msg.equals("add_to_shopping_cart")) {
@@ -1076,8 +1091,8 @@ public class AMiKoDesk {
 		}
 		
 		public void loadShoppingCartWithIndex(final int n) {
-			boolean success = m_shopping_cart.loadShoppingCartWithIndex(n);			
-			if (success)
+			m_shopping_basket = m_shopping_cart.loadShoppingCartWithIndex(n);			
+			if (m_shopping_basket!=null)
 				updateShoppingHtml();
 		}
 		
@@ -1104,6 +1119,11 @@ public class AMiKoDesk {
 		
 		public void updateShoppingCartTotals() {
 			String js = m_shopping_cart.getTotalsUpdateJS();
+			jWeb.executeJavascript(js);
+		}
+		
+		public void updateCheckoutTable(String row_key, char shipping_type) {
+			String js = m_shopping_cart.getCheckoutUpdateJS(row_key, shipping_type);
 			jWeb.executeJavascript(js);
 		}
 		
@@ -1259,6 +1279,15 @@ public class AMiKoDesk {
 			jWeb.setJavascriptEnabled(true);			
 			jWeb.setHTMLContent(html_str);
 			jWeb.setVisible(true);				
+		}
+		
+		public void showCheckoutHtml() {
+			// Retrieve main html
+			String html_str = m_shopping_cart.checkoutHtml();
+			// Update html	
+			jWeb.setJavascriptEnabled(true);			
+			jWeb.setHTMLContent(html_str);
+			jWeb.setVisible(true);	
 		}
 		
 		public void dispose() {

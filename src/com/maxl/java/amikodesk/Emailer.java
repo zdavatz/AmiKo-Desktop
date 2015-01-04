@@ -366,8 +366,8 @@ public class Emailer {
 						if (mSbasket.getMedsForAuthor(author.getName())>0 && !isCancelled()) {
 							String auth = author.getShortName();
 							String p = path + "\\" + auth + "_" + name;
-							mSbasket.generatePdf(auth, p + ".pdf");	
-							mSbasket.generateCsv(auth, p + ".csv");
+							mSbasket.generatePdf(author, p + ".pdf", "specific");	
+							mSbasket.generateCsv(author, p + ".csv", "specific");
 							index++;
 							mDialog.setLabel("Sending " + author.getCompany() + " order...");
 							// Send email							
@@ -386,8 +386,8 @@ public class Emailer {
 			File desktop = new File(System.getProperty("user.home"), "Desktop");
 			path = desktop.getAbsolutePath();
 			if (mSbasket.getMedsWithNoAuthor()>0) {
-				mSbasket.generatePdf("rest", path + "\\" + "amiko_" + name + ".pdf");	
-				mSbasket.generateCsv("rest", path + "\\" + "amiko_" + name + ".csv");
+				mSbasket.generatePdf(null, path + "\\" + "amiko_" + name + ".pdf", "rest");	
+				mSbasket.generateCsv(null, path + "\\" + "amiko_" + name + ".csv", "rest");
 			}			
 			if (num_authors==0)
 				mDialog.setLabel("Order pdfs saved to desktop.");

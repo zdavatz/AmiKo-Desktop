@@ -37,8 +37,16 @@ function createCsv(event) {
 	invokeJava("create_csv",0);
 }
 
+function checkOut(event) {
+	invokeJava("check_out", 0);
+}
+
 function sendOrder(event) {
 	invokeJava("send_order",0);
+}
+
+function agbsAccepted(event) {
+	invokeJava("agbs_accepted",event.checked);
 }
 
 function changeQty(tableID,currentRow) {
@@ -99,5 +107,21 @@ function changeMarge(tableID,currentRow) {
 		}
 	} catch(e) {
 		// alert(e);
+	}
+}
+
+function changeShipping(tableID,currentRow,index) {
+	if (tableID=="Checkout") {
+		var table = document.getElementById(tableID);
+		var rowCount = table.rows.length;
+		for (var i=0; i<rowCount; i++) {
+			var row = table.rows[i];
+			if (row==currentRow.parentNode.parentNode) {
+				var selectId = document.getElementById("selected" + index);
+				var qty = selectId.value;
+				var eanCode = row.cells[0].innerText;
+				invokeJava("change_shipping"+qty,eanCode);
+			}
+		}
 	}
 }

@@ -27,6 +27,7 @@ public class Article implements java.io.Serializable {
 	private String public_price = "";
 	private String fap_price = "";
 	private String fep_price = "";
+	private String value_added_tax = "";
 	private String additional_info;
 	private String ean_code;
 	private String pharma_code;
@@ -53,8 +54,8 @@ public class Article implements java.io.Serializable {
 			}
 			if (author!=null && !author.isEmpty())
 				this.author = author;
-			// efp + "|" + pup + "|" + fap + "|" + fep 
-			if (entry.length>7) {
+			// efp + "|" + pup + "|" + fap + "|" + fep + "|" + vat
+			if (entry.length>8) {
 				if (!entry[0].isEmpty())
 					pack_title = entry[0];
 				if (!entry[1].isEmpty())
@@ -68,13 +69,15 @@ public class Article implements java.io.Serializable {
 				if (!entry[5].isEmpty())
 					fap_price = entry[5];
 				if (!entry[6].isEmpty())
-					fep_price = entry[6];								
-				if (!entry[7].isEmpty())				
-					additional_info = entry[7];				
-				if (!entry[8].isEmpty())
-					ean_code = entry[8];
+					fep_price = entry[6];							
+				if (!entry[7].isEmpty())
+					value_added_tax = entry[7];
+				if (!entry[8].isEmpty())				
+					additional_info = entry[8];				
 				if (!entry[9].isEmpty())
-					pharma_code = entry[9];
+					ean_code = entry[9];
+				if (!entry[10].isEmpty())
+					pharma_code = entry[10];
 			}
 			quantity = 1;
 		}
@@ -169,6 +172,13 @@ public class Article implements java.io.Serializable {
 	
 	public boolean isSpecial() {
 		return additional_info.contains("SL");
+	}
+	
+	public float getVat() {
+		if (value_added_tax!=null && !value_added_tax.isEmpty())
+			return Float.parseFloat(value_added_tax);
+		else
+			return 8.0f;
 	}
 	
 	/**
@@ -337,6 +347,8 @@ public class Article implements java.io.Serializable {
 			}
 		}
 		*/
+		if ((cash_rebate>=0.0f && cash_rebate<0.01f) || (cash_rebate<=0.0f && cash_rebate>-0.01f))
+			cash_rebate = 0.0f;
 		if (draufgabe>0)
 			return (100.0f*(float)draufgabe/(draufgabe+quantity));
 		else 
