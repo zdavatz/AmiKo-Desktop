@@ -222,7 +222,7 @@ public class SaveBasket {
 	      		
 	      		// Add shopping basket
 	      		if (type.equals("specific"))
-	      			document.add(getShoppingBasketForAuthor(author.getShortName(), cb));
+	      			document.add(getShoppingBasketForAuthor(author, cb));
 	      		else if (type.equals("all"))
 	      			document.add(getFullShoppingBasket(cb, "all"));
 	      		else if (type.equals("rest"))
@@ -240,14 +240,19 @@ public class SaveBasket {
         // System.out.println("Saved PDF to " + filename);
 	}	
 	
-	public PdfPTable getShoppingBasketForAuthor(String author, PdfContentByte cb) {
+	public PdfPTable getShoppingBasketForAuthor(Author a, PdfContentByte cb) {
 		int position = 0;
-		float sub_total_CHF = 0.0f;
+		float subtotal_CHF = 0.0f;
+		float shipping_CHF = 0.0f;
+		float vat25_CHF = 0.0f;
+		float vat80_CHF = 0.0f;
 
+		String author = a.getShortName();
+		
 		BarcodeEAN codeEAN = new BarcodeEAN();
 		
-		// Pos | Menge | Eancode | Bezeichnung | Preis
-        PdfPTable table = new PdfPTable(new float[] {1,1,3,6,2});
+		// Pos | Menge | Eancode | Bezeichnung | MwSt | Preis
+        PdfPTable table = new PdfPTable(new float[] {1,2,3,6,1,2});
         table.setWidthPercentage(100f);
         table.getDefaultCell().setPadding(5);
         table.setSpacingAfter(5f);
@@ -257,15 +262,16 @@ public class SaveBasket {
         table.addCell(getStringCell("Pos.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
 		table.addCell(getStringCell("Menge", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell("EAN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("Artikel", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell("Artikel", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));    
+        table.addCell(getStringCell("MwSt", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
         table.addCell(getStringCell("Preis (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
 		        
         if (m_shopping_basket.size()>0 && !author.isEmpty()) {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-				Article article = entry.getValue();				
-				
-				if (article.getAuthor().trim().toLowerCase().contains(author)) {	
-					String price_pruned = "";
+				Article article = entry.getValue();							
+				if (article.getAuthor().trim().toLowerCase().contains(author)) {
+					String price_pruned = "";					
+					/*
 					if (article.getCode()!=null && article.getCode().equals("ibsa")) {
 						float cr = article.getCashRebate();
 						if (article.getDraufgabe()>0)
@@ -275,10 +281,28 @@ public class SaveBasket {
 					} else {
 						price_pruned = article.getCleanExfactoryPrice();						
 					}
+					*/
+					String total_price_CHF = "";
+					if (article.getCode()!=null && article.getCode().equals("ibsa")) {
+						float cr = article.getCashRebate();
+						if (article.getDraufgabe()>0) {
+							price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
+							total_price_CHF = String.format("%.2f", article.getTotBuyingPrice(0.0f));
+						} else {
+							price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
+							total_price_CHF = String.format("%.2f", article.getTotBuyingPrice(cr));
+						}
+					} else {
+						price_pruned = article.getCleanExfactoryPrice();
+						total_price_CHF = String.format("%.2f", article.getTotExfactoryPrice());
+					}
+					
 					if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {						
+						// Index
 						table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-						table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-						
+						// Anzahl
+						table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));						
+						// EAN code
 				        codeEAN.setCode(article.getEanCode());
 				        Image img = codeEAN.createImageWithBarcode(cb, null, null);
 				        img.scalePercent(120);
@@ -293,27 +317,43 @@ public class SaveBasket {
 				        	cell.setPaddingTop(0);
 				        cell.setPaddingBottom(8);
 				        table.addCell(cell);
-				        
+				        // Artikelbezeichnung
 						table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
-						
-						float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-						sub_total_CHF += price_CHF;					
-						table.addCell(getStringCell(String.format("%.2f", price_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));						
+						// MwSt						
+						table.addCell(getStringCell(String.format("%.1f%%", article.getVat()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));
+						// Preis (exkl. MwSt)
+						// float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
+						table.addCell(getStringCell(total_price_CHF, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));						
 					}
 				}
 			}
 			
+			subtotal_CHF = a.getSubtotal();					
+			shipping_CHF = a.getShippingCosts();
+			vat25_CHF = a.getVat25();
+			vat80_CHF = a.getVat80() + a.getShippingCosts()*0.08f;
+			
+			float fulltotal_CHF = subtotal_CHF + shipping_CHF + vat25_CHF + vat80_CHF;
+			
 			table.addCell(getStringCell("Subtotal", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF), font_bold_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));
-					
-			table.addCell(getStringCell("MwSt (8%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*0.08f), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
+			table.addCell(getStringCell(String.format("%.2f", subtotal_CHF), font_bold_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));
 			
-			table.addCell(getStringCell("Total", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("Versand", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", shipping_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
+			
+			table.addCell(getStringCell("MwSt (2.5%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", vat25_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
+			
+			table.addCell(getStringCell("MwSt (8.0%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(String.format("%.2f", vat80_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
+			
+			table.addCell(getStringCell("Gesamttotal", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*1.08f), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
+			table.addCell(getStringCell(String.format("%.2f", fulltotal_CHF), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
 		}
         return table;
 	}
@@ -410,6 +450,7 @@ public class SaveBasket {
 			// These are all authors which are specifically listed (e.g. ibsa, desitin)
 	        if (m_shopping_basket.size()>0) {
 	        	int pos = 0;
+	        	String total_price_CHF = "";
 	        	String shopping_basket_str = "";
 				for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 					Article article = entry.getValue();									
@@ -417,16 +458,22 @@ public class SaveBasket {
 						String price_pruned = "";				
 						if (article.getCode()!=null && article.getCode().equals("ibsa")) {
 							float cr = article.getCashRebate();
-							if (article.getDraufgabe()>0)
+							if (article.getDraufgabe()>0) {
 								price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
-							else
+								total_price_CHF = String.format("%.2f", article.getTotBuyingPrice(0.0f));
+							} else {
 								price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
+								total_price_CHF = String.format("%.2f", article.getTotBuyingPrice(cr));
+							}
 						} else {
-							price_pruned = article.getCleanExfactoryPrice();						
+							price_pruned = article.getCleanExfactoryPrice();
+							total_price_CHF = String.format("%.2f", article.getTotExfactoryPrice());
 						}						
 						if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
+							/*
 							double price = Math.ceil(article.getQuantity()*Float.parseFloat(price_pruned)*100.0f)/100.0f;
 							String total_price_CHF = String.format("%.2f", price);
+							*/
 							if (article.getQuantity()>0) {
 								shopping_basket_str += (++pos) + "|" + date + "|" 
 										+ gln_code + "|" + email_address + "|"

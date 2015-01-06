@@ -395,15 +395,15 @@ public class ShoppingCart implements java.io.Serializable {
 			int index = 1;						
 			basket_html_str += "<tr>"
 					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"10%\"><b>EAN</b></td>"			// 9
-					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"30%\"><b>Artikel</b></td>"		// 36
+					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"32%\"><b>Artikel</b></td>"		// 36
 					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"3%\"><b>Kat</b></td>"			// 39			
 					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"7%\"><b>Menge</b></td>"			// 46
 					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"5%\"><b>Bonus</b></td>"			// 50
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"5%\"><b>Aufw.</b></td>"		 	// 56
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"5%\"><b>Erlös</b></td>"			// 62			
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"9%\"><b>Tot.Aufw.</b></td>"		// 71
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"9%\"><b>Tot.Erlös</b></td>"		// 80				
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"9%\"><b>Gewinn</b></td>"		// 89
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"7%\"><b>Aufw.</b></td>"		 	// 56
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"7%\"><b>Erlös</b></td>"			// 62			
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"7%\"><b>Tot.Aufw.</b></td>"		// 71
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"7%\"><b>Tot.Erlös</b></td>"		// 80				
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"7%\"><b>Gewinn</b></td>"		// 89
 					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"5%\"><b>Rabatt</b></td>"		// 96			
 					+ "<td style=\"text-align:center; padding-bottom:8px;\"; width=\"3%\"></td>"					// 100
 					+ "</tr>";
@@ -940,16 +940,21 @@ public class ShoppingCart implements java.io.Serializable {
 		}
 		
 		int index = 0;
+		float sum_total_CHF = 0.0f;
+		float sum_vat25_CHF = 0.0f;
+		float sum_vat80_CHF = 0.0f;
+		float sum_shipping_CHF = 0.0f;
 		float grand_total_CHF = 0.0f;
 		// Loop through all authors and generate html
 		for (Map.Entry<String, Owner> e : m_map_owner_total.entrySet()) { 
 			author = e.getKey();
-			float sum_price_CHF = e.getValue().subtotal_CHF;
-			float sum_vat25_CHF = e.getValue().vat25_CHF;
-			float sum_vat80_CHF = e.getValue().vat80_CHF;
+			float price_CHF = e.getValue().subtotal_CHF;
+			float vat25_CHF = e.getValue().vat25_CHF;
+			float vat80_CHF = e.getValue().vat80_CHF;
+			float shipping_CHF = e.getValue().shipping_CHF;
 			String versand_optionen = "";
 			if (!shipping_free) {
-				if (sum_price_CHF<=500.0f) {
+				if (price_CHF<=500.0f) {
 					versand_optionen = "<option value=\"B\">B-Post: +7.35 CHF</option>"
 							+ "<option value=\"A\">A-Post: +7.95 CHF</option>"
 							+ "<option value=\"E\">Express: +62.95 CHF</option>";
@@ -962,28 +967,34 @@ public class ShoppingCart implements java.io.Serializable {
 				versand_optionen = "<option value=\"B\">A-Post: +0.00 CHF</option>";
 			}
 			// Sum up including VAT (+8%) for shipping costs
-			float sub_total_CHF = sum_price_CHF + 1.08f*e.getValue().shipping_CHF + sum_vat25_CHF + sum_vat80_CHF;
-			sum_vat80_CHF += 0.08f*e.getValue().shipping_CHF; 
+			float sub_total_CHF = price_CHF + 1.08f*shipping_CHF + vat25_CHF + vat80_CHF;
+			vat80_CHF += 0.08f*shipping_CHF; 
+			
+			// All sums
+			sum_total_CHF += price_CHF;
+			sum_vat25_CHF += vat25_CHF;
+			sum_vat80_CHF += vat80_CHF;
+			sum_shipping_CHF += shipping_CHF;
 			grand_total_CHF += sub_total_CHF;
 									
 			index++;
 			checkout_html_str += "<tr id=\"" + author + "\">"
 					+ "<td style=\"text-align:left; padding-top:8px;\">" + author + "</td>"			
-					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(sum_price_CHF) + "</td>"	// Subtotal (exkl. MwSt. + shipping costs)			
+					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(price_CHF) + "</td>"	// Subtotal (exkl. MwSt. + shipping costs)			
 					+ "<td style=\"text-align:right; padding-top:8px;\"><select id=\"selected" + index + "\" style=\"width:180px; direction:rtl; text-align:left;\""
 						+ "onchange=\"changeShipping('Checkout',this," + index + ")\">"
 						+ versand_optionen + "</select></td>"		
-					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(sum_vat25_CHF) + "</td>"	// MwSt (2.5%)								
-					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(sum_vat80_CHF) + "</td>"	// MwSt (8.0%)		
+					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(vat25_CHF) + "</td>"	// MwSt (2.5%)								
+					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(vat80_CHF) + "</td>"	// MwSt (8.0%)		
 					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(sub_total_CHF) + "</td>"	// Subtotal	(inkl. MwSt + shipping costs)
 					+ "</tr>";
 		}
 		checkout_html_str += "<tr id=\"GrandTotal\">"
 				+ "<td style=\"text-align:left; padding-top:16px; padding-bottom:8px;\"><b>Gesamttotal</b></td>"
-				+ "<td></td>"
-				+ "<td></td>"
-				+ "<td></td>"				
-				+ "<td></td>"
+				+ "<td style=\"text-align:right; padding-top:16px; padding-bottom:8px;\"><b>" + Utilities.prettyFormat(sum_total_CHF) + "</b></td>"
+				+ "<td style=\"text-align:right; padding-top:16px; padding-bottom:8px;\"><b>" + Utilities.prettyFormat(sum_shipping_CHF) + "</b></td>"
+				+ "<td style=\"text-align:right; padding-top:16px; padding-bottom:8px;\"><b>" + Utilities.prettyFormat(sum_vat25_CHF) + "</b></td>"				
+				+ "<td style=\"text-align:right; padding-top:16px; padding-bottom:8px;\"><b>" + Utilities.prettyFormat(sum_vat80_CHF) + "</b></td>"
 				+ "<td style=\"text-align:right; padding-top:16px; padding-bottom:8px;\"><b>" + Utilities.prettyFormat(grand_total_CHF) + "</b></td>"
 				+ "</tr></table>";
 		
@@ -1028,14 +1039,27 @@ public class ShoppingCart implements java.io.Serializable {
 		float total_CHF = subtotal_CHF + vat25_CHF + vat80_CHF + 1.08f*shipping_CHF; 
 		vat80_CHF += 0.08f*shipping_CHF;
 		
+		float sum_total_CHF = 0.0f;
+		float sum_vat25_CHF = 0.0f;
+		float sum_vat80_CHF = 0.0f;
+		float sum_shipping_CHF = 0.0f;
 		float grand_total_CHF = 0.0f;
 		for (Map.Entry<String, Owner> e : m_map_owner_total.entrySet()) { 
 			float t_CHF = e.getValue().subtotal_CHF + e.getValue().vat25_CHF + e.getValue().vat80_CHF + 1.08f*e.getValue().shipping_CHF;
+			// All sums
+			sum_total_CHF += e.getValue().subtotal_CHF;
+			sum_shipping_CHF += e.getValue().shipping_CHF;
+			sum_vat25_CHF += e.getValue().vat25_CHF;
+			sum_vat80_CHF += e.getValue().vat80_CHF + e.getValue().shipping_CHF*0.08f;
 			grand_total_CHF += t_CHF;
 		}		
 		
 		String js = "document.getElementById('Checkout').rows.namedItem(\"" + author + "\").cells[4].innerHTML=\"" + Utilities.prettyFormat(vat80_CHF) + "\";"
 				+ "document.getElementById('Checkout').rows.namedItem(\"" + author + "\").cells[5].innerHTML=\"" + Utilities.prettyFormat(total_CHF) + "\";"
+				+ "document.getElementById('Checkout').rows.namedItem(\"GrandTotal\").cells[1].innerHTML=\"<b>" + Utilities.prettyFormat(sum_total_CHF) + "</b>\";"
+				+ "document.getElementById('Checkout').rows.namedItem(\"GrandTotal\").cells[2].innerHTML=\"<b>" + Utilities.prettyFormat(sum_shipping_CHF) + "</b>\";"
+				+ "document.getElementById('Checkout').rows.namedItem(\"GrandTotal\").cells[3].innerHTML=\"<b>" + Utilities.prettyFormat(sum_vat25_CHF) + "</b>\";"
+				+ "document.getElementById('Checkout').rows.namedItem(\"GrandTotal\").cells[4].innerHTML=\"<b>" + Utilities.prettyFormat(sum_vat80_CHF) + "</b>\";"
 				+ "document.getElementById('Checkout').rows.namedItem(\"GrandTotal\").cells[5].innerHTML=\"<b>" + Utilities.prettyFormat(grand_total_CHF) + "</b>\";";
 		
 		return js;

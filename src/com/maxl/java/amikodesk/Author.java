@@ -122,4 +122,12 @@ public class Author {
 	public float getShippingCosts() {
 		return shipping_CHF;
 	}
+
+	public float getVat25() {
+		return vat25_CHF;
+	}
+	
+	public float getVat80() {
+		return vat80_CHF;
+	}
 }
