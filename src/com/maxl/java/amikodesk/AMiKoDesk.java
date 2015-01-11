@@ -56,7 +56,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.acl.Owner;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -938,6 +937,8 @@ public class AMiKoDesk {
 									saveShoppingCartWithIndex(index);
 								// Load new cart
 								index = (int)(Float.parseFloat(row_key));
+								m_shopping_basket.clear();
+								// m_shopping_cart.setShoppingBasket(m_shopping_basket);
 								m_shopping_cart.setCartIndex(index);								
 								loadShoppingCartWithIndex(index);
 							}
@@ -1000,7 +1001,8 @@ public class AMiKoDesk {
 								m_web_panel.updateShoppingHtml();
 							}
 						}
-					}					
+					}							
+					
 					if (msg.equals("add_to_shopping_cart")) {
 						m_shopping_basket = m_shopping_cart.getShoppingBasket();
 						// No cart, load default cart
@@ -1013,8 +1015,11 @@ public class AMiKoDesk {
 						if (m_shopping_basket.containsKey(row_key)) {
 							Article article = m_shopping_basket.get(row_key);
 							article.incrementQuantity();
+							m_shopping_basket.put(row_key, article);
 						} else {
 							if (med_index>=0) {
+								// user/customer categories are defined in aips2sqlite:glncodes.java
+								String user_category = m_prefs.get("type", "arzt");
 								// Get full info on selected medication
 								Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
 								// Get its packages
@@ -1025,13 +1030,17 @@ public class AMiKoDesk {
 										if (!packages[i].isEmpty() && packages[i].contains(row_key)) {
 											String[] entry = packages[i].split("\\|");
 											Article article = new Article(entry, m.getAuth());
-											article.setQuantity(1);
-											m_shopping_basket.put(row_key, article);
+											if (article.isVisible(user_category) && article.hasPrice(user_category)) {
+												article.setQuantity(1);
+												m_shopping_basket.put(row_key, article);
+											}
 										}
-									}
+									}							
 								}
 							}
 						}
+						m_shopping_cart.setShoppingBasket(m_shopping_basket);
+						// m_shopping_cart.printShoppingBasket();
 					}
 					return "true";					
  				}
@@ -1091,9 +1100,9 @@ public class AMiKoDesk {
 		}
 		
 		public void loadShoppingCartWithIndex(final int n) {
-			m_shopping_basket = m_shopping_cart.loadShoppingCartWithIndex(n);			
-			if (m_shopping_basket!=null)
-				updateShoppingHtml();
+			if (m_shopping_basket==null || m_shopping_basket.size()==0)
+				m_shopping_basket = m_shopping_cart.loadShoppingCartWithIndex(n);		
+			updateShoppingHtml();
 		}
 		
 		public void updateShoppingCart(String ean_code, Article article) {
@@ -1182,39 +1191,41 @@ public class AMiKoDesk {
 					m_web_panel.setTitle("Notice Infopro");
 				
 				// Get section ids
-				String[] sections = m.getSectionIds().split(",");
-				m_section_str = Arrays.asList(sections);
-				// Update section titles		
-				updateSectionTitles(m);							
-				// Get FI content
-				content_str = new StringBuffer(m.getContent());				
-				// DateFormat df = new SimpleDateFormat("dd.MM.yy");
-				String _amiko_str = Constants.APP_NAME + " - Datenstand AIPS Swissmedic " + Constants.GEN_DATE;
-				content_str = content_str.insert(content_str.indexOf("<head>"), "<title>" + _amiko_str + "</title>");
-				content_str = content_str.insert(content_str.indexOf("</head>"), m_jscript_str + m_css_str);
-				// Enable javascript
-				jWeb.setJavascriptEnabled(true);
-				
-				// System.out.println(content_str);
-				
-				if (CML_OPT_SERVER==false) {
-					try {
-						// Currently preferred solution, html saved in C:/Users/ ... folder
-						String path_html = System.getProperty ("user.home") + "/" + Constants.APP_NAME +"/htmls/";
-						String _title = m.getTitle();					
-						String file_name = _title.replaceAll("[®,/;.]","_") + ".html";
-						FileOps.writeToFile(content_str.toString(), path_html, file_name, "UTF-16");
-						jWeb.navigate("file:///" + path_html + file_name);
-					} catch(IOException e) {
-						// Fallback solution (used to be preferred implementation)
-						jWeb.setHTMLContent(content_str.toString());
+				if (m.getSectionIds()!=null) {
+					String[] sections = m.getSectionIds().split(",");
+					m_section_str = Arrays.asList(sections);
+					// Update section titles		
+					updateSectionTitles(m);							
+					// Get FI content
+					content_str = new StringBuffer(m.getContent());				
+					// DateFormat df = new SimpleDateFormat("dd.MM.yy");
+					String _amiko_str = Constants.APP_NAME + " - Datenstand AIPS Swissmedic " + Constants.GEN_DATE;
+					content_str = content_str.insert(content_str.indexOf("<head>"), "<title>" + _amiko_str + "</title>");
+					content_str = content_str.insert(content_str.indexOf("</head>"), m_jscript_str + m_css_str);
+					// Enable javascript
+					jWeb.setJavascriptEnabled(true);
+					
+					// System.out.println(content_str);
+					
+					if (CML_OPT_SERVER==false) {
+						try {
+							// Currently preferred solution, html saved in C:/Users/ ... folder
+							String path_html = System.getProperty ("user.home") + "/" + Constants.APP_NAME +"/htmls/";
+							String _title = m.getTitle();					
+							String file_name = _title.replaceAll("[®,/;.]","_") + ".html";
+							FileOps.writeToFile(content_str.toString(), path_html, file_name, "UTF-16");
+							jWeb.navigate("file:///" + path_html + file_name);
+						} catch(IOException e) {
+							// Fallback solution (used to be preferred implementation)
+							jWeb.setHTMLContent(content_str.toString());
+						}
+					} else {
+						// Original fallback solution works well and is fast...
+						jWeb.setHTMLContent(content_str.toString());					
 					}
-				} else {
-					// Original fallback solution works well and is fast...
-					jWeb.setHTMLContent(content_str.toString());					
+					
+					jWeb.setVisible(true);
 				}
-				
-				jWeb.setVisible(true);
 			} else 
 				return;
 		}
@@ -1249,7 +1260,9 @@ public class AMiKoDesk {
 		}		
 		
 		public void updateListOfPackages() {
+			List<String> list_of_packages = new ArrayList<String>();
 			String[] packages = {"Packungen"};
+			// user/customer categories are defined in aips2sqlite:glncodes.java
 			String user_category = m_prefs.get("type", "arzt");
 			if (med_index<med_id.size() && med_index>=0) {
 				// Get full info on selected medication
@@ -1262,13 +1275,19 @@ public class AMiKoDesk {
 						if (!packages[i].isEmpty()) {
 							String[] entry = packages[i].split("\\|");
 							Article article = new Article(entry, m.getAuth());
-							list_of_articles.add(article);
-							packages[i] = article.getPackTitle() + " [" + article.getPrice(user_category) + "]";
+							if (article.isVisible(user_category) && article.hasPrice(user_category)) {
+								list_of_articles.add(article);
+								// packages[i] = article.getPackTitle().trim() + " [" + article.getPrice(user_category) + "]";
+								list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + "]");
+							}
 						}
 					}
 				}
 			}
 			// Update section titles		
+			if (list_of_packages.size()==0)
+				list_of_packages.add("Packungen");
+			packages = list_of_packages.toArray(new String[list_of_packages.size()]);
 			m_section_titles.updatePanel(packages);	
 		}
 		
@@ -2296,8 +2315,8 @@ public class AMiKoDesk {
 					selectAipsButton.setSelected(false);
 					selectFavoritesButton.setSelected(false);
 					selectInteractionsButton.setSelected(false);
-					selectShoppingCartButton.setSelected(true);
-					
+					selectShoppingCartButton.setSelected(true);					
+					// Set state 'shopping'
 					if (!m_curr_uistate.getUseMode().equals("shopping")) {
 						m_curr_uistate.setUseMode("shopping");						
 						// Set right panel title
@@ -2310,6 +2329,7 @@ public class AMiKoDesk {
 						if (m_shopping_cart!=null) {
 							index = m_shopping_cart.getCartIndex();				
 							m_web_panel.loadShoppingCartWithIndex(index);	
+							m_shopping_cart.printShoppingBasket();							
 						}
 						// m_web_panel.updateShoppingHtml();
 						m_web_panel.updateListOfPackages();									
@@ -2748,48 +2768,48 @@ public class AMiKoDesk {
 		if (med_search.size()<BigCellNumber) {
 			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);			
-				// String atc_code_str = ms.getAtcCode().replaceAll(";", " - ");
-				
-				String[] m_code = ms.getAtcCode().split(";");
-				String atc_code_str = "";
-				String atc_title_str = "";
-				if (m_code.length>1) {
-					atc_code_str = m_code[0];
-					atc_title_str = m_code[1];
+				if (ms.getAtcCode()!=null) {
+					String[] m_code = ms.getAtcCode().split(";");
+					String atc_code_str = "";
+					String atc_title_str = "";
+					if (m_code.length>1) {
+						atc_code_str = m_code[0];
+						atc_title_str = m_code[1];
+					}					
+					String[] m_class = ms.getAtcClass().split(";");			
+					String atc_class_str = "";
+					if (m_class.length==2) {			// *** Ver.<1.2.4
+						atc_class_str = m_class[1];
+						m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
+								+ atc_title_str + "<br>" + atc_class_str + "</font></html>");					
+					} else if (m_class.length==3)	{ 	// *** Ver. 1.2.4 and above
+						atc_class_str = "";
+						String[] atc_class_l4_and_l5 = m_class[2].split("#");
+						if (atc_class_l4_and_l5.length>0)
+							atc_class_str = atc_class_l4_and_l5[atc_class_l4_and_l5.length-1];
+						m.add("<html><b>" + ms.getTitle() + "</b><br>"
+								+ "<font color=gray size=-1>" + atc_code_str + " - " + atc_title_str + "<br>" 
+								+ atc_class_str + "<br>" 
+								+ m_class[1] + "</font></html>");					
+					} 				
+					med_id.add(ms.getId());
 				}
-				
-				String[] m_class = ms.getAtcClass().split(";");			
-				String atc_class_str = "";
-				if (m_class.length==2) {			// *** Ver.<1.2.4
-					atc_class_str = m_class[1];
-					m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
-							+ atc_title_str + "<br>" + atc_class_str + "</font></html>");					
-				} else if (m_class.length==3)	{ 	// *** Ver. 1.2.4 and above
-					atc_class_str = "";
-					String[] atc_class_l4_and_l5 = m_class[2].split("#");
-					if (atc_class_l4_and_l5.length>0)
-						atc_class_str = atc_class_l4_and_l5[atc_class_l4_and_l5.length-1];
-					m.add("<html><b>" + ms.getTitle() + "</b><br>"
-							+ "<font color=gray size=-1>" + atc_code_str + " - " + atc_title_str + "<br>" 
-							+ atc_class_str + "<br>" 
-							+ m_class[1] + "</font></html>");					
-				} 
-				
-				med_id.add(ms.getId());
 			}
 		} else {
 			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
-				String[] m_code = ms.getAtcCode().split(";");
-				String atc_code_str = "";
-				String atc_title_str = "";
-				if (m_code.length>1) {
-					atc_code_str = m_code[0];
-					atc_title_str = m_code[1];
-				}				
-				m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
-						+ atc_title_str + "</font></html>");
-					med_id.add(ms.getId());
+				if (ms.getAtcCode()!=null) {
+					String[] m_code = ms.getAtcCode().split(";");
+					String atc_code_str = "";
+					String atc_title_str = "";
+					if (m_code.length>1) {
+						atc_code_str = m_code[0];
+						atc_title_str = m_code[1];
+					}				
+					m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + atc_code_str + " - " 
+							+ atc_title_str + "</font></html>");
+						med_id.add(ms.getId());
+				}
 			}
 		}
 		m_list_atccodes.update(m);
@@ -2843,17 +2863,21 @@ public class AMiKoDesk {
 		if (med_search.size()<BigCellNumber) {
 			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
-				String application_str = ms.getApplication().replaceAll("\n", "<p>");
-				application_str = ms.getApplication().replaceAll(";", "<p>");
-				m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
-				med_id.add(ms.getId());
+				if (ms.getApplication()!=null) {
+					String application_str = ms.getApplication().replaceAll("\n", "<p>");
+					application_str = ms.getApplication().replaceAll(";", "<p>");
+					m.add("<html><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
+					med_id.add(ms.getId());
+				}
 			}
 		} else {
 			for (int i=0; i<med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
-				String application_str = ms.getApplication().replaceAll(";", " / ");
-				m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
-				med_id.add(ms.getId());		
+				if (ms.getApplication()!=null) {
+					String application_str = ms.getApplication().replaceAll(";", " / ");
+					m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
+					med_id.add(ms.getId());		
+				}
 			}
 		}
 		m_list_therapies.update(m);

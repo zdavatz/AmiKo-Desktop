@@ -40,9 +40,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.nio.channels.FileChannel;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -97,9 +95,9 @@ public class SqlDatabase {
 	 * Table columns used for fast queries
 	 */
 	private static final String SHORT_TABLE = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", 
-				KEY_ROWID, KEY_TITLE, KEY_AUTH, KEY_ATCCODE, KEY_SUBSTANCES, KEY_REGNRS, 
-				KEY_ATCCLASS, KEY_THERAPY, KEY_APPLICATION, KEY_INDICATIONS,
-				KEY_CUSTOMER_ID, KEY_PACK_INFO, KEY_CONTENT);
+			KEY_ROWID, KEY_TITLE, KEY_AUTH, KEY_ATCCODE, KEY_SUBSTANCES, KEY_REGNRS, 
+			KEY_ATCCLASS, KEY_THERAPY, KEY_APPLICATION, KEY_INDICATIONS,
+			KEY_CUSTOMER_ID, KEY_PACK_INFO, KEY_CONTENT);
 	
 	private Connection m_conn;
 	private Statement m_stat;
@@ -108,7 +106,6 @@ public class SqlDatabase {
 	private String m_app_lang;
 	private String m_customization;
 	private boolean m_loadedDBisZipped = false;
-	private boolean m_operationCancelled = false;
 	
 	public boolean dbIsZipped() {
 		return m_loadedDBisZipped;
@@ -268,7 +265,6 @@ public class SqlDatabase {
 		
 		m_app_lang = db_lang;
 		m_customization = custom;
-		m_operationCancelled = false;
 		if (Utilities.isInternetReachable())
 			new DownloadDialog(db_url, report_url, drug_interactions_url, shop_files_url,
 					amiko_report, db_unzipped, drug_interactions_unzipped, shop_files_zipped);

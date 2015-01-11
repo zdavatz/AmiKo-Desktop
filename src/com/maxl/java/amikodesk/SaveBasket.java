@@ -474,6 +474,9 @@ public class SaveBasket {
 							double price = Math.ceil(article.getQuantity()*Float.parseFloat(price_pruned)*100.0f)/100.0f;
 							String total_price_CHF = String.format("%.2f", price);
 							*/
+							char shipping_type = 'U';	// unknown
+							if (m_map_of_authors.containsKey(author.getShortName())) 
+								shipping_type = m_map_of_authors.get(author.getShortName()).getShippingType();
 							if (article.getQuantity()>0) {
 								shopping_basket_str += (++pos) + "|" + date + "|" 
 										+ gln_code + "|" + email_address + "|"
@@ -481,21 +484,25 @@ public class SaveBasket {
 										+ article.getPackTitle() + "|" 
 										+ "Bezahlt|" + article.getQuantity() + "|" 										
 										+ price_pruned + "|"
-										+ total_price_CHF + "|" + article.getVat() + "\n"; 
+										+ total_price_CHF + "|" + article.getVat() + "|"
+										+ shipping_type + "\n"; 
 							}
 							if (article.getDraufgabe()>0) {
 								shopping_basket_str += (++pos) + "|" + date + "|" 
 										+ gln_code + "|" + email_address + "|"
 										+ article.getEanCode() + "|" 
 										+ article.getPackTitle() + "|"
-										+ "Gratis|" + article.getDraufgabe() + "\n";
+										+ "Gratis|" + article.getDraufgabe() + "|"
+										+ shipping_type + "\n";
 							}
 						}
 					}
 				}
+				/*
 				// Add shipping costs at very end of file
 				Author a = m_map_of_authors.get(author.getShortName());
 				shopping_basket_str += a.getShippingCosts() + "\n";
+				*/
 				
 				try {
 					CharsetEncoder encoder = Charset.forName("UTF-8").newEncoder();

@@ -159,7 +159,7 @@ public class Emailer {
             } 
             
             File local_file = new File(path); 
-            String remote_file = name;
+            String remote_file = name + ".csv";
             InputStream is = new FileInputStream(local_file); 
             System.out.print("Uploading file " + name + " to server " + m_fs + "... ");
 

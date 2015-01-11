@@ -24,10 +24,12 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
 
@@ -43,11 +45,13 @@ public class ShoppingCart implements java.io.Serializable {
 		float vat25_CHF;
 		float vat80_CHF;
 		float shipping_CHF;		
-		public Owner(float subtotal, float vat25, float vat80, float shipping) {
+		char shipping_type;		// Z: gratis, A: A-Post, B: B-Post, E: Express
+		public Owner(float subtotal, float vat25, float vat80, float shipping, char type) {
 			subtotal_CHF = subtotal;
 			vat25_CHF = vat25;
 			vat80_CHF = vat80;
 			shipping_CHF = shipping;
+			shipping_type = type;
 		}
 	}
 	
@@ -128,7 +132,7 @@ public class ShoppingCart implements java.io.Serializable {
 			for (Author a : authors_list) {
 				if (author_name.contains(a.getName().toLowerCase())) {
 					Author author = new Author(a);
-					author.setCosts(owner.subtotal_CHF, owner.vat25_CHF, owner.vat80_CHF, owner.shipping_CHF);
+					author.setCosts(owner.subtotal_CHF, owner.vat25_CHF, owner.vat80_CHF, owner.shipping_CHF, owner.shipping_type);
 					list_of_authors.remove(a);
 					list_of_authors.add(author);
 				}
@@ -155,6 +159,14 @@ public class ShoppingCart implements java.io.Serializable {
     
 	public Map<String, Article> getShoppingBasket() {
 		return m_shopping_basket;
+	}
+	
+	public void printShoppingBasket() {
+		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+			String eancode = entry.getKey();
+			Article article = m_shopping_basket.get(eancode);
+			System.out.println("[" + article.getEanCode() + "] " + article.getPackTitle() + ": " + article.getQuantity() + " (" + article.getDraufgabe() + ")");
+		}
 	}
 	
 	public Map<String, Article> loadShoppingCartWithIndex(final int n) {
@@ -848,9 +860,9 @@ public class ShoppingCart implements java.io.Serializable {
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[9].innerHTML=\"<b>" + total_profit_CHF + "</b>\";"
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[10].innerHTML=\"<b>" + total_cash_rebate_percent + "</b>\";"
 				+ "document.getElementById('Buying_Col').style.width=\"" + buying_percent + "%\";"
-				+ "document.getElementById('Buying_Col').innerHTML=\"Tot.Aufwand: " + total_buying_CHF + " CHF\";"
+				+ "document.getElementById('Buying_Col').innerHTML=\"Tot.Aufwand: " + subtotal_buying_CHF + " CHF\";"
 				+ "document.getElementById('Selling_Col').style.width=\"" + selling_percent + "%\";"
-				+ "document.getElementById('Selling_Col').innerHTML=\"Tot.Erlös: " + total_selling_CHF + " CHF\";"
+				+ "document.getElementById('Selling_Col').innerHTML=\"Tot.Erlös: " + subtotal_selling_CHF + " CHF\";"
 				+ "document.getElementById('Profit_Col').style.width=\"" + profit_percent + "%\";"
 				+ "document.getElementById('Profit_Col').innerHTML=\"Gewinn: " + total_profit_CHF + " CHF\";";
 		
@@ -894,7 +906,15 @@ public class ShoppingCart implements java.io.Serializable {
 
 		m_map_owner_total = new TreeMap<String, Owner>();		
 		String author = "";
+		// Generate set of authors
+		Set<String> set_of_authors = new HashSet<String>();
+		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+			set_of_authors.add(entry.getValue().getAuthor());
+		}
+		
 		boolean shipping_free = true; 	// Some combinations of articles can be shipped for free... keep track
+		float shipping_CHF = 0.0f;		
+		char shipping_type = 'Z';
 		// Loop through all articles in shopping basket
 		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 			Article article = entry.getValue();
@@ -915,6 +935,12 @@ public class ShoppingCart implements java.io.Serializable {
 			// Update map from author/owner to total spent
 			vat = price * article.getVat()/100.0f;
 			author = article.getAuthor();
+			// Loop through set of authors and find matches
+			for (String a : set_of_authors) {
+				if (a.toLowerCase().contains(author.toLowerCase())) 
+					author = a;
+			}			
+			System.out.println(author);
 			if (author!=null) {
 				float sum_price = 0.0f;
 				float sum_vat25 = 0.0f;
@@ -924,16 +950,21 @@ public class ShoppingCart implements java.io.Serializable {
 					sum_vat25 = m_map_owner_total.get(author).vat25_CHF;
 					sum_vat80 = m_map_owner_total.get(author).vat80_CHF;
 				}
-				float shipping_CHF = 7.35f;
-				if (shipping_free)
+				if (shipping_free) {
 					shipping_CHF = 0.0f;
-				else if (sum_price>=500.0f)
+					shipping_type = 'Z';
+				} else if (sum_price>=500.0f) {
 					shipping_CHF = 0.0f;
+					shipping_type = 'Z';
+				} else {
+					shipping_CHF = 7.35f;
+					shipping_type = 'B';					
+				}
 				if (article.getVat()==2.5f) {
-					Owner o = new Owner(sum_price + price, sum_vat25 + vat, sum_vat80, shipping_CHF); 	// Default: B-Post
+					Owner o = new Owner(sum_price + price, sum_vat25 + vat, sum_vat80, shipping_CHF, shipping_type); 	// Default: B-Post
 					m_map_owner_total.put(author, o);				
 				} else {
-					Owner o = new Owner(sum_price + price, sum_vat25, sum_vat80 + vat, shipping_CHF); 	// Default: B-Post
+					Owner o = new Owner(sum_price + price, sum_vat25, sum_vat80 + vat, shipping_CHF, shipping_type); 	// Default: B-Post
 					m_map_owner_total.put(author, o);									
 				}
 			}
@@ -951,7 +982,8 @@ public class ShoppingCart implements java.io.Serializable {
 			float price_CHF = e.getValue().subtotal_CHF;
 			float vat25_CHF = e.getValue().vat25_CHF;
 			float vat80_CHF = e.getValue().vat80_CHF;
-			float shipping_CHF = e.getValue().shipping_CHF;
+			shipping_CHF = e.getValue().shipping_CHF;
+			shipping_type = e.getValue().shipping_type;
 			String versand_optionen = "";
 			if (!shipping_free) {
 				if (price_CHF<=500.0f) {
@@ -959,8 +991,8 @@ public class ShoppingCart implements java.io.Serializable {
 							+ "<option value=\"A\">A-Post: +7.95 CHF</option>"
 							+ "<option value=\"E\">Express: +62.95 CHF</option>";
 				} else {
-					versand_optionen = "<option value=\"B\">B-Post: +0.00 CHF</option>"
-							+ "<option value=\"A\">A-Post: +0.00 CHF</option>"
+					versand_optionen = "<option value=\"Z\">B-Post: +0.00 CHF</option>"
+							+ "<option value=\"Z\">A-Post: +0.00 CHF</option>"
 							+ "<option value=\"E\">Express: +62.95 CHF</option>";
 				}
 			} else {
@@ -1019,6 +1051,9 @@ public class ShoppingCart implements java.io.Serializable {
 	public String getCheckoutUpdateJS(String author, char shipping_type) {
 		float shipping_CHF = 0.0f;
 		switch (shipping_type) {
+		case 'Z':
+			shipping_CHF = 0.0f;
+			break;
 		case 'B':
 			shipping_CHF = 7.35f;
 			break;
@@ -1033,7 +1068,7 @@ public class ShoppingCart implements java.io.Serializable {
 		float subtotal_CHF = m_map_owner_total.get(author).subtotal_CHF;	
 		float vat25_CHF = m_map_owner_total.get(author).vat25_CHF;
 		float vat80_CHF = m_map_owner_total.get(author).vat80_CHF;
-		Owner owner = new Owner(subtotal_CHF, vat25_CHF, vat80_CHF, shipping_CHF);
+		Owner owner = new Owner(subtotal_CHF, vat25_CHF, vat80_CHF, shipping_CHF, shipping_type);
 		m_map_owner_total.put(author, owner);
 		// Calculate new total
 		float total_CHF = subtotal_CHF + vat25_CHF + vat80_CHF + 1.08f*shipping_CHF; 

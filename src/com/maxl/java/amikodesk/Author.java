@@ -31,6 +31,7 @@ public class Author {
 	private float vat25_CHF;
 	private float vat80_CHF;
 	private float shipping_CHF;
+	private char shipping_type;
 	
 	public Author() {
 		//
@@ -47,6 +48,7 @@ public class Author {
 		this.vat25_CHF = another.vat25_CHF;
 		this.vat80_CHF = another.vat80_CHF;			
 		this.shipping_CHF = another.shipping_CHF;
+		this.shipping_type = another.shipping_type;
 	}
 	
 	boolean isAuthor(String n) {
@@ -108,11 +110,12 @@ public class Author {
 		return salutation;
 	}
 	
-	public void setCosts(float subtotal, float vat25, float vat80, float shipping) {
+	public void setCosts(float subtotal, float vat25, float vat80, float shipping, char type) {
 		subtotal_CHF = subtotal;
 		vat25_CHF = vat25;
 		vat80_CHF = vat80;
 		shipping_CHF = shipping;
+		shipping_type = type;
 	}
 	
 	public float getSubtotal() {
@@ -121,8 +124,12 @@ public class Author {
 	
 	public float getShippingCosts() {
 		return shipping_CHF;
+	}	
+	
+	public char getShippingType() {
+		return shipping_type;
 	}
-
+	
 	public float getVat25() {
 		return vat25_CHF;
 	}

@@ -42,6 +42,7 @@ public class Article implements java.io.Serializable {
 	private int draufgabe = 0;
 	private float cash_rebate = 0.0f; // [%]
 	private int onstock;
+	private int visible;
 	
 	public Article(String[] entry, String author) {
 		if (entry!=null) {
@@ -55,7 +56,7 @@ public class Article implements java.io.Serializable {
 			if (author!=null && !author.isEmpty())
 				this.author = author;
 			// efp + "|" + pup + "|" + fap + "|" + fep + "|" + vat
-			if (entry.length>8) {
+			if (entry.length>10) {
 				if (!entry[0].isEmpty())
 					pack_title = entry[0];
 				if (!entry[1].isEmpty())
@@ -78,6 +79,9 @@ public class Article implements java.io.Serializable {
 					ean_code = entry[9];
 				if (!entry[10].isEmpty())
 					pharma_code = entry[10];
+				if (!entry[11].isEmpty()) {
+					visible = Integer.parseInt(entry[11]);
+				}
 			}
 			quantity = 1;
 		}
@@ -155,12 +159,11 @@ public class Article implements java.io.Serializable {
 	public void setAdditionalInfo(String additional_info) {
 		this.additional_info = additional_info;
 	}
-	
-	
+		
     public String getCategories() {
     	String cat = "";    	
     	String[] c = additional_info.split(",");
-    	for (int i=0; i<3; ++i) {
+    	for (int i=0; i<c.length; ++i) {
     		if (!c[i].isEmpty() && c[i].trim().matches("^[a-zA-Z]+$")) {
     			cat += (c[i].trim() + ", ");
     		}
@@ -169,7 +172,58 @@ public class Article implements java.io.Serializable {
     		return cat.substring(0,cat.length()-2);
     	return "";
     }
-	
+    
+    /*
+		user/customer categories are defined in aips2sqlite:glncodes.java
+			arzt, apotheke, drogerie, spital, grossist
+     */
+    public boolean isVisible(String user_category) {
+    	// For non-ibsa article visible = 0xff
+    	if (user_category.equals("arzt") || user_category.equals("apotheke")) {
+    		return ((visible & 0x08)>0);
+    	} else if (user_category.equals("drogerie")) {
+    		String swissmedic_cat = getCategories();
+    		if (!swissmedic_cat.isEmpty()) {
+    			String s[] = swissmedic_cat.split(",");
+    			if (s.length>0)
+    				swissmedic_cat = s[0].trim();
+    		}
+    		return ((visible & 0x04)>0 
+    				&& (swissmedic_cat.equals("D") || swissmedic_cat.equals("E") || swissmedic_cat.equals("CE")));
+    	} else if (user_category.equals("spital")) {
+    		return ((visible & 0x02)>0);
+    	} else if (user_category.equals("grossist")) {
+    		return ((visible & 0x01)>0);    	
+    	} else { // for all other categories
+    		return true;
+    	}
+    	
+    	/*
+    	if (author.toLowerCase().contains("ibsa")) {
+	    	if (user_category.equals("arzt") || user_category.equals("apotheke"))
+	    		return ((visible & 0x08)>0);
+	    	else if (user_category.equals("drogerie")) {
+	    		String swissmedic_cat = getCategories();
+	    		if (!swissmedic_cat.isEmpty()) {
+	    			String s[] = swissmedic_cat.split(",");
+	    			if (s.length>0)
+	    				swissmedic_cat = s[0].trim();
+	    		}
+	    		return ((visible & 0x04)>0 
+	    				&& (swissmedic_cat.equals("D") || swissmedic_cat.equals("E") || swissmedic_cat.equals("CE")));
+	    	} else if (user_category.equals("spital"))
+	    		return ((visible & 0x02)>0);
+	    	else if (user_category.equals("grossist"))
+	    		return ((visible & 0x01)>0);    	
+	    	else	// for all other categories
+	    		return false;
+    	} else {
+    		// For authors return always true...
+    		return true;    	
+    	}
+    	*/
+    }
+    
 	public boolean isSpecial() {
 		return additional_info.contains("SL");
 	}
@@ -197,6 +251,27 @@ public class Article implements java.io.Serializable {
 			}
 		}
 		return exfactory_price;
+	}
+	
+	/**
+	 * Does the article have a price?
+	 */
+	public boolean hasPrice(String user_category) {
+		String no_info_str = "k.A.";
+		if (Utilities.appLanguage().equals("fr"))
+			no_info_str = "n.s.";
+		if (author.toLowerCase().contains("ibsa")) {
+			if (user_category.equals("spital")) {
+				if (fap_price.isEmpty())
+					return !exfactory_price.contains(no_info_str);
+				return !fap_price.contains(no_info_str);
+			} else {
+				if (fep_price.isEmpty())
+					return !exfactory_price.contains(no_info_str);
+				return !fep_price.contains(no_info_str);
+			}
+		}
+		return !exfactory_price.contains(no_info_str);
 	}
 	
 	/**
