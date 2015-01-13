@@ -1010,12 +1010,12 @@ public class AMiKoDesk {
 							m_shopping_cart.loadShoppingCartWithIndex(-1);
 							m_shopping_basket = m_shopping_cart.getShoppingBasket();
 						}
-						AmiKoDialogs sd = new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization());
-						sd.ShoppingCartDialog(row_key);
+						AmiKoDialogs sd = new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization());						
 						if (m_shopping_basket.containsKey(row_key)) {
 							Article article = m_shopping_basket.get(row_key);
 							article.incrementQuantity();
 							m_shopping_basket.put(row_key, article);
+							sd.ShoppingCartDialog(row_key, true);
 						} else {
 							if (med_index>=0) {
 								// user/customer categories are defined in aips2sqlite:glncodes.java
@@ -1033,6 +1033,9 @@ public class AMiKoDesk {
 											if (article.isVisible(user_category) && article.hasPrice(user_category)) {
 												article.setQuantity(1);
 												m_shopping_basket.put(row_key, article);
+												sd.ShoppingCartDialog(row_key, true);
+											} else {
+												sd.ShoppingCartDialog(row_key, false);
 											}
 										}
 									}							

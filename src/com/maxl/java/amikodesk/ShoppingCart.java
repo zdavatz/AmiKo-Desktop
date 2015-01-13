@@ -399,7 +399,7 @@ public class ShoppingCart implements java.io.Serializable {
 		float subtotal_buying_CHF = 0.0f;
 		float subtotal_selling_CHF = 0.0f;
 		
-		// m_shopping_basket = shopping_basket;
+		m_shopping_basket = shopping_basket;
 				
 		String images_dir = System.getProperty("user.dir") + "/images/";	
 		

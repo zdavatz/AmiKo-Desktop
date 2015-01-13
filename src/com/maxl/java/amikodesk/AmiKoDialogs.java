@@ -336,13 +336,24 @@ public class AmiKoDialogs extends JDialog {
 		this.setVisible(true);
 	}
 	
-	public void ShoppingCartDialog(String ean) {
+	public void ShoppingCartDialog(String ean, boolean to_shopping_cart) {
         final JDialog dialog = new JDialog(this, "Warenkorb", true);
 		JPanel panel = new JPanel();
 		JLabel label = new JLabel();		
-		label.setText(ean + " in Warenkorb...");
-		
-        Timer timer = new Timer(2000, new ActionListener() {
+		int display_time = 2000;		
+		int dialog_width = 240;
+		int dialog_height = 60;
+		if (to_shopping_cart)
+			label.setText("<html><b>" + ean + "</b> in den Warenkorb...</html>");
+		else {
+			label.setText("<html>Produkt hat keinen Preis oder darf nicht bestellt werden.<br>"
+					+ "Bitte treten Sie mit dem Hersteller in Verbindung.</html>");
+			display_time = 4000;
+			dialog_width = 340;
+			dialog_height = 80;
+		}
+			
+        Timer timer = new Timer(display_time, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 dialog.setVisible(false);
                 dialog.dispose();
@@ -359,7 +370,7 @@ public class AmiKoDialogs extends JDialog {
 		dialog.pack();
 		dialog.setLocationRelativeTo(null);
 		dialog.setModal(false);
-		dialog.setSize(220, 60);
+		dialog.setSize(dialog_width, dialog_height);
 		dialog.setResizable(false);
 		dialog.setAlwaysOnTop(true);
         dialog.setVisible(true); 	// If modal, application will pause here
