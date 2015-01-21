@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Observer;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
 
@@ -70,13 +71,11 @@ public class Emailer {
 	private String m_el;
 	private String m_ep;
 	private String m_es;
-	private String m_fl;
-	private String m_fp;
-	private String m_fs;
+	private boolean m_is_sending = false;	
+	private Observer m_observer;
 	
 	public Emailer() {
 		m_el = "amiko@ywesee.com";
-		m_fl = "IbsaAmiko";
 		m_map_of_attachments = new TreeMap<String, String>();
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
 		loadMap();
@@ -95,6 +94,22 @@ public class Emailer {
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
 	}
 
+	public void addObserver(Observer observer) {
+		m_observer = observer;
+	}
+	
+	protected void notify(String str) {
+		m_observer.update(null, str);
+	}	
+	
+	protected void notifyObserver() {
+		notify("Emailer notification: order(s) sent ");
+	}
+	
+	public boolean isSending() {
+		return m_is_sending;
+	}
+	
 	public void loadMap() {
 		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\access.ami.ser");
 		if (encrypted_msg==null) {		
@@ -109,8 +124,10 @@ public class Emailer {
 			map = (TreeMap<String, String>)(FileOps.deserialize(serialized_bytes));									
 			m_ep = ((String)map.get(m_el)).split(";")[0];
 			m_es = ((String)map.get(m_el)).split(";")[1];
+			/*
 			m_fp = ((String)map.get(m_fl)).split(";")[0];
 			m_fs = ((String)map.get(m_fl)).split(";")[1];
+			*/
 		}
 	}
 	
@@ -142,13 +159,13 @@ public class Emailer {
 		m_map_of_attachments.put(attachment_name, attachment_path);
 	}
 	
-	private void uploadToFTPServer(String name, String path) {
+	private void uploadToFTPServer(Author author, String name, String path) {
 		FTPClient ftp_client = new FTPClient();
 	    try {
-	    	ftp_client.connect(m_fs, 21);
-	    	ftp_client.login(m_fl, m_fp);
+	    	ftp_client.connect(author.getS(), 21);
+	    	ftp_client.login(author.getL(), author.getP());
 	    	ftp_client.enterLocalPassiveMode(); 
-	    	ftp_client.changeWorkingDirectory("orders");
+	    	ftp_client.changeWorkingDirectory(author.getO());
 	    	ftp_client.setFileType(FTP.BINARY_FILE_TYPE);
             
             int reply = ftp_client.getReplyCode();                        
@@ -161,7 +178,7 @@ public class Emailer {
             File local_file = new File(path); 
             String remote_file = name + ".csv";
             InputStream is = new FileInputStream(local_file); 
-            System.out.print("Uploading file " + name + " to server " + m_fs + "... ");
+            System.out.print("Uploading file " + name + " to server " + author.getS() + "... ");
 
             boolean done = ftp_client.storeFile(remote_file, is);
             if (done)
@@ -243,7 +260,10 @@ public class Emailer {
 	
 	public void sendAllOrders(List<Author> list_of_authors, SaveBasket save_basket) {
 		// Proceed and send order
-		new SendOrderDialog(list_of_authors, save_basket);		
+		if (m_is_sending==false) {
+			m_is_sending = true;
+			new SendOrderDialog(list_of_authors, save_basket);		
+		}
 	}
 	
 	public String orderFileName() {
@@ -306,7 +326,7 @@ public class Emailer {
 		    okButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent event) {
-					System.out.println("Order(s) sent.");
+					System.out.println("Dialog closed: order(s) sent.");
 					emailWorker.cancel(true);
 					dialog.dispatchEvent(new WindowEvent(dialog, WindowEvent.WINDOW_CLOSING)); 
 				}
@@ -373,8 +393,9 @@ public class Emailer {
 							// Send email							
 							sendWithAttachment(author, name, p);
 							// If ibsa send FTP					
-							if (author.getName().equals("ibsa"))
-								uploadToFTPServer(name, p + ".csv");
+							if (author.getS()!=null && !author.getS().isEmpty()) {
+								uploadToFTPServer(author, name, p + ".csv");
+							}
 							setProgress((int)(100.0f*index/(float)num_authors));
 						}
 					}
@@ -403,6 +424,9 @@ public class Emailer {
 			if (!isCancelled())
 				setProgress(100);
 			mDialog.setOKButton("OK");	
+			m_is_sending = false;
+		    // Notify GUI   
+		    notifyObserver();
 		}		
 	}	
 }

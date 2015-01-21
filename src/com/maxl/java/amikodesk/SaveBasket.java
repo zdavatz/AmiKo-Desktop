@@ -271,17 +271,6 @@ public class SaveBasket {
 				Article article = entry.getValue();							
 				if (article.getAuthor().trim().toLowerCase().contains(author)) {
 					String price_pruned = "";					
-					/*
-					if (article.getCode()!=null && article.getCode().equals("ibsa")) {
-						float cr = article.getCashRebate();
-						if (article.getDraufgabe()>0)
-							price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
-						else
-							price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
-					} else {
-						price_pruned = article.getCleanExfactoryPrice();						
-					}
-					*/
 					String total_price_CHF = "";
 					if (article.getCode()!=null && article.getCode().equals("ibsa")) {
 						float cr = article.getCashRebate();
@@ -438,6 +427,11 @@ public class SaveBasket {
         return table;
 	}
 	
+    private boolean isMuster(Article article, float cr) {
+    	return (article.getBuyingPrice(cr)<=0.0f 
+    			&& (article.getSellingPrice()>0.0f || article.getPublicPriceAsFloat()>0.0f));
+    }
+	
 	public void generateCsv(Author author, String filename, String type) {
 		String name_split[] = filename.split("_");
 		String date = name_split[name_split.length-1];		
@@ -455,26 +449,34 @@ public class SaveBasket {
 				for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 					Article article = entry.getValue();									
 					if (article.getAuthor().trim().toLowerCase().contains(author.getShortName())) {						
-						String price_pruned = "";				
+						String price_pruned = "";		
+						String payment = "Bezahlt";
 						if (article.getCode()!=null && article.getCode().equals("ibsa")) {
 							float cr = article.getCashRebate();
 							if (article.getDraufgabe()>0) {
+								// Warenrabatt / Bonus
 								price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
 								total_price_CHF = String.format("%.2f", article.getTotBuyingPrice(0.0f));
+								payment = "Gratis";
 							} else {
-								price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
-								total_price_CHF = String.format("%.2f", article.getTotBuyingPrice(cr));
+								if (cr<100.0f) {
+									price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
+									total_price_CHF = String.format("%.2f", article.getTotBuyingPrice(cr));
+									payment = "Bezahlt";
+								} else {
+									// These are the "muster"
+									price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
+									total_price_CHF = String.format("%.2f", article.getTotBuyingPrice(0.0f));
+									payment = "Gratis";
+								}
 							}
 						} else {
 							price_pruned = article.getCleanExfactoryPrice();
 							total_price_CHF = String.format("%.2f", article.getTotExfactoryPrice());
+							payment = "Bezahlt";
 						}						
 						if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
-							/*
-							double price = Math.ceil(article.getQuantity()*Float.parseFloat(price_pruned)*100.0f)/100.0f;
-							String total_price_CHF = String.format("%.2f", price);
-							*/
-							char shipping_type = 'U';	// unknown
+							char shipping_type = 'U';	// unknown shipping type
 							if (m_map_of_authors.containsKey(author.getShortName())) 
 								shipping_type = m_map_of_authors.get(author.getShortName()).getShippingType();
 							if (article.getQuantity()>0) {
@@ -482,9 +484,8 @@ public class SaveBasket {
 										+ gln_code + "|" + email_address + "|"
 										+ article.getEanCode() + "|" 
 										+ article.getPackTitle() + "|" 
-										+ "Bezahlt|" + article.getQuantity() + "|" 										
-										+ price_pruned + "|"
-										+ total_price_CHF + "|" + article.getVat() + "|"
+										+ payment + "|" + article.getQuantity() + "|" 										
+										+ price_pruned + "|" + total_price_CHF + "|" + article.getVat() + "|"
 										+ shipping_type + "\n"; 
 							}
 							if (article.getDraufgabe()>0) {
@@ -492,17 +493,13 @@ public class SaveBasket {
 										+ gln_code + "|" + email_address + "|"
 										+ article.getEanCode() + "|" 
 										+ article.getPackTitle() + "|"
-										+ "Gratis|" + article.getDraufgabe() + "|"
+										+ payment + "|" + article.getDraufgabe() + "|"
+										+ price_pruned + "|" + total_price_CHF + "|" + article.getVat() + "|"
 										+ shipping_type + "\n";
 							}
 						}
 					}
 				}
-				/*
-				// Add shipping costs at very end of file
-				Author a = m_map_of_authors.get(author.getShortName());
-				shopping_basket_str += a.getShippingCosts() + "\n";
-				*/
 				
 				try {
 					CharsetEncoder encoder = Charset.forName("UTF-8").newEncoder();

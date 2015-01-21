@@ -227,6 +227,9 @@ public class AMiKoDesk {
 	// List of med authors
 	private static List<Author> list_of_authors = new ArrayList<Author>();
 	
+	// Checks if this is a first pass
+	private static boolean m_first_pass = true;
+	
 	/**
 	 * Adds an option into the command line parser
 	 * @param optionName - the option name
@@ -462,6 +465,7 @@ public class AMiKoDesk {
 				Map<String,Object> authorData = mapper.readValue(serialized_bytes, typeRef);								
 				@SuppressWarnings("unchecked")
 				ArrayList<HashMap<String,String>> authorList = (ArrayList<HashMap<String,String>>)authorData.get("authors");				 
+				list_of_authors.clear();
 				for (HashMap<String,String> al : authorList) {
 					Author auth = new Author();
 					auth.setName(al.get("name"));
@@ -469,6 +473,15 @@ public class AMiKoDesk {
 					auth.setEmail(al.get("email"));
 					auth.setEmailCC(al.get("emailcc"));
 					auth.setSalutation(al.get("salutation"));
+					if (al.get("server")!=null) {
+						String s[] = al.get("server").split(";");
+						if (s.length==4) {
+							auth.setS(s[0]);
+							auth.setL(s[1]);
+							auth.setP(s[2]);
+							auth.setO(s[3]);
+						}
+					}
 					list_of_authors.add(auth);
 				}
 			}
@@ -924,6 +937,7 @@ public class AMiKoDesk {
 												list_of_carts.add(f.substring(0,f.lastIndexOf(".")));
 											}
 										}
+										Collections.reverse(list_of_carts);
 										m_curr_uistate.setUseMode("loadcart");
 										String[] file_str = list_of_carts.toArray(new String[list_of_carts.size()]);
 										m_section_titles.updatePanel(file_str);
@@ -985,17 +999,20 @@ public class AMiKoDesk {
 							char shipping_type = msg.replace("change_shipping", "").charAt(0);
 							updateCheckoutTable(row_key, shipping_type);
 						} else if (msg.equals("check_out")) {
-							saveShoppingCart();
+							int index = m_shopping_cart.getCartIndex();
+							if (index>0)
+								saveShoppingCartWithIndex(index);
+							m_shopping_cart.setAgbsAccepted(false);
 							m_web_panel.showCheckoutHtml();
 						} else if (msg.equals("agbs_accepted")) {
 							boolean a = Boolean.valueOf(row_key);
 							m_shopping_cart.setAgbsAccepted(a);
 						} else if (msg.equals("send_order")) {
-							saveShoppingCart();
-							if (m_shopping_cart.getAgbsAccepted()) {
+							if (m_shopping_cart.getAgbsAccepted() && !m_emailer.isSending()) {
+								saveShoppingCart();
 								SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
 								// Update authors list with subtotals, vats and shipping costs
-								list_of_authors = m_shopping_cart.updateAuthors(list_of_authors);
+								list_of_authors = m_shopping_cart.updateAuthors(list_of_authors);								
 								sbasket.setAuthorList(list_of_authors);
 								m_emailer.sendAllOrders(list_of_authors, sbasket);
 								m_web_panel.updateShoppingHtml();
@@ -1831,7 +1848,12 @@ public class AMiKoDesk {
 				Runtime.getRuntime().exit(0);	        	
 	        }
 	        @Override
-	        public void windowClosing(WindowEvent e) {}
+	        public void windowClosing(WindowEvent e) {
+				// Save shopping cart
+				int index = m_shopping_cart.getCartIndex();
+				if (index>0 && m_web_panel!=null)
+					m_web_panel.saveShoppingCartWithIndex(index);	   
+	        }
 	        @Override 
 	        public void windowIconified(WindowEvent e) {}
 	        @Override 
@@ -1856,8 +1878,12 @@ public class AMiKoDesk {
 		quit_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				// Save settings
 				try {
+					// Save shopping cart
+					int index = m_shopping_cart.getCartIndex();
+					if (index>0 && m_web_panel!=null)
+						m_web_panel.saveShoppingCartWithIndex(index);
+					// Save settings					
 					WindowSaver.saveSettings();
 					m_web_panel.dispose();
 					Runtime.getRuntime().exit(0);
@@ -2332,10 +2358,16 @@ public class AMiKoDesk {
 						if (m_shopping_cart!=null) {
 							index = m_shopping_cart.getCartIndex();				
 							m_web_panel.loadShoppingCartWithIndex(index);	
-							m_shopping_cart.printShoppingBasket();							
+							// m_shopping_cart.printShoppingBasket();							
 						}
 						// m_web_panel.updateShoppingHtml();
-						m_web_panel.updateListOfPackages();									
+						m_web_panel.updateListOfPackages();				
+						if (m_first_pass==true) {
+							m_first_pass = false;
+							med_search = m_sqldb.searchAuth("ibsa");
+							sAuth();
+							cardl.show(p_results, final_author);
+						}
 					}
 				} else {
 					selectShoppingCartButton.setSelected(false);
@@ -2514,6 +2546,9 @@ public class AMiKoDesk {
 			}
 		});		
 		
+		/**
+		 * Observers
+		 */
 		// Attach observer to 'm_sqldb'
 		m_sqldb.addObserver(new Observer() {
 			public void update(Observable o, Object arg) {
@@ -2525,16 +2560,19 @@ public class AMiKoDesk {
 					m_shopping_cart.load_conditions();
 					m_shopping_cart.load_glns();
 				}				
-				// Refresh search results
-				/*
-				selectAipsButton.setSelected(true);
-				selectFavoritesButton.setSelected(false);
-				m_curr_uistate.setUseMode("aips");
-				med_search = m_sqldb.searchTitle("");
-				// 
-				sTitle();	// Used instead of sTitle (which is slow)
-				cardl.show(p_results, final_title);						
-				*/
+			}
+		});
+
+		// Attach observer to 'm_emailer'
+		m_emailer.addObserver(new Observer() {
+			public void update(Observable o, Object arg) {
+				System.out.println(arg);
+				// Refresh some stuff
+				m_shopping_basket.clear();
+				int index = m_shopping_cart.getCartIndex();
+				if (index>0)
+					m_web_panel.saveShoppingCartWithIndex(index);
+				m_web_panel.updateShoppingHtml();
 			}
 		});
 		

@@ -27,6 +27,10 @@ public class Author {
 	private String email_cc;
 	private String address;	
 	private String salutation;
+	private String s;	
+	private String l;
+	private String p;
+	private String o;
 	private float subtotal_CHF;
 	private float vat25_CHF;
 	private float vat80_CHF;
@@ -44,6 +48,10 @@ public class Author {
 		this.email_cc = another.email_cc;
 		this.address = another.address;
 		this.salutation = another.salutation;
+		this.s = another.s;	
+		this.l = another.l;
+		this.p = another.p;
+		this.o = another.o;		
 		this.subtotal_CHF = another.subtotal_CHF;
 		this.vat25_CHF = another.vat25_CHF;
 		this.vat80_CHF = another.vat80_CHF;			
@@ -109,7 +117,39 @@ public class Author {
 	public String getSalutation() {
 		return salutation;
 	}
+
+	public void setS(String s) {
+		this.s = s;
+	}
 	
+	public String getS() {
+		return this.s;
+	}
+	
+	public void setL(String l) {
+		this.l = l;
+	}
+	
+	public String getL() {
+		return this.l;
+	}
+	
+	public void setP(String p) {
+		this.p = p;
+	}
+	
+	public String getP() {
+		return this.p;
+	}
+
+	public void setO(String o) {
+		this.o = o;
+	}
+	
+	public String getO() {
+		return this.o;
+	}
+
 	public void setCosts(float subtotal, float vat25, float vat80, float shipping, char type) {
 		subtotal_CHF = subtotal;
 		vat25_CHF = vat25;

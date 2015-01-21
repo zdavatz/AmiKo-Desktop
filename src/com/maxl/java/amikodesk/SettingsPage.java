@@ -312,7 +312,7 @@ public class SettingsPage extends JDialog {
 						else 
 							mPrefs.put(HumanID, "no");
 						mPrefs.put(TypeID, m_user.getType().toLowerCase());
-						System.out.println(m_user.getGlnCode() + " - " + m_user.getType() + " (" + m_user.isHuman() + ") -> " + m_user.getName1() + ", " + m_user.getName2());
+						System.out.println(m_user.getGlnCode() + " - " + m_user.getType() + " -> " + m_user.getName1() + ", " + m_user.getName2());
 						mTextFieldGLN.setBorder(new LineBorder(color_white, 5, false));
 						mTextFieldGLN.setBackground(color_white);
 						String address = "";
