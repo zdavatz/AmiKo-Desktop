@@ -27,8 +27,10 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
@@ -54,6 +56,8 @@ public class ShoppingCart implements java.io.Serializable {
 			shipping_type = type;
 		}
 	}
+
+	private static ResourceBundle m_rb = ResourceBundle.getBundle("amiko_de_CH", new Locale("de", "CH"));
 	
 	private static Map<String, Article> m_shopping_basket = null;
 	private static Map<String, Conditions> m_map_ibsa_conditions = null;
@@ -415,17 +419,17 @@ public class ShoppingCart implements java.io.Serializable {
 		if (m_shopping_basket!=null && m_shopping_basket.size()>0) {
 			int index = 1;						
 			basket_html_str += "<tr>"
-					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"11%\"><b>EAN</b></td>"			// 12
-					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"8%\"><b>Kat</b></td>"			// 20
+					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"11%\"><b>" + m_rb.getString("ean") + "</b></td>"			// 12
+					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"8%\"><b>" + m_rb.getString("category") + "</b></td>"			// 20
 					+ "<td style=\"text-align:center; padding-bottom:8px;\"; width=\"3%\"></td>"			// 20				
-					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"40%\"><b>Artikel</b></td>"		// 66	
+					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"40%\"><b>" + m_rb.getString("article") + "</b></td>"		// 66	
 					+ "<td style=\"text-align:center; padding-bottom:8px;\"; width=\"6%\"><b>Assort</b></td>"		// 73						
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"7%\"><b>Menge</b></td>"			// 80
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"5%\"><b>Bonus</b></td>"			// 50		
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"12%\"><b>Aufwand</b></td>"		// 71
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"12%\"><b>Erlös</b></td>"		// 80				
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"12%\"><b>Gewinn</b></td>"		// 89
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"5%\"><b>Rabatt</b></td>"		// 96			
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"7%\"><b>" + m_rb.getString("quantity") + "</b></td>"			// 80
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"5%\"><b>" + m_rb.getString("bonus") + "</b></td>"			// 50		
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"12%\"><b>" + m_rb.getString("expense") + "</b></td>"		// 71
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"12%\"><b>" + m_rb.getString("proceeds") + "</b></td>"		// 80				
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"12%\"><b>" + m_rb.getString("profit") + "</b></td>"		// 89
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"5%\"><b>" + m_rb.getString("rebate") + "</b></td>"		// 96			
 					+ "<td style=\"text-align:center; padding-bottom:8px;\"; width=\"3%\"></td>"					// 100
 					+ "</tr>";
 			
@@ -688,7 +692,7 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + selling_percent + "%; background-color:forestgreen;\">Erlös: " 
 					+ Utilities.prettyFormat(subtotal_selling_CHF) + " CHF</div></td></tr>";
 			
-			bar_charts_str += "<tr><td colspan=\"4\">Vertriebsanteil in % "
+			bar_charts_str += "<tr><td colspan=\"4\">" + m_rb.getString("margin") + " "
 					+ "<input type=\"number\" name=\"points\" maxlength=\"3\" min=\"1\" max=\"999\" style=\"width:40px; text-align:right;\"" 
 					+ " value=\"" + m_margin_percent + "\" onkeydown=\"changeMarge('Warenkorb',this)\" id=\"marge\" /></td>"
 					+ "</tr>";	
@@ -708,10 +712,10 @@ public class ShoppingCart implements java.io.Serializable {
 			checkout_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Check_out\">"
 					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"checkOut(this)\"><img src=\"" + m_images_dir + "checkout_icon.png\" /></button></div></td>";;
 			// Subtitles	
-			delete_all_text = "<td><div class=\"right\">Korb leeren</div></td>";		
-			generate_pdf_text = "<td><div class=\"right\">PDF erstellen</div></td>";
-			generate_csv_text = "<td><div class=\"right\">CSV erstellen</div></td>";
-			checkout_text = "<td><div class=\"right\">Zur Kasse</div></td>";			
+			delete_all_text = "<td><div class=\"right\">" + m_rb.getString("emptyBasket") + "/div></td>";		
+			generate_pdf_text = "<td><div class=\"right\">" + m_rb.getString("makePdf") + "</div></td>";
+			generate_csv_text = "<td><div class=\"right\">" + m_rb.getString("makeCsv") + "</div></td>";
+			checkout_text = "<td><div class=\"right\">" + m_rb.getString("checkout") + "</div></td>";			
 		} else {	
 			// Warenkorb ist leer
 			if (Utilities.appLanguage().equals("de"))
@@ -730,8 +734,8 @@ public class ShoppingCart implements java.io.Serializable {
 		}
 		
 		String footnotes_str = "<hr><table style=\"background:white\">"
-				+ "<tr><td style=\"color:'#999999'; text-align:center; padding-right:8px;\"><b>M</b></td><td>Mit AmiKo können Sie wo erwähnt auch Muster bestellen.</td></tr>"
-				+ "<tr><td style=\"text-align:center; padding-right:8px;\"><img src=\"" + m_images_dir + "checkmark_icon.png\" /></td><td>Diese Artikel sind assortierbar.</td></tr>"
+				+ "<tr><td style=\"color:'#999999'; text-align:center; padding-right:10px;\"><b>M</b></td><td>" + m_rb.getString("musterMsg") + "</td></tr>"
+				+ "<tr><td style=\"text-align:center; padding-right:10px;\"><img src=\"" + m_images_dir + "checkmark_icon.png\" /></td><td>" + m_rb.getString("assortMsg") + "</td></tr>"
 				+ "</table>";
 		
 		String jscript_str = "<script language=\"javascript\">" + m_jscripts_str+ "</script>";
