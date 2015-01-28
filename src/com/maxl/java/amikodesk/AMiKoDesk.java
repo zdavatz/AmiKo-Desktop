@@ -904,7 +904,6 @@ public class AMiKoDesk {
 								// Loop through all medis and update
 								for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 									Article article = entry.getValue();
-									System.out.println(article.getPackTitle());
 									if (!article.isSpecial()) {
 										String ean_code = article.getEanCode();
 										article.setMargin(marge/100.0f);								
@@ -932,9 +931,16 @@ public class AMiKoDesk {
 										list_of_carts.clear();
 										File[] files = new File(m_application_data_folder + "\\shop").listFiles();
 										for (File file : files) {
-											if (file.isFile() && file.getName().startsWith("warenkorb") && file.getName().endsWith(".ser")) {
-												String f = file.getName();
-												list_of_carts.add(f.substring(0,f.lastIndexOf(".")));
+											if (Utilities.appLanguage().equals("de")) {
+												if (file.isFile() && file.getName().startsWith("warenkorb") && file.getName().endsWith(".ser")) {
+													String f = file.getName();
+													list_of_carts.add(f.substring(0,f.lastIndexOf(".")));
+												}
+											} else if (Utilities.appLanguage().equals("fr")) {
+												if (file.isFile() && file.getName().startsWith("panier") && file.getName().endsWith(".ser")) {
+													String f = file.getName();
+													list_of_carts.add(f.substring(0,f.lastIndexOf(".")));
+												}
 											}
 										}
 										Collections.reverse(list_of_carts);
@@ -967,7 +973,7 @@ public class AMiKoDesk {
 										int r = fc.showSaveDialog(jWeb);
 										if (r==JFileChooser.APPROVE_OPTION) {										
 											String filename = fc.getSelectedFile().getPath();
-											SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
+											SaveBasket sbasket = new SaveBasket(m_shopping_cart);
 											sbasket.generatePdf(null, filename, "all");	
 										}
 									}
@@ -986,7 +992,7 @@ public class AMiKoDesk {
 										int r = fc.showSaveDialog(jWeb);
 										if (r==JFileChooser.APPROVE_OPTION) {										
 											String filename = fc.getSelectedFile().getPath();
-											SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
+											SaveBasket sbasket = new SaveBasket(m_shopping_cart);
 											sbasket.generateCsv(null, filename, "all");
 										}
 									}
@@ -1010,7 +1016,7 @@ public class AMiKoDesk {
 						} else if (msg.equals("send_order")) {
 							if (m_shopping_cart.getAgbsAccepted() && !m_emailer.isSending()) {
 								saveShoppingCart();
-								SaveBasket sbasket = new SaveBasket(m_shopping_cart.getShoppingBasket());
+								SaveBasket sbasket = new SaveBasket(m_shopping_cart);
 								// Update authors list with subtotals, vats and shipping costs
 								list_of_authors = m_shopping_cart.updateAuthors(list_of_authors);								
 								sbasket.setAuthorList(list_of_authors);
@@ -1092,7 +1098,11 @@ public class AMiKoDesk {
 			File wdir = new File(dir_name);
 			if (!wdir.exists())
 				wdir.mkdirs();
-			File file = new File(dir_name + "\\warenkorb_" + fmt.print(dT) + ".ser");
+			File file = null;
+			if (Utilities.appLanguage().equals("de"))
+				file = new File(dir_name + "\\warenkorb_" + fmt.print(dT) + ".ser");
+			else if (Utilities.appLanguage().equals("fr"))
+				file = new File(dir_name + "\\panier_" + fmt.print(dT) + ".ser");
 			if (file != null) {
 				String filename = file.getAbsolutePath();
 				// System.out.println("Saved shopping cart to " + filename);
@@ -1107,8 +1117,8 @@ public class AMiKoDesk {
 			String dir_name = m_application_data_folder + "\\shop";
 			File wdir = new File(dir_name);
 			if (!wdir.exists())
-				wdir.mkdirs();
-			File file = new File(dir_name + "\\korb" + n + ".ser");
+				wdir.mkdirs();			
+			File file = new File(dir_name + "\\korb" + n + ".ser");		
 			if (file != null) {
 				String filename = file.getAbsolutePath();
 				// System.out.println("Saved shopping cart " + n + " to " + filename);
@@ -1818,7 +1828,10 @@ public class AMiKoDesk {
 		setupButton(selectAipsButton, "AIPS", "aips32x32_gray.png", "aips32x32_dark.png");
 		setupButton(selectFavoritesButton, "Favorites", "favorites32x32_gray.png", "favorites32x32_dark.png");
 		setupButton(selectInteractionsButton, "Interactions", "interactions32x32_gray.png", "interactions32x32_dark.png");
-		setupButton(selectShoppingCartButton, "Warenkorb", "shoppingcart32x32_gray.png", "shoppingcart32x32_dark.png");
+		if (Utilities.appLanguage().equals("de"))
+			setupButton(selectShoppingCartButton, "Warenkorb", "shoppingcart32x32_gray.png", "shoppingcart32x32_dark.png");
+		if (Utilities.appLanguage().equals("fr"))
+			setupButton(selectShoppingCartButton, "Panier", "shoppingcart32x32_gray.png", "shoppingcart32x32_dark.png");
 		
 		// Add to toolbar and set up
 		toolBar.setBackground(m_toolbar_bg);

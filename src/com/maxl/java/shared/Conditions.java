@@ -1,5 +1,9 @@
 package com.maxl.java.shared;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.ObjectStreamClass;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,6 +13,16 @@ import org.joda.time.DateTime;
 
 public class Conditions implements java.io.Serializable {
 
+	/**
+	 * Determines if a de-serialized file is compatible with this class.
+	 * 
+	 * Maintainers must change this value if and only if the new version of this
+	 * class is not compatible with old versions. See Sun docs for <a
+	 * href=http://java.sun.com/products/jdk/1.1/docs/guide
+	 * /serialization/spec/version.doc.html> details. </a>
+	 */
+	private static final long serialVersionUID = 1L;
+	
 	public String ean_code;
 	public String name;
 	public float fep_chf;
@@ -238,5 +252,32 @@ public class Conditions implements java.io.Serializable {
 					System.out.println(category + "-drugstore promo days = [" + d.get(i) + ", " + d.get(i+1) + "]");							
 			}
 		}
+	}
+	
+	/**
+	 * Always treat de-serialization as a full-blown constructor, by validating
+	 * the final state of the de-serialized object.
+	 */
+	private void readObject(ObjectInputStream ois)
+			throws ClassNotFoundException, IOException {		
+		// Always perform the default de-serialization first
+		ois.defaultReadObject();
+		
+		long serial_ver_uid = Conditions.serialVersionUID;
+		// In case there are changes use this technique...
+		if (serial_ver_uid==1L) {
+			
+		} else if (serial_ver_uid==2L) {
+			
+		}
+	}
+
+	/**
+	 * This is the default implementation of writeObject. Customise if necessary.
+	 */
+	private void writeObject(ObjectOutputStream oos)
+			throws IOException {
+		// Perform the default serialization for all non-transient, non-static fields
+		oos.defaultWriteObject();
 	}
 }

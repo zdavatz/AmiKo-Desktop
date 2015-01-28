@@ -387,7 +387,9 @@ public class Article implements java.io.Serializable {
 	}
 
 	public float getTotSellingPrice() {
-		return (quantity+draufgabe)*selling_price;
+		// Update selling price first... need to take into account the margin.
+		float s = getSellingPrice();
+		return (quantity+draufgabe)*s;
 	}
 		
 	/**

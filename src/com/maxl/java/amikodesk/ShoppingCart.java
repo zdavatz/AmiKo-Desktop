@@ -90,6 +90,15 @@ public class ShoppingCart implements java.io.Serializable {
 		load_glns();
 		// 
 		m_images_dir = System.getProperty("user.dir") + "/images/";	
+		// 
+		if (Utilities.appLanguage().equals("de"))
+			m_rb = ResourceBundle.getBundle("amiko_de_CH", new Locale("de", "CH"));
+		else if (Utilities.appLanguage().equals("fr"))
+			m_rb = ResourceBundle.getBundle("amiko_fr_CH", new Locale("fr", "CH"));			
+	}
+	
+	public ResourceBundle getRB() {
+		return m_rb;
 	}
 	
 	public void load_conditions() {
@@ -420,12 +429,12 @@ public class ShoppingCart implements java.io.Serializable {
 			int index = 1;						
 			basket_html_str += "<tr>"
 					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"11%\"><b>" + m_rb.getString("ean") + "</b></td>"			// 12
-					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"8%\"><b>" + m_rb.getString("category") + "</b></td>"			// 20
+					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"7%\"><b>" + m_rb.getString("category") + "</b></td>"			// 20
 					+ "<td style=\"text-align:center; padding-bottom:8px;\"; width=\"3%\"></td>"			// 20				
 					+ "<td style=\"text-align:left; padding-bottom:8px;\"; width=\"40%\"><b>" + m_rb.getString("article") + "</b></td>"		// 66	
 					+ "<td style=\"text-align:center; padding-bottom:8px;\"; width=\"6%\"><b>Assort</b></td>"		// 73						
 					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"7%\"><b>" + m_rb.getString("quantity") + "</b></td>"			// 80
-					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"5%\"><b>" + m_rb.getString("bonus") + "</b></td>"			// 50		
+					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"7%\"><b>" + m_rb.getString("bonus") + "</b></td>"			// 50		
 					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"12%\"><b>" + m_rb.getString("expense") + "</b></td>"		// 71
 					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"12%\"><b>" + m_rb.getString("proceeds") + "</b></td>"		// 80				
 					+ "<td style=\"text-align:right; padding-bottom:8px;\"; width=\"12%\"><b>" + m_rb.getString("profit") + "</b></td>"		// 89
@@ -479,9 +488,9 @@ public class ShoppingCart implements java.io.Serializable {
 						}
 
 						if (!qty_found)
-							article.setQuantity(rebate_map.firstEntry().getKey());															
+							article.setQuantity(rebate_map.firstEntry().getKey());		
+						article.setMargin(m_margin_percent/100.0f);							
 						article.setBuyingPrice(c.fep_chf);
-						article.setMargin(m_margin_percent/100.0f);	
 						article.setDropDownStr(value_str);						
 					} else {
 						// --> These medis are like any other medis, the prices, however, come from the IBSA Excel file	
@@ -498,7 +507,8 @@ public class ShoppingCart implements java.io.Serializable {
 				Article article = entry.getValue();				
 				String category = article.getCategories();				
 				String ean_code = article.getEanCode();
-				// Check if ean code is in conditions map (special treatment)
+				// Check if ean code is in conditions map (special treatment) 
+				// --> This is all IBSA stuff
 				if (m_map_ibsa_conditions.containsKey(ean_code)) {	
 					article.setCode("ibsa");
 			
@@ -618,7 +628,7 @@ public class ShoppingCart implements java.io.Serializable {
 						basket_html_str += "</tr>";	
 					}
 				} else {
-					
+					// --> Non-IBSA stuff
 					int quantity = article.getQuantity();
 					subtotal_buying_CHF += article.getTotExfactoryPrice();
 					subtotal_selling_CHF += article.getTotPublicPrice();
@@ -685,11 +695,11 @@ public class ShoppingCart implements java.io.Serializable {
 			bar_charts_str += "<table width=\"99%25\">";
 			
 			bar_charts_str += "<tr style=\"height:10px;\"><td colspan=\"12\"></tr>"
-					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Buying_Col\" style=\"width:" + buying_percent + "%; background-color:firebrick;\">Aufwand: " 
+					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Buying_Col\" style=\"width:" + buying_percent + "%; background-color:firebrick;\">" + m_rb.getString("expense") + ": " 
 					+ Utilities.prettyFormat(subtotal_buying_CHF) + " CHF</div>" 
-					+ "<div style=\"width:0.3%; padding:0px;\"></div><div id=\"Profit_Col\" style=\"width:" + profit_percent + "%; background-color:blue;\">Gewinn: " 
+					+ "<div style=\"width:0.3%; padding:0px;\"></div><div id=\"Profit_Col\" style=\"width:" + profit_percent + "%; background-color:blue;\">" + m_rb.getString("proceeds") + ": "  
 					+ Utilities.prettyFormat(subtotal_profit_CHF) + " CHF</div></td></tr>"
-					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + selling_percent + "%; background-color:forestgreen;\">Erlös: " 
+					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + selling_percent + "%; background-color:forestgreen;\">" + m_rb.getString("profit") + ": "  
 					+ Utilities.prettyFormat(subtotal_selling_CHF) + " CHF</div></td></tr>";
 			
 			bar_charts_str += "<tr><td colspan=\"4\">" + m_rb.getString("margin") + " "
@@ -712,25 +722,22 @@ public class ShoppingCart implements java.io.Serializable {
 			checkout_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Check_out\">"
 					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"checkOut(this)\"><img src=\"" + m_images_dir + "checkout_icon.png\" /></button></div></td>";;
 			// Subtitles	
-			delete_all_text = "<td><div class=\"right\">" + m_rb.getString("emptyBasket") + "/div></td>";		
+			delete_all_text = "<td><div class=\"right\">" + m_rb.getString("emptyBasket") + "</div></td>";		
 			generate_pdf_text = "<td><div class=\"right\">" + m_rb.getString("makePdf") + "</div></td>";
 			generate_csv_text = "<td><div class=\"right\">" + m_rb.getString("makeCsv") + "</div></td>";
 			checkout_text = "<td><div class=\"right\">" + m_rb.getString("checkout") + "</div></td>";			
 		} else {	
 			// Warenkorb ist leer
-			if (Utilities.appLanguage().equals("de"))
-				basket_html_str = "<div>Ihr Warenkorb ist leer.<br><br></div>";
-			else if (Utilities.appLanguage().equals("fr"))
-				basket_html_str = "<div>Votre panier d'achat est vide.<br><br></div>";
+			basket_html_str = "<div>" + m_rb.getString("emptyCart") + "<br><br></div>";
 		}
 		
 		// Bestellungen und Schnellbestellungen
-		load_order_str = "<button style=\"background-color:#b0b0b0; color:#ffffff;\" id=\"loadCart0\" tabindex=\"-1\" onclick=\"loadCart(this,0)\">Alle Bestellungen</button>";		
+		load_order_str = "<button style=\"background-color:#b0b0b0; color:#ffffff;\" id=\"loadCart0\" tabindex=\"-1\" onclick=\"loadCart(this,0)\">" + m_rb.getString("allOrders") + "</button>";		
 		for (int i=1; i<6; ++i) {
 			String button_pressed = "";
 			if (m_cart_index==i)
 				button_pressed = "class=\"buttonPressed\""; 
-			fast_order_str[i-1] = "<button " + button_pressed + " id=\"loadCart" + i + "\" tabindex=\"-1\" onclick=\"loadCart(this," + i + ")\">Warenkorb " + i + "</button>";
+			fast_order_str[i-1] = "<button " + button_pressed + " id=\"loadCart" + i + "\" tabindex=\"-1\" onclick=\"loadCart(this," + i + ")\">" + m_rb.getString("shoppingCart") + " " + i + "</button>";
 		}
 		
 		String footnotes_str = "<hr><table style=\"background:white\">"
@@ -794,8 +801,6 @@ public class ShoppingCart implements java.io.Serializable {
 			tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
 			profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
 		}
-		
-		System.out.println(muster);
 		
 		String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[2].innerHTML=\"" + muster + "\";"  
 				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[6].innerHTML=\"" + draufgabe + "\";"  
@@ -883,23 +888,23 @@ public class ShoppingCart implements java.io.Serializable {
 		String images_dir = System.getProperty("user.dir") + "/images/";	
 		
 		// Bestellungen und Schnellbestellungen
-		load_order_str = "<button style=\"background-color:#b0b0b0; color:#ffffff;\" id=\"loadCart0\" tabindex=\"-1\" onclick=\"loadCart(this,0)\">Alle Bestellungen</button>";		
+		load_order_str = "<button style=\"background-color:#b0b0b0; color:#ffffff;\" id=\"loadCart0\" tabindex=\"-1\" onclick=\"loadCart(this,0)\">" + m_rb.getString("allOrders") + "</button>";		
 		for (int i=1; i<6; ++i) {
 			String button_pressed = "";
 			if (m_cart_index==i)
 				button_pressed = "class=\"buttonPressed\""; 
-			fast_order_str[i-1] = "<button " + button_pressed + " id=\"loadCart" + i + "\" tabindex=\"-1\" onclick=\"loadCart(this," + i + ")\">Warenkorb " + i + "</button>";
+			fast_order_str[i-1] = "<button " + button_pressed + " id=\"loadCart" + i + "\" tabindex=\"-1\" onclick=\"loadCart(this," + i + ")\">" + m_rb.getString("shoppingCart") + " " + i + "</button>";
 		}
 		
 		String checkout_html_str = "<table id=\"Checkout\" width=\"99%25\">";
 		
 		checkout_html_str += "<tr>"
-				+ "<td style=\"text-align:left; padding-top:8px; padding-bottom:8px;\";><b>Inhaberin</b></td>"			
-				+ "<td style=\"text-align:right; padding-top:8px; padding-bottom:8px;\";><b>Subtotal</b></td>"		
-				+ "<td style=\"text-align:right; padding-top:8px; padding-bottom:8px;\";><b>Versand</b></td>"				
-				+ "<td style=\"text-align:right; padding-top:8px; padding-bottom:8px;\";><b>MwSt.(2.5%)</b></td>"			
-				+ "<td style=\"text-align:right; padding-top:8px; padding-bottom:8px;\";><b>MwSt.(8.0%)</b></td>"							
-				+ "<td style=\"text-align:right; padding-top:8px; padding-bottom:8px;\";><b>Total</b></td>"			
+				+ "<td style=\"text-align:left; padding-top:8px; padding-bottom:8px;\";><b>" + m_rb.getString("owner") + "</b></td>"			
+				+ "<td style=\"text-align:right; padding-top:8px; padding-bottom:8px;\";><b>" + m_rb.getString("subtotal") + "</b></td>"		
+				+ "<td style=\"text-align:right; padding-top:8px; padding-bottom:8px;\";><b>" + m_rb.getString("shipping") + "</b></td>"				
+				+ "<td style=\"text-align:right; padding-top:8px; padding-bottom:8px;\";><b>" + m_rb.getString("vat") + " (2.5%)</b></td>"			
+				+ "<td style=\"text-align:right; padding-top:8px; padding-bottom:8px;\";><b>" + m_rb.getString("vat") + " (8.0%)</b></td>"							
+				+ "<td style=\"text-align:right; padding-top:8px; padding-bottom:8px;\";><b>" + m_rb.getString("total") + "</b></td>"			
 				+ "</tr>";
 
 		m_map_owner_total = new TreeMap<String, Owner>();		
@@ -987,19 +992,19 @@ public class ShoppingCart implements java.io.Serializable {
 			if (checkIfSponsor(author)) {
 				if (!shipping_free) {
 					if (price_CHF<=500.0f) {
-						versand_optionen = "<option value=\"B\">B-Post: +7.35 CHF</option>"
-								+ "<option value=\"A\">A-Post: +7.95 CHF</option>"
-								+ "<option value=\"E\">Express: +62.95 CHF</option>";
+						versand_optionen = "<option value=\"B\">" + m_rb.getString("BPost") + ": +7.35 CHF</option>"
+								+ "<option value=\"A\">" + m_rb.getString("APost") + ": +7.95 CHF</option>"
+								+ "<option value=\"E\">" + m_rb.getString("express") + ": +62.95 CHF</option>";
 					} else {
-						versand_optionen = "<option value=\"Z\">B-Post: +0.00 CHF</option>"
-								+ "<option value=\"Z\">A-Post: +0.00 CHF</option>"
-								+ "<option value=\"E\">Express: +62.95 CHF</option>";
+						versand_optionen = "<option value=\"Z\">" + m_rb.getString("BPost") +": +0.00 CHF</option>"
+								+ "<option value=\"Z\">" + m_rb.getString("APost") + ": +0.00 CHF</option>"
+								+ "<option value=\"E\">" + m_rb.getString("express") + ": +62.95 CHF</option>";
 					}
 				} else {
-					versand_optionen = "<option value=\"B\">A-Post: +0.00 CHF</option>";
+					versand_optionen = "<option value=\"A\">" + m_rb.getString("APost") + ": +0.00 CHF</option>";
 				}
 			} else {
-				versand_optionen = "Wird als PDF auf Desktop gespeichert.*";
+				versand_optionen = m_rb.getString("saveOrder");
 				saving_to_desktop_text += author + ", ";
 			}
 			// Sum up including VAT (+8%) for shipping costs
@@ -1029,7 +1034,7 @@ public class ShoppingCart implements java.io.Serializable {
 					+ "</tr>";
 		}
 		checkout_html_str += "<tr id=\"GrandTotal\">"
-				+ "<td style=\"text-align:left; padding-top:16px; padding-bottom:8px;\"><b>Gesamttotal</b></td>"
+				+ "<td style=\"text-align:left; padding-top:16px; padding-bottom:8px;\"><b>" + m_rb.getString("gesamttotal") + "</b></td>"
 				+ "<td style=\"text-align:right; padding-top:16px; padding-bottom:8px;\"><b>" + Utilities.prettyFormat(sum_total_CHF) + "</b></td>"
 				+ "<td style=\"text-align:right; padding-top:16px; padding-bottom:8px;\"><b>" + Utilities.prettyFormat(sum_shipping_CHF) + "</b></td>"
 				+ "<td style=\"text-align:right; padding-top:16px; padding-bottom:8px;\"><b>" + Utilities.prettyFormat(sum_vat25_CHF) + "</b></td>"				
@@ -1037,18 +1042,14 @@ public class ShoppingCart implements java.io.Serializable {
 				+ "<td style=\"text-align:right; padding-top:16px; padding-bottom:8px;\"><b>" + Utilities.prettyFormat(grand_total_CHF) + "</b></td>"
 				+ "</tr></table>";
 		
-		String agb_str = "<input type=\"checkbox\" style=\"margin-right:10px;\" onclick=\"agbsAccepted(this)\">"
-				+ "Ich habe die Allgemeinen Geschäftsbedingungen gelesen und stimme diesen ausdrücklich zu.</input>";
+		String agb_str = "<input type=\"checkbox\" style=\"margin-right:10px;\" onclick=\"agbsAccepted(this)\">" + m_rb.getString("agbsMsg") + "</input>";
 		
 		String send_order_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Send_order\">"
 				+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"sendOrder(this)\"><img src=\"" + images_dir + "order_send_icon.png\" /></button></div></td>";
-		String send_order_text = "<td><div class=\"right\">Bestellung(en) senden</div></td>";			
+		String send_order_text = "<td><div class=\"right\">" + m_rb.getString("sendOrder") + "</div></td>";			
 		
 		if (!saving_to_desktop_text.isEmpty()) {
-			saving_to_desktop_text = "<hr><p class=\"footnote\">* Produkte von "
-					+ saving_to_desktop_text.substring(0, saving_to_desktop_text.length()-2)
-					+ " werden zur Zeit noch nicht automatisch übermittelt. Die Bestellung wird als PDF auf dem Desktop gespeichert. "
-					+ "Falls Sie an einer Direktübermittlung interessiert sind, treten Sie bitte mit Zeno Davatz (zdavatz@ywesee.com) in Verbindung.</p>";
+			saving_to_desktop_text = "<hr><p class=\"footnote\">" + m_rb.getString("saveDesk") + "</p>";
 		}
 		
 		String html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_str + "</head>"

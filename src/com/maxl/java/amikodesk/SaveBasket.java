@@ -32,7 +32,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.ResourceBundle;
 import java.util.TreeSet;
 import java.util.prefs.Preferences;
 
@@ -70,8 +72,11 @@ public class SaveBasket {
 	private static Map<String, Article> m_shopping_basket = null;
 	private static Map<String, Author> m_map_of_authors = null;
 
-	public SaveBasket(Map<String, Article> shopping_basket) {
-		m_shopping_basket = shopping_basket;
+	private static ResourceBundle m_rb = null;
+	
+	public SaveBasket(ShoppingCart shopping_cart) {
+		m_shopping_basket = shopping_cart.getShoppingBasket();
+		m_rb = shopping_cart.getRB();
 	}
 	
 	/** Class to add a header and a footer. */
@@ -260,11 +265,11 @@ public class SaveBasket {
 		PdfPCell cell = new PdfPCell();	
         
         table.addCell(getStringCell("Pos.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
-		table.addCell(getStringCell("Menge", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("EAN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("Artikel", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));    
-        table.addCell(getStringCell("MwSt", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
-        table.addCell(getStringCell("Preis (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
+		table.addCell(getStringCell(m_rb.getString("quantity"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell(m_rb.getString("ean"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell(m_rb.getString("article"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));    
+        table.addCell(getStringCell(m_rb.getString("vat"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
+        table.addCell(getStringCell(m_rb.getString("price") + " (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
 		        
         if (m_shopping_basket.size()>0 && !author.isEmpty()) {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
@@ -324,23 +329,23 @@ public class SaveBasket {
 			
 			float fulltotal_CHF = subtotal_CHF + shipping_CHF + vat25_CHF + vat80_CHF;
 			
-			table.addCell(getStringCell("Subtotal", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(m_rb.getString("subtotal"), font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell(String.format("%.2f", subtotal_CHF), font_bold_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));
 			
-			table.addCell(getStringCell("Versand", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(m_rb.getString("shipping"), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell(String.format("%.2f", shipping_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
 			
-			table.addCell(getStringCell("MwSt (2.5%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(m_rb.getString("vat") + " (2.5%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell(String.format("%.2f", vat25_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
 			
-			table.addCell(getStringCell("MwSt (8.0%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(m_rb.getString("vat") + " (8.0%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell(String.format("%.2f", vat80_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
 			
-			table.addCell(getStringCell("Gesamttotal", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(m_rb.getString("gesamttotal"), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell(String.format("%.2f", fulltotal_CHF), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
 		}
@@ -362,10 +367,10 @@ public class SaveBasket {
 		PdfPCell cell = new PdfPCell();	
         
         table.addCell(getStringCell("Pos.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
-		table.addCell(getStringCell("Menge", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("EAN", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("Artikel", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
-        table.addCell(getStringCell("Preis (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
+		table.addCell(getStringCell(m_rb.getString("quantity"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell(m_rb.getString("ean"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell(m_rb.getString("article"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
+        table.addCell(getStringCell(m_rb.getString("price") + " (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
         
         if (m_shopping_basket.size()>0) {
 			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
@@ -412,15 +417,15 @@ public class SaveBasket {
 				}
 			}
 			
-			table.addCell(getStringCell("Subtotal", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(m_rb.getString("subtotal"), font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF), font_bold_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));			
 				
-			table.addCell(getStringCell("MwSt (8%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(m_rb.getString("vat") + " (8.0%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*0.08f), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
 				
-			table.addCell(getStringCell("Total", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(m_rb.getString("gesamttotal"), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*1.08f), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
 		}
