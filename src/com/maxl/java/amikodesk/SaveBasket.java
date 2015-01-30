@@ -97,7 +97,7 @@ public class SaveBasket {
                     break;
             }
             ColumnText.showTextAligned(writer.getDirectContent(),
-                    Element.ALIGN_CENTER, new Phrase(String.format("Seite %d", writer.getPageNumber()), 
+                    Element.ALIGN_CENTER, new Phrase(String.format("%s-%d", m_rb.getString("page"), writer.getPageNumber()), 
                     		font_norm_10), (rect.getLeft() + rect.getRight())/2, rect.getBottom()-18, 0);
         }
     }	    
@@ -189,7 +189,7 @@ public class SaveBasket {
 	      		document.add(Chunk.NEWLINE);
 	       		
 	       		// Bestelladresse
-	       		String bestellAdrStr = mPrefs.get(BestellAdresseID, "Keine Bestelladresse");
+	       		String bestellAdrStr = mPrefs.get(BestellAdresseID, m_rb.getString("noaddress1"));
 	       		Paragraph p = new Paragraph(12);
 	       		// p.setIndentationLeft(60);
 	       		p.add(new Chunk(bestellAdrStr, font_norm_10));
@@ -197,7 +197,7 @@ public class SaveBasket {
 	       		document.add(Chunk.NEWLINE);
 	       		
 	       		// Title
-	       		p = new Paragraph("Bestellung", font_bold_16);
+	       		p = new Paragraph(m_rb.getString("order"), font_bold_16);
 	       		document.add(p);
 	               
 	            // Date
@@ -210,15 +210,15 @@ public class SaveBasket {
 	      		// document.add(Chunk.NEWLINE);
 	        		
 	       		// Add addresses (Lieferadresse + Rechnungsadresse)
-	       		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
-	       		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");        		
+	       		String lieferAdrStr = mPrefs.get(LieferAdresseID, m_rb.getString("noaddress2"));
+	       		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, m_rb.getString("noaddress3"));        		
 	        		
 	            PdfPTable addressTable = new PdfPTable(new float[] {1,1});
 	            addressTable.setWidthPercentage(100f);
 	            addressTable.getDefaultCell().setPadding(5);
 	            addressTable.setSpacingAfter(5f);
-	            addressTable.addCell(getStringCell("Lieferadresse", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-	            addressTable.addCell(getStringCell("Rechnungsdresse", font_bold_10,	PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));     		
+	            addressTable.addCell(getStringCell(m_rb.getString("shipaddress"), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+	            addressTable.addCell(getStringCell(m_rb.getString("billaddress"), font_bold_10,	PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));     		
 	            addressTable.addCell(getStringCell(lieferAdrStr, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
 	            addressTable.addCell(getStringCell(rechnungsAdrStr, font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
 	            document.add(addressTable);
@@ -264,7 +264,7 @@ public class SaveBasket {
         
 		PdfPCell cell = new PdfPCell();	
         
-        table.addCell(getStringCell("Pos.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
+        table.addCell(getStringCell(m_rb.getString("position"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
 		table.addCell(getStringCell(m_rb.getString("quantity"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell(m_rb.getString("ean"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell(m_rb.getString("article"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));    
@@ -366,7 +366,7 @@ public class SaveBasket {
         
 		PdfPCell cell = new PdfPCell();	
         
-        table.addCell(getStringCell("Pos.", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
+        table.addCell(getStringCell(m_rb.getString("position"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));
 		table.addCell(getStringCell(m_rb.getString("quantity"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell(m_rb.getString("ean"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        
         table.addCell(getStringCell(m_rb.getString("article"), font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_MIDDLE, 1));        

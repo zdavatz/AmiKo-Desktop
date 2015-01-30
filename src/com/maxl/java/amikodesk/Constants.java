@@ -30,7 +30,7 @@ public class Constants {
 	public static final String DEFAULT_INTERACTION_CSV_BASE = "drug_interactions_csv_";
 	public static final String GLN_CODES_FILE = "gln_codes_csv.csv";
 	
-	// Important folders
+	// Important folders and files
 	public static final String IMG_FOLDER = "./images/";	
 	public static final String JS_FOLDER = "./jscripts/";
 	public static final String SHOP_FOLDER = "./shop/";
@@ -38,6 +38,7 @@ public class Constants {
 	public static final String CSS_SHEET = "./css/amiko_stylesheet.css";
 	public static final String INTERACTIONS_SHEET = "./css/interactions_css.css";
 	public static final String SHOPPING_SHEET = "./css/shopping_css.css";
+	public static final String AGBS_HTML = "./shop/agbs_";
 
 	// App names
 	public static final String AMIKO_NAME = "AmiKo Desktop";
@@ -58,8 +59,8 @@ public class Constants {
 	public static final String ZURROSE_ICON = "./icons/amiko_icon.png";
 	
 	// -->> Note: uncomment name of app to compile!
-	// public static final String APP_NAME = AMIKO_NAME;
-	public static final String APP_NAME = COMED_NAME;
+	public static final String APP_NAME = AMIKO_NAME;
+	// public static final String APP_NAME = COMED_NAME;
 	// public static final String APP_NAME = AMIKO_DESITIN_NAME;
 	// public static final String APP_NAME = COMED_DESITIN_NAME;
 	// public static final String APP_NAME = AMIKO_MEDDRUGS_NAME;

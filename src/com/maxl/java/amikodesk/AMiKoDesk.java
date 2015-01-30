@@ -1010,9 +1010,12 @@ public class AMiKoDesk {
 								saveShoppingCartWithIndex(index);
 							m_shopping_cart.setAgbsAccepted(false);
 							m_web_panel.showCheckoutHtml();
-						} else if (msg.equals("agbs_accepted")) {
+						} else if (msg.equals("agbs_accepted")) {													
 							boolean a = Boolean.valueOf(row_key);
 							m_shopping_cart.setAgbsAccepted(a);
+							// Open web panel
+							AmiKoDialogs ad = new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization());
+							ad.AgbDialog();	
 						} else if (msg.equals("send_order")) {
 							if (m_shopping_cart.getAgbsAccepted() && !m_emailer.isSending()) {
 								saveShoppingCart();

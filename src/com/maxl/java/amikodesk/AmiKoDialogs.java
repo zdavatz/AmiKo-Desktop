@@ -27,6 +27,7 @@ import java.awt.Font;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -41,6 +42,9 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
+
+import chrriis.dj.nativeswing.NSComponentOptions;
+import chrriis.dj.nativeswing.swtimpl.components.JWebBrowser;
 
 public class AmiKoDialogs extends JDialog {
 
@@ -371,6 +375,30 @@ public class AmiKoDialogs extends JDialog {
 		dialog.setLocationRelativeTo(null);
 		dialog.setModal(false);
 		dialog.setSize(dialog_width, dialog_height);
+		dialog.setResizable(false);
+		dialog.setAlwaysOnTop(true);
+        dialog.setVisible(true); 	// If modal, application will pause here
+	}
+	
+	public void AgbDialog() {		
+        final JDialog dialog = new JDialog(this, "AGB/CG", true);		
+		JWebBrowser jAgb = new JWebBrowser(NSComponentOptions.destroyOnFinalization());
+		jAgb.setBarsVisible(false);	
+		// Default AGBs
+		String agb_text = "<html>No AGBs...</html>";
+		String agb_file = Utilities.appDataFolder() + Constants.AGBS_HTML + Utilities.appLanguage() + ".html";
+		if ((new File(agb_file)).exists())
+			agb_text = FileOps.readFromFile(agb_file);
+		else 
+			agb_text = FileOps.readFromFile("./shop/agbs_" + Utilities.appLanguage() + ".html");				
+		jAgb.setHTMLContent("<html>" + agb_text + "</html>");
+		jAgb.setVisible(true);
+		
+		dialog.getContentPane().add(jAgb);
+		dialog.pack();
+		dialog.setLocationRelativeTo(null);
+		dialog.setModal(false);
+		dialog.setSize(640, 640);
 		dialog.setResizable(false);
 		dialog.setAlwaysOnTop(true);
         dialog.setVisible(true); 	// If modal, application will pause here
