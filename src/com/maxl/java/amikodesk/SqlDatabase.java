@@ -521,6 +521,9 @@ public class SqlDatabase {
 				cancel(true);
 			}
 			
+			// Unzip files
+			unzipper(downloadedFile, mDrugInteractions, appDataFolder);
+			
 			// **** Download shop files ****
 			mDialog.setLabel("Downloading shopping files...");
 			url = new URL(mShopFilesURL);

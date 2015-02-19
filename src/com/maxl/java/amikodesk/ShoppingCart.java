@@ -34,6 +34,8 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Entities.EscapeMode;
@@ -170,7 +172,9 @@ public class ShoppingCart implements java.io.Serializable {
 	}
 	
 	public void setShoppingBasket(Map<String, Article> shopping_basket) {
-		m_shopping_basket = shopping_basket;
+		synchronized(this) {
+			m_shopping_basket = shopping_basket;
+		}
 	}
     
 	public Map<String, Article> getShoppingBasket() {
@@ -178,10 +182,12 @@ public class ShoppingCart implements java.io.Serializable {
 	}
 	
 	public void printShoppingBasket() {
-		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-			String eancode = entry.getKey();
-			Article article = m_shopping_basket.get(eancode);
-			System.out.println("[" + article.getEanCode() + "] " + article.getPackTitle() + ": " + article.getQuantity() + " (" + article.getDraufgabe() + ")");
+		if (m_shopping_basket!=null) {
+			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+				String eancode = entry.getKey();
+				Article article = m_shopping_basket.get(eancode);
+				System.out.println("[" + article.getEanCode() + "] " + article.getPackTitle() + ": " + article.getQuantity() + " (" + article.getDraufgabe() + ")");
+			}
 		}
 	}
 	
@@ -196,8 +202,13 @@ public class ShoppingCart implements java.io.Serializable {
 			String filename = file.getAbsolutePath();
 			byte[] serialized_bytes = FileOps.readBytesFromFile(filename);
 			if (serialized_bytes!=null) {
-				// System.out.println("Loaded shopping cart " + index + " from " + filename);
 				m_shopping_basket = (LinkedHashMap<String, Article>)FileOps.deserialize(serialized_bytes);
+				// If there are problems deserializing, delete file and generate new shopping cart
+				if (m_shopping_basket==null) {
+					System.out.println("Shopping cart " + index + " is corrupted... deleting it!");
+					file.delete();
+					m_shopping_basket = new LinkedHashMap<String, Article>();					
+				}
 				return m_shopping_basket;							
 			}
 		} else {
@@ -243,6 +254,7 @@ public class ShoppingCart implements java.io.Serializable {
 		if (m_map_ibsa_conditions.containsKey(ean_code)) {
 			List<String> assort_list = null;
 			String gln_code = m_prefs.get("glncode", "7610000000000");
+
 			if (m_map_ibsa_glns.containsKey(gln_code)) {
 				char user_class = m_map_ibsa_glns.get(gln_code).charAt(0);
 				// Is the user human or corporate?			
@@ -278,7 +290,7 @@ public class ShoppingCart implements java.io.Serializable {
 			String ean_code = article.getEanCode();
 			if (m_map_ibsa_conditions.containsKey(ean_code)) {
 				NavigableMap<Integer, Float> rebate = getRebateMap(ean_code);
-				if (rebate!=null && rebate.size()>0) {
+				if (rebate!=null && rebate.size()>0) {					
 					int qty = article.getQuantity();
 					int assorted_qty = qty + article.getAssortedQuantity();
 					// If rebate map contains key, get bonus (draufgabe) otherwise get closest possible value using "floorKey"
@@ -425,6 +437,9 @@ public class ShoppingCart implements java.io.Serializable {
 		
 		m_shopping_basket = shopping_basket;
 		
+		// Is the user human or corporate?
+		String user_type = m_prefs.get("type", "arzt");		
+		
 		if (m_shopping_basket!=null && m_shopping_basket.size()>0) {
 			int index = 1;						
 			basket_html_str += "<tr>"
@@ -450,6 +465,10 @@ public class ShoppingCart implements java.io.Serializable {
 				if (m_map_ibsa_conditions.containsKey(ean_code)) {
 					// Get rebate conditions
 					Conditions c = m_map_ibsa_conditions.get(ean_code);
+					float factory_price = c.fep_chf;
+					// Diese Kundengruppen haben spezielle Preise
+					if (user_type.equals("spital") || user_type.equals("grossist"))
+						factory_price = c.fap_chf;					
 					// System.out.println(index + ": " + ean_code + " - " + c.name);
 					// Extract rebate conditions for particular doctor/pharmacy
 					TreeMap<Integer, Float> rebate_map = getRebateMap(ean_code);
@@ -489,12 +508,12 @@ public class ShoppingCart implements java.io.Serializable {
 
 						if (!qty_found)
 							article.setQuantity(rebate_map.firstEntry().getKey());		
-						article.setMargin(m_margin_percent/100.0f);							
-						article.setBuyingPrice(c.fep_chf);
+						article.setMargin(m_margin_percent/100.0f);		
+						article.setBuyingPrice(factory_price);
 						article.setDropDownStr(value_str);						
 					} else {
 						// --> These medis are like any other medis, the prices, however, come from the IBSA Excel file	
-						article.setBuyingPrice(c.fep_chf);
+						article.setBuyingPrice(factory_price);
 					}
 				}
 				index++;				
@@ -509,25 +528,35 @@ public class ShoppingCart implements java.io.Serializable {
 				String ean_code = article.getEanCode();
 				// Check if ean code is in conditions map (special treatment) 
 				// --> This is all IBSA stuff
+				
 				if (m_map_ibsa_conditions.containsKey(ean_code)) {	
 					article.setCode("ibsa");
 			
 					String assort_articles_str = "";
 					String assortierbar = "<img src=\"" + m_images_dir + "checkmark_icon.png\" />";
 					List<String> assort_list = getAssortList(ean_code);
+					int num_assorts = 0;
 					if (assort_list!=null) {
 						for (String al : assort_list) {
 							if (al.matches("[\\d]{13}")) {
 								Conditions cond_a = m_map_ibsa_conditions.get(al);
-								if (cond_a!=null)
-									assort_articles_str += cond_a.name + "\n";
+								if (cond_a!=null) {
+									assort_articles_str += cond_a.name + "<br>";
+									num_assorts++;
+								}
 							}
 						}
 					}
+					
 					if (assort_articles_str.isEmpty()) {
-						assort_articles_str = "nicht assortierbar";
+						assort_articles_str = "<div>" + m_rb.getString("negassort") + "</div>";
 						assortierbar = "";
-					}					
+					} else {
+						if (num_assorts>12)
+							assort_articles_str = "<div style=\"right:0; top:10%; width:110%;\">" + assort_articles_str + "</div>";
+						else
+							assort_articles_str = "<div style=\"width:110%;\">" + assort_articles_str + "</div>";
+					}
 						
 					String muster = "";
 					
@@ -559,7 +588,7 @@ public class ShoppingCart implements java.io.Serializable {
 							subtotal_selling_CHF += article.getTotPublicPrice();
 						else	// article is OTC (over-the-counter)
 							subtotal_selling_CHF += article.getTotSellingPrice();					
-						
+
 						String tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice(cr));
 						String tot_selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
 						String profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice(cr));
@@ -569,15 +598,15 @@ public class ShoppingCart implements java.io.Serializable {
 						}
 						
 						if (isMuster(article, cr)) {
-							muster = "<b>M</b>";
+							muster = "<b>" + m_rb.getString("musterAbbr") + "</b>";
 						}						
 						
 						basket_html_str += "<tr id=\"" + ean_code + "\">";
 						basket_html_str += "<td>" + ean_code + "</td>"
 								+ "<td>" + category + "</td>"			
 								+ "<td style=\"color:'#999999'\">" + muster + "</td>"
-								+ "<td onMouseOver=\"this.bgColor='#eeeed0'\" onMouseOut=\"this.bgColor='#eeeeee'\">" 
-									+ "<a title=\"" + assort_articles_str + "\" class=\"tooltip\">" + article.getPackTitle() + "</a>" + "</td>"	
+								+ "<td onMouseOver=\"this.bgColor='#eeeed0'\" onMouseOut=\"this.bgColor='#f0f0f0'\">" 
+									+ "<a href=\"#\" class=\"tooltip\">" + article.getPackTitle() + assort_articles_str + "</a></td>"	
 								+ "<td style=\"text-align:center;\">" + assortierbar + "</td>"	
 								+ "<td style=\"text-align:right;\">" + "<select id=\"selected" + index + "\" style=\"width:50px; direction:rtl; text-align:right;\" onchange=\"onSelect('Warenkorb',this," + index + ")\"" +
 									" tabindex=\"" + index + "\">" + article.getDropDownStr()+ "</select></td>"
@@ -590,6 +619,7 @@ public class ShoppingCart implements java.io.Serializable {
 									+ m_images_dir + "trash_icon.png\" /></button>" + "</td>";
 						basket_html_str += "</tr>";	
 					} else {
+						// --> These medis have NO drop-down menu
 						int quantity = article.getQuantity();	
 						
 						subtotal_buying_CHF += article.getTotBuyingPrice(0.0f);
@@ -597,7 +627,7 @@ public class ShoppingCart implements java.io.Serializable {
 						if (article.isSpecial())	// article is in SL Liste
 							subtotal_selling_CHF += article.getTotPublicPrice();
 						else	// article is OTC (over-the-counter)
-							subtotal_selling_CHF += article.getTotSellingPrice();
+							subtotal_selling_CHF += article.getTotSellingPrice();	
 						
 						String tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice(0.0f));
 						String tot_selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
@@ -613,8 +643,8 @@ public class ShoppingCart implements java.io.Serializable {
 						basket_html_str += "<td>" + ean_code + "</td>"
 								+ "<td>" + category + "</td>"		
 								+ "<td style=\"color:'#999999'\">" + muster + "</td>"
-								+ "<td onMouseOver=\"this.bgColor='#eeeed0'\" onMouseOut=\"this.bgColor='#eeeeee'\">" 
-									+ "<a title=\"" + assort_articles_str + "\" class=\"tooltip\">" + article.getPackTitle() + "</a>" +"</td>"	
+								+ "<td onMouseOver=\"this.bgColor='#eeeed0'\" onMouseOut=\"this.bgColor='#f0f0f0'\">" 
+									+ "<a href=\"#\" class=\"tooltip\">" + article.getPackTitle() + assort_articles_str + "</a></td>"	
 								+ "<td>" + assortierbar + "</td>"	
 								+ "<td style=\"text-align:right;\">" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:50px; text-align:right;\"" +
 									" value=\"" + quantity + "\"" + " onkeydown=\"changeQty('Warenkorb',this)\" id=\"" + index + "\" tabindex=\"" + index + "\" />" + "</td>"
@@ -638,11 +668,18 @@ public class ShoppingCart implements java.io.Serializable {
 					String profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
 					String cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
 					
+					String assort_hover = "<td>" + article.getPackTitle() + "</td>";
+					// Falls "ibsa" Produkt, erwähne explizit, dass es "nicht assortierbar" ist
+					if (article.getAuthor().toLowerCase().contains("ibsa")) {
+						assort_hover = "<td onMouseOver=\"this.bgColor='#eeeed0'\" onMouseOut=\"this.bgColor='#f0f0f0'\">" 
+								+ "<a href=\"#\" class=\"tooltip\">" + article.getPackTitle() + "<div>" + m_rb.getString("negassort") + "</div></a></td>";	
+					}
+					
 					basket_html_str += "<tr id=\"" + ean_code + "\">";
 					basket_html_str += "<td>" + ean_code + "</td>"
 							+ "<td>" + category + "</td>"
 							+ "<td>" + "" + "</td>"
-							+ "<td>" + article.getPackTitle() + "</td>"		
+							+ assort_hover
 							+ "<td>" + "" + "</td>"															
 							+ "<td style=\"text-align:right;\">" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:50px; text-align:right;\"" +
 								" value=\"" + quantity + "\"" + " onkeydown=\"changeQty('Warenkorb',this)\" id=\"" + index + "\" tabindex=\"" + index + "\" />" + "</td>"
@@ -697,9 +734,9 @@ public class ShoppingCart implements java.io.Serializable {
 			bar_charts_str += "<tr style=\"height:10px;\"><td colspan=\"12\"></tr>"
 					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Buying_Col\" style=\"width:" + buying_percent + "%; background-color:firebrick;\">" + m_rb.getString("expense") + ": " 
 					+ Utilities.prettyFormat(subtotal_buying_CHF) + " CHF</div>" 
-					+ "<div style=\"width:0.3%; padding:0px;\"></div><div id=\"Profit_Col\" style=\"width:" + profit_percent + "%; background-color:blue;\">" + m_rb.getString("proceeds") + ": "  
+					+ "<div style=\"width:0.3%; padding:0px;\"></div><div id=\"Profit_Col\" style=\"width:" + profit_percent + "%; background-color:forestgreen;\">" + m_rb.getString("profit") + ": "  
 					+ Utilities.prettyFormat(subtotal_profit_CHF) + " CHF</div></td></tr>"
-					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + selling_percent + "%; background-color:forestgreen;\">" + m_rb.getString("profit") + ": "  
+					+ "<tr><td colspan=\"10\" class=\"chart\"><div id=\"Selling_Col\" style=\"width:" + selling_percent + "%; background-color:blue;\">" + m_rb.getString("proceeds") + ": "  
 					+ Utilities.prettyFormat(subtotal_selling_CHF) + " CHF</div></td></tr>";
 			
 			bar_charts_str += "<tr><td colspan=\"4\">" + m_rb.getString("margin") + " "
@@ -739,9 +776,9 @@ public class ShoppingCart implements java.io.Serializable {
 				button_pressed = "class=\"buttonPressed\""; 
 			fast_order_str[i-1] = "<button " + button_pressed + " id=\"loadCart" + i + "\" tabindex=\"-1\" onclick=\"loadCart(this," + i + ")\">" + m_rb.getString("shoppingCart") + " " + i + "</button>";
 		}
-		
+				
 		String footnotes_str = "<hr><table style=\"background:white\">"
-				+ "<tr><td style=\"color:'#999999'; text-align:center; padding-right:10px;\"><b>M</b></td><td>" + m_rb.getString("musterMsg") + "</td></tr>"
+				+ "<tr><td style=\"color:'#999999'; text-align:center; padding-right:10px;\"><b>" + m_rb.getString("musterAbbr") + "</b></td><td>" + m_rb.getString("musterMsg") + "</td></tr>"
 				+ "<tr><td style=\"text-align:center; padding-right:10px;\"><img src=\"" + m_images_dir + "checkmark_icon.png\" /></td><td>" + m_rb.getString("assortMsg") + "</td></tr>"
 				+ "</table>";
 		
@@ -769,7 +806,8 @@ public class ShoppingCart implements java.io.Serializable {
 			draufgabe = String.format("+ %d", dg);
 		}
 		// Update cash rebate
-		String cash_rebate_percent = "0%";
+		String cash_rebate_percent = "0%";	
+		
 		float cr = getCashRebate(article);
 		if (cr>0.0f)
 			article.setCashRebate(cr);				
@@ -794,7 +832,7 @@ public class ShoppingCart implements java.io.Serializable {
 				profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice(cr));
 			}			
 			if (isMuster(article, cr)) {
-				muster = "<b>M</b>";
+				muster = "<b>" + m_rb.getString("musterAbbr") + "</b>";
 			}
 		} else {			
 			tot_buying_price_CHF = Utilities.prettyFormat(article.getTotExfactoryPrice());
@@ -920,7 +958,7 @@ public class ShoppingCart implements java.io.Serializable {
 		char shipping_type = 'Z';
 		// Loop through all articles in shopping basket
 		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-			Article article = entry.getValue();
+			Article article = entry.getValue();			
 			float price = 0.0f;
 			float vat = 0.0f;	// vat in [CHF]
 			// Is the shipping still free?
@@ -983,7 +1021,7 @@ public class ShoppingCart implements java.io.Serializable {
 		// Loop through all authors and generate html
 		for (Map.Entry<String, Owner> e : m_map_owner_total.entrySet()) { 
 			author = e.getKey();
-			float price_CHF = e.getValue().subtotal_CHF;
+			float subtotal_CHF = e.getValue().subtotal_CHF;			
 			float vat25_CHF = e.getValue().vat25_CHF;
 			float vat80_CHF = e.getValue().vat80_CHF;
 			shipping_CHF = e.getValue().shipping_CHF;
@@ -991,37 +1029,40 @@ public class ShoppingCart implements java.io.Serializable {
 			String versand_optionen = "";
 			if (checkIfSponsor(author)) {
 				if (!shipping_free) {
-					if (price_CHF<=500.0f) {
+					if (subtotal_CHF<=500.0f) {
 						versand_optionen = "<option value=\"B\">" + m_rb.getString("BPost") + ": +7.35 CHF</option>"
 								+ "<option value=\"A\">" + m_rb.getString("APost") + ": +7.95 CHF</option>"
 								+ "<option value=\"E\">" + m_rb.getString("express") + ": +62.95 CHF</option>";
 					} else {
+						shipping_CHF = 0.0f;
 						versand_optionen = "<option value=\"Z\">" + m_rb.getString("BPost") +": +0.00 CHF</option>"
 								+ "<option value=\"Z\">" + m_rb.getString("APost") + ": +0.00 CHF</option>"
 								+ "<option value=\"E\">" + m_rb.getString("express") + ": +62.95 CHF</option>";
 					}
 				} else {
+					shipping_CHF = 0.0f;
 					versand_optionen = "<option value=\"A\">" + m_rb.getString("APost") + ": +0.00 CHF</option>";
 				}
 			} else {
-				versand_optionen = m_rb.getString("saveOrder");
+				versand_optionen = m_rb.getString("deskOrder");
+				shipping_CHF = 0.0f;
 				saving_to_desktop_text += author + ", ";
 			}
 			// Sum up including VAT (+8%) for shipping costs
-			float sub_total_CHF = price_CHF + 1.08f*shipping_CHF + vat25_CHF + vat80_CHF;
+			float total_author_CHF = subtotal_CHF + 1.08f*shipping_CHF + vat25_CHF + vat80_CHF;
 			vat80_CHF += 0.08f*shipping_CHF; 
 			
 			// All sums
-			sum_total_CHF += price_CHF;
+			sum_total_CHF += subtotal_CHF;
 			sum_vat25_CHF += vat25_CHF;
 			sum_vat80_CHF += vat80_CHF;
 			sum_shipping_CHF += shipping_CHF;
-			grand_total_CHF += sub_total_CHF;
+			grand_total_CHF += total_author_CHF;
 									
 			index++;
 			checkout_html_str += "<tr id=\"" + author + "\">"
 					+ "<td style=\"text-align:left; padding-top:8px;\">" + author + "</td>"			
-					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(price_CHF) + "</td>";			// Subtotal (exkl. MwSt. + shipping costs)			
+					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(subtotal_CHF) + "</td>";			// Subtotal (exkl. MwSt. + shipping costs)			
 			if (checkIfSponsor(author)) {
 					checkout_html_str += "<td style=\"text-align:right; padding-top:8px;\"><select id=\"selected" + index + "\" style=\"width:180px; direction:rtl; text-align:left;\""
 						+ "onchange=\"changeShipping('Checkout',this," + index + ")\">"
@@ -1030,7 +1071,7 @@ public class ShoppingCart implements java.io.Serializable {
 				checkout_html_str += "<td style=\"text-align:right; padding-top:8px;\">" + versand_optionen + "</td>";
 			checkout_html_str += "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(vat25_CHF) + "</td>"	// MwSt (2.5%)								
 					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(vat80_CHF) + "</td>"			// MwSt (8.0%)		
-					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(sub_total_CHF) + "</td>"		// Subtotal	(inkl. MwSt + shipping costs)
+					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(total_author_CHF) + "</td>"		// Subtotal	(inkl. MwSt + shipping costs)
 					+ "</tr>";
 		}
 		checkout_html_str += "<tr id=\"GrandTotal\">"
@@ -1055,7 +1096,7 @@ public class ShoppingCart implements java.io.Serializable {
 		String html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_str + "</head>"
 				+ "<div id=\"buttons\">" + load_order_str + fast_order_str[0] + fast_order_str[1] + fast_order_str[2] + fast_order_str[3] + fast_order_str[4] + "</div>"
 				+ "<body><div id=\"shopping\">" + checkout_html_str
-				+ "<div><p>" + agb_str + "</p></div>"				
+				+ "<div><p>" + agb_str + " <a href=\"javascript:void(0)\" onClick=\"showAgbs();\" style=\"font-style:italic; color:'#0000bb'\">" + m_rb.getString("readAgbs") + "</a></p></div>"				
 				+ "<form><table class=\"container\"><tr>" + send_order_str + "</tr>"
 				+ "<tr>" + send_order_text + "</tr></table></form>"
 				+ saving_to_desktop_text
@@ -1096,10 +1137,12 @@ public class ShoppingCart implements java.io.Serializable {
 		float sum_shipping_CHF = 0.0f;
 		float grand_total_CHF = 0.0f;
 		for (Map.Entry<String, Owner> e : m_map_owner_total.entrySet()) { 
+			author = e.getKey();
 			float t_CHF = e.getValue().subtotal_CHF + e.getValue().vat25_CHF + e.getValue().vat80_CHF + 1.08f*e.getValue().shipping_CHF;
 			// All sums
 			sum_total_CHF += e.getValue().subtotal_CHF;
-			sum_shipping_CHF += e.getValue().shipping_CHF;
+			if (shipping_type!='Z' && checkIfSponsor(author)) 
+				sum_shipping_CHF += e.getValue().shipping_CHF;
 			sum_vat25_CHF += e.getValue().vat25_CHF;
 			sum_vat80_CHF += e.getValue().vat80_CHF + e.getValue().shipping_CHF*0.08f;
 			grand_total_CHF += t_CHF;

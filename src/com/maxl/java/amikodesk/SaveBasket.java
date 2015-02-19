@@ -87,12 +87,12 @@ public class SaveBasket {
             switch(writer.getPageNumber() % 2) {
                 case 0:
                     ColumnText.showTextAligned(writer.getDirectContent(),
-                        Element.ALIGN_RIGHT, new Phrase("Erstellt mit AmiKo. Bestellmodul gesponsort von IBSA.", 
+                        Element.ALIGN_RIGHT, new Phrase(m_rb.getString("sponsoring"), 
                         		font_norm_10), rect.getRight()-18, rect.getTop(), 0);
                     break;
                 case 1:
                     ColumnText.showTextAligned(writer.getDirectContent(),
-                        Element.ALIGN_LEFT, new Phrase("Erstellt mit AmiKo. Bestellmodul gesponsort von IBSA.",
+                        Element.ALIGN_LEFT, new Phrase(m_rb.getString("sponsoring"),
                         		font_norm_10), rect.getLeft(), rect.getTop(), 0);
                     break;
             }
@@ -102,9 +102,15 @@ public class SaveBasket {
         }
     }	    
     
-    private boolean anyElemIsContained(Map<String, Author> map_of_str, String str) {
-    	if (map_of_str.containsKey(str))
+    private boolean anyElemIsContained(Map<String, Author> map_of_auths, String auth) {
+    	if (map_of_auths.containsKey(auth))
    			return true;
+    	else {
+    		for (String author : map_of_auths.keySet()) {
+    			if (auth.contains(author))
+    				return true;
+    		}    		    		
+    	}
     	return false;
     }
     
@@ -203,7 +209,7 @@ public class SaveBasket {
 	            // Date
 	       		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 	       		Date date = new Date();
-	       		p = new Paragraph("Datum: " + dateFormat.format(date), font_bold_10);
+	       		p = new Paragraph(m_rb.getString("date") + ": " + dateFormat.format(date), font_bold_10);
 	      		p.setSpacingAfter(20);
 	       		document.add(p);
 	
@@ -421,21 +427,16 @@ public class SaveBasket {
 			table.addCell(getStringCell("", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF), font_bold_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));			
 				
-			table.addCell(getStringCell(m_rb.getString("vat") + " (8.0%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
+			table.addCell(getStringCell(m_rb.getString("vat") + " (2.5%)", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*0.08f), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
+			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*0.025f), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));	
 				
 			table.addCell(getStringCell(m_rb.getString("gesamttotal"), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 2));
-			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*1.08f), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
+			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF*1.025f), font_bold_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 2));		
 		}
         return table;
 	}
-	
-    private boolean isMuster(Article article, float cr) {
-    	return (article.getBuyingPrice(cr)<=0.0f 
-    			&& (article.getSellingPrice()>0.0f || article.getPublicPriceAsFloat()>0.0f));
-    }
 	
 	public void generateCsv(Author author, String filename, String type) {
 		String name_split[] = filename.split("_");
@@ -445,6 +446,7 @@ public class SaveBasket {
 		Preferences prefs = Preferences.userRoot().node(SettingsPage.class.getName());		
 		String gln_code = prefs.get("glncode", "7610000000000");	
 		String email_address = prefs.get("emailadresse", "");
+		int user_id = prefs.getInt("user", 17);
 		if (type.equals("specific")) {
 			// These are all authors which are specifically listed (e.g. ibsa, desitin)
 	        if (m_shopping_basket.size()>0) {
@@ -454,7 +456,7 @@ public class SaveBasket {
 				for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 					Article article = entry.getValue();									
 					if (article.getAuthor().trim().toLowerCase().contains(author.getShortName())) {						
-						String price_pruned = "";		
+						String price_pruned = "";	
 						String payment = "Bezahlt";
 						if (article.getCode()!=null && article.getCode().equals("ibsa")) {
 							float cr = article.getCashRebate();
@@ -462,7 +464,7 @@ public class SaveBasket {
 								// Warenrabatt / Bonus
 								price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
 								total_price_CHF = String.format("%.2f", article.getTotBuyingPrice(0.0f));
-								payment = "Gratis";
+								payment = "Bezahlt";
 							} else {
 								if (cr<100.0f) {
 									price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
@@ -484,23 +486,42 @@ public class SaveBasket {
 							char shipping_type = 'U';	// unknown shipping type
 							if (m_map_of_authors.containsKey(author.getShortName())) 
 								shipping_type = m_map_of_authors.get(author.getShortName()).getShippingType();
+							/*
+							String cash_rebate = "0.0";
+							if (article.getDraufgabe()<=0)
+								cash_rebate = String.format("%.1f", article.getCashRebate());
+							*/
+							String cash_rebate = String.format("%.1f", article.getCashRebate());							
+							String skonto = "0.0";
+							// 1. Add article
 							if (article.getQuantity()>0) {
 								shopping_basket_str += (++pos) + "|" + date + "|" 
 										+ gln_code + "|" + email_address + "|"
 										+ article.getEanCode() + "|" 
 										+ article.getPackTitle() + "|" 
 										+ payment + "|" + article.getQuantity() + "|" 										
-										+ price_pruned + "|" + total_price_CHF + "|" + article.getVat() + "|"
-										+ shipping_type + "\n"; 
+										+ price_pruned + "|" + total_price_CHF + "|" 
+										+ article.getVat() + "|"
+										+ shipping_type + "|" 
+										+ user_id + "|"
+										+ skonto + "|" + cash_rebate
+										+ "\n"; 
 							}
+							// 2. Add draufgabe
 							if (article.getDraufgabe()>0) {
+								payment = "Gratis";
+								total_price_CHF = String.format("%.2f", article.getDraufgabe()*article.getBuyingPrice(0.0f));
 								shopping_basket_str += (++pos) + "|" + date + "|" 
 										+ gln_code + "|" + email_address + "|"
 										+ article.getEanCode() + "|" 
 										+ article.getPackTitle() + "|"
 										+ payment + "|" + article.getDraufgabe() + "|"
-										+ price_pruned + "|" + total_price_CHF + "|" + article.getVat() + "|"
-										+ shipping_type + "\n";
+										+ price_pruned + "|" + total_price_CHF + "|" 
+										+ article.getVat() + "|"
+										+ shipping_type + "|" 
+										+ user_id + "|"
+										+ skonto + "|" + cash_rebate
+										+ "\n";
 							}
 						}
 					}
@@ -539,7 +560,7 @@ public class SaveBasket {
 							price_pruned = article.getCleanExfactoryPrice();						
 						}
 						if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
-							float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
+							String price_CHF = String.format("%.2f", article.getQuantity()*Float.parseFloat(price_pruned));
 							shopping_basket_str += (++pos) + "|" + date + "|" 
 									+ gln_code + "|" + email_address + "|"
 									+ article.getQuantity() + "|" 

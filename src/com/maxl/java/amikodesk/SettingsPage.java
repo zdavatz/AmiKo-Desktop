@@ -21,6 +21,7 @@ package com.maxl.java.amikodesk;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
@@ -41,7 +42,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Map;
-import java.util.Properties;
+import java.util.Observer;
+import java.util.ResourceBundle;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
 
@@ -71,6 +73,7 @@ public class SettingsPage extends JDialog {
 	private static String LogoImageID = "logo";
 	private static String GLNCodeID = "glncode";
 	private static String HumanID = "ishuman";
+	private static String UserID = "user";
 	private static String TypeID = "type"; 
 	private static String BestellAdresseID = "bestelladresse";
 	private static String LieferAdresseID = "lieferadresse";
@@ -94,11 +97,17 @@ public class SettingsPage extends JDialog {
 	
 	// Colors
 	private static Color color_white = new Color(255,255,255);
+	private static Color color_ok = new Color(220,255,220);
 	// private static Color color_green = new Color(220,255,220);
 	private static Color color_red = new Color(255,220,220);
 	
-	public SettingsPage(JFrame frame) {
+	private static ResourceBundle m_rb;
+	
+	private Observer m_observer;
+	
+	public SettingsPage(JFrame frame, ResourceBundle rb) {
 		mFrame = frame;
+		m_rb = rb;
 		mFc = new JFileChooser();
 		// Defines a node in which the preferences can be stored
 		mPrefs = Preferences.userRoot().node(this.getClass().getName());
@@ -127,7 +136,7 @@ public class SettingsPage extends JDialog {
 		add(Box.createRigidArea(new Dimension(0, 10)));
 		
 		this.setModalityType(ModalityType.APPLICATION_MODAL);
-		this.setTitle("Einstellungen");		
+		this.setTitle(m_rb.getString("settings"));		
 		this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		// Centers the dialog
 		this.setLocationRelativeTo(null);
@@ -156,6 +165,14 @@ public class SettingsPage extends JDialog {
 		this.setVisible(true);
 	}
 	
+	public void addObserver(Observer observer) {
+		m_observer = observer;
+	}
+	
+	protected void notify(String str) {
+		m_observer.update(null, str);
+	}	
+	
 	protected JPanel globalAmiKoSettings() {
 		JPanel jPanel = new JPanel();
 		jPanel.setLayout(new GridLayout(1, 4));
@@ -164,13 +181,13 @@ public class SettingsPage extends JDialog {
 		
 		jPanel.setOpaque(false);
 		jPanel.setBorder(new CompoundBorder(
-				new TitledBorder("Update"),
+				new TitledBorder(m_rb.getString("data-update")),
 				new EmptyBorder(5,5,5,5)));		
 		
-		JCheckBox updateNeverCBox = new JCheckBox("manuell");
-		JCheckBox updateDailyCBox = new JCheckBox("täglich");
-		JCheckBox updateWeeklyCBox = new JCheckBox("wöchentlich");
-		JCheckBox updateMonthlyCBox = new JCheckBox("monatlich");		
+		JCheckBox updateNeverCBox = new JCheckBox(m_rb.getString("manual"));
+		JCheckBox updateDailyCBox = new JCheckBox(m_rb.getString("daily"));
+		JCheckBox updateWeeklyCBox = new JCheckBox(m_rb.getString("weekly"));
+		JCheckBox updateMonthlyCBox = new JCheckBox(m_rb.getString("monthly"));		
 		
 		// Add to buttongroup to ensure that only one box is selected at a time
 		bg.add(updateNeverCBox);
@@ -229,11 +246,22 @@ public class SettingsPage extends JDialog {
 		return jPanel;
 	}
 	
+	private void delete_shopping_carts() {
+		System.out.println("User type changed...");
+		for (int index=1; index<6; ++index) {
+			File file = new File(Utilities.appDataFolder() + "\\shop\\korb" + index + ".ser");
+			if (file.exists()) {		
+				file.delete();
+			    notify("# Deleted shopping cart " + index); 	// Notify GUI   
+			}
+		}
+	}
+	
 	protected JPanel shoppingBasketSettings() {
 		String GLNCodeStr = mPrefs.get(GLNCodeID, "7610000000000");
-		String bestellAdrStr = mPrefs.get(BestellAdresseID, "Keine Bestelladresse");
-		String lieferAdrStr = mPrefs.get(LieferAdresseID, "Keine Lieferadresse");
-		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, "Keine Rechnungsadresse");
+		String bestellAdrStr = mPrefs.get(BestellAdresseID, m_rb.getString("noaddress1"));
+		String lieferAdrStr = mPrefs.get(LieferAdresseID, m_rb.getString("noaddress2"));
+		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, m_rb.getString("noaddress3"));
 		String EmailStr = mPrefs.get(EmailAdresseID, "");
 		String PhoneNumberStr = mPrefs.get(PhoneNumberID, "+41-");
 		
@@ -244,7 +272,7 @@ public class SettingsPage extends JDialog {
 		
 		jPanel.setOpaque(false);
 		jPanel.setBorder(new CompoundBorder(
-				new TitledBorder("Warenkorb"), new EmptyBorder(5,5,5,5)));		
+				new TitledBorder(m_rb.getString("shoppingCart")), new EmptyBorder(5,5,5,5)));		
 		
 		// -----------------------------
 		JLabel jlabelLogo = new JLabel("Logo");
@@ -277,7 +305,7 @@ public class SettingsPage extends JDialog {
 		});
 		
 		// -----------------------------
-		JLabel jlabelGLN = new JLabel("GLN Code");
+		JLabel jlabelGLN = new JLabel("GLN Code*");
 		jlabelGLN.setHorizontalAlignment(JLabel.LEFT);
 		gbc = getGbc(0,1, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(jlabelGLN, gbc);
@@ -287,8 +315,8 @@ public class SettingsPage extends JDialog {
 			mTextFieldGLN.setBorder(new LineBorder(color_red, 5, false));
 			mTextFieldGLN.setBackground(color_red);
 		} else {
-			mTextFieldGLN.setBorder(new LineBorder(color_white, 5, false));
-			mTextFieldGLN.setBackground(color_white);
+			mTextFieldGLN.setBorder(new LineBorder(color_ok, 5, false));
+			mTextFieldGLN.setBackground(color_ok);
 		}
 			
 		gbc = getGbc(1,1 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
@@ -311,10 +339,13 @@ public class SettingsPage extends JDialog {
 							mPrefs.put(HumanID, "yes");	
 						else 
 							mPrefs.put(HumanID, "no");
-						mPrefs.put(TypeID, m_user.getType().toLowerCase());
-						System.out.println(m_user.getGlnCode() + " - " + m_user.getType() + " -> " + m_user.getName1() + ", " + m_user.getName2());
-						mTextFieldGLN.setBorder(new LineBorder(color_white, 5, false));
-						mTextFieldGLN.setBackground(color_white);
+						String old_user_type = mPrefs.get(TypeID, "");
+						String new_user_type = m_user.getType().toLowerCase();
+						mPrefs.put(TypeID, new_user_type);
+						mPrefs.putInt(UserID, 17);	// Default
+						System.out.println("User: " + m_user.getGlnCode() + " - " + m_user.getType() + ", " + m_user.getName1() + ", " + m_user.getName2());
+						mTextFieldGLN.setBorder(new LineBorder(color_ok, 5, false));
+						mTextFieldGLN.setBackground(color_ok);
 						String address = "";
 						if (m_user.isHuman()) {
 							if (!m_user.getStreet().isEmpty()) {
@@ -346,7 +377,10 @@ public class SettingsPage extends JDialog {
 							mTextAreaLiefer.setBackground(color_red);
 							mTextAreaRechnung.setBorder(new LineBorder(color_red, 5, false));
 							mTextAreaRechnung.setBackground(color_red);							
-						}
+						}						
+						// If old user and new user do not match, delete ALL shopping carts
+						if (!old_user_type.equals(new_user_type))
+							delete_shopping_carts();
 						return;
 					} 
 				}
@@ -363,58 +397,102 @@ public class SettingsPage extends JDialog {
 		});
 		
 		// -----------------------------
-		JLabel jlabelBestell = new JLabel("Bestelladresse");
+		JLabel jlabelBestell = new JLabel(m_rb.getString("ordaddress") + "*");		
 		jlabelBestell.setHorizontalAlignment(JLabel.LEFT);
 		gbc = getGbc(0,2,0.5,1.0,GridBagConstraints.HORIZONTAL);		
 		jPanel.add(jlabelBestell, gbc);
 		
-		mTextAreaBestell = new JTextArea(bestellAdrStr);
+		mTextAreaBestell = new JTextArea(bestellAdrStr);	
+		validateAddress(mTextAreaBestell);
 		mTextAreaBestell.setPreferredSize(new Dimension(128, 256));
 		mTextAreaBestell.setMargin(new Insets(5,5,5,5));
 		gbc = getGbc(1,2,3.5,1.0,GridBagConstraints.HORIZONTAL);
 		jPanel.add(mTextAreaBestell, gbc);
 		
+		mTextAreaBestell.addKeyListener(new KeyListener() { 
+			@Override 
+			public void keyPressed(KeyEvent keyEvent) {
+				//
+			}
+			@Override
+			public void keyReleased(KeyEvent keyEvent) {
+				// Validate email addres: do a quick sanity check on the email address
+				validateAddress(mTextAreaBestell);
+			}
+			@Override 
+			public void keyTyped(KeyEvent keyEvent) {
+				//
+			}
+		});
+		
 		// -----------------------------
-		JLabel jlabelLiefer = new JLabel("Lieferadresse");
+		JLabel jlabelLiefer = new JLabel(m_rb.getString("shipaddress") + "*");
 		jlabelLiefer.setHorizontalAlignment(JLabel.LEFT);
 		gbc = getGbc(0,3,0.5,1.0,GridBagConstraints.HORIZONTAL);
 		jPanel.add(jlabelLiefer, gbc);
 
 		mTextAreaLiefer = new JTextArea(lieferAdrStr);
+		validateAddress(mTextAreaLiefer);		
 		mTextAreaLiefer.setPreferredSize(new Dimension(128, 128));
 		mTextAreaLiefer.setMargin(new Insets(5,5,5,5));
 		gbc = getGbc(1,3,2.5,1.0,GridBagConstraints.HORIZONTAL);
 		jPanel.add(mTextAreaLiefer, gbc);
 		
+		mTextAreaLiefer.addKeyListener(new KeyListener() { 
+			@Override 
+			public void keyPressed(KeyEvent keyEvent) {
+				//
+			}
+			@Override
+			public void keyReleased(KeyEvent keyEvent) {
+				// Validate email addres: do a quick sanity check on the email address
+				validateAddress(mTextAreaLiefer);
+			}
+			@Override 
+			public void keyTyped(KeyEvent keyEvent) {
+				//
+			}
+		});
+		
 		// -----------------------------
-		JLabel jlabelRechnung = new JLabel("Rechnungsadresse");
+		JLabel jlabelRechnung = new JLabel(m_rb.getString("billaddress") + "*");
 		jlabelRechnung.setHorizontalAlignment(JLabel.LEFT);
 		gbc = getGbc(0,4,0.5,1.0,GridBagConstraints.HORIZONTAL);
 		jPanel.add(jlabelRechnung, gbc);
 
 		mTextAreaRechnung = new JTextArea(rechnungsAdrStr);
+		validateAddress(mTextAreaRechnung);	
 		mTextAreaRechnung.setPreferredSize(new Dimension(128, 128));
 		mTextAreaRechnung.setMargin(new Insets(5,5,5,5));
 		gbc = getGbc(1,4,2.5,1.0,GridBagConstraints.HORIZONTAL);
 		jPanel.add(mTextAreaRechnung, gbc);
 		
+		mTextAreaRechnung.addKeyListener(new KeyListener() { 
+			@Override 
+			public void keyPressed(KeyEvent keyEvent) {
+				//
+			}
+			@Override
+			public void keyReleased(KeyEvent keyEvent) {
+				// Validate email addres: do a quick sanity check on the email address
+				validateAddress(mTextAreaRechnung);
+			}
+			@Override 
+			public void keyTyped(KeyEvent keyEvent) {
+				//
+			}
+		});
+		
 		// -----------------------------
-		JLabel jlabelEmail = new JLabel("Emailadresse");
+		JLabel jlabelEmail = new JLabel(m_rb.getString("emailaddress"));
 		jlabelEmail.setHorizontalAlignment(JLabel.LEFT);
 		gbc = getGbc(0,5, 0.5,1.0, GridBagConstraints.HORIZONTAL);
 		jPanel.add(jlabelEmail, gbc);
 		
 		mTextFieldEmail = new JTextField(EmailStr);
-		// Validate email addres: do a quick sanity check on the email address
-		if (!EmailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
-			mTextFieldEmail.setBorder(new LineBorder(color_red, 5, false));
-			mTextFieldEmail.setBackground(color_red);  
-		} else {
-			mTextFieldEmail.setBorder(new LineBorder(color_white, 5, false));
-			mTextFieldEmail.setBackground(color_white); 
-		}
+		validateEmail(EmailStr);
 		gbc = getGbc(1,5 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
-		jPanel.add(mTextFieldEmail, gbc);
+		jPanel.add(mTextFieldEmail, gbc);		
 		
 		mTextFieldEmail.addKeyListener(new KeyListener() { 
 			@Override 
@@ -425,14 +503,8 @@ public class SettingsPage extends JDialog {
 			public void keyReleased(KeyEvent keyEvent) {
 				// Validate email addres: do a quick sanity check on the email address
 				String mEmailStr = mTextFieldEmail.getText();
-				if (mEmailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
-					mTextFieldEmail.setBorder(new LineBorder(color_white, 5, false));
-					mTextFieldEmail.setBackground(color_white);
+				if (validateEmail(mEmailStr))
 					mPrefs.put(EmailAdresseID, mEmailStr);			
-				} else { 
-					mTextFieldEmail.setBorder(new LineBorder(color_red, 5, false));
-					mTextFieldEmail.setBackground(color_red);
-				}
 			}
 			@Override 
 			public void keyTyped(KeyEvent keyEvent) {
@@ -441,41 +513,87 @@ public class SettingsPage extends JDialog {
 		});
 		
 		// -----------------------------	
-		JLabel jlabelPhone = new JLabel("Telephonnummer");
+		JLabel jlabelPhone = new JLabel(m_rb.getString("telephone"));
 		jlabelPhone.setHorizontalAlignment(JLabel.LEFT);
 		gbc = getGbc(0,6, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(jlabelPhone, gbc);
 		
 		mTextFieldPhone = new JTextField(PhoneNumberStr);
 		// Validate phone number: do a quick sanity check on the phone number
-		if (PhoneNumberStr.matches("[+][\\d]+-[\\d]+")) {
-			mTextFieldPhone.setBorder(new LineBorder(color_white, 5, false));
-			mTextFieldPhone.setBackground(color_white);
-		} else {
-			mTextFieldPhone.setBorder(new LineBorder(color_red, 5, false));
-			mTextFieldPhone.setBackground(color_red);
-		}
+		validatePhone(PhoneNumberStr);
 		gbc = getGbc(1,6 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mTextFieldPhone, gbc);
 
-		mTextFieldPhone.addActionListener(new ActionListener() {
+		mTextFieldPhone.addKeyListener(new KeyListener() {
+			@Override 
+			public void keyPressed(KeyEvent keyEvent) {
+				//
+			}
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void keyReleased(KeyEvent keyEvent) {
 				String mPhoneStr = mTextFieldPhone.getText();
-				// Validate phone number: do a quick sanity check on the phone number
-				if (mPhoneStr.matches("[+][\\d]+-[\\d]+")) {
-					mTextFieldPhone.setBorder(new LineBorder(color_white, 5, false));
-					mTextFieldPhone.setBackground(color_white);
-					mPrefs.put(PhoneNumberID, mPhoneStr);
-					System.out.println(mPhoneStr);					
-				} else { 
-					mTextFieldPhone.setBorder(new LineBorder(color_red, 5, false));
-					mTextFieldPhone.setBackground(color_red);
-				}
+				if (validatePhone(mPhoneStr))
+					mPrefs.put(PhoneNumberID, mPhoneStr);								
+			}
+			@Override 
+			public void keyTyped(KeyEvent keyEvent) {
+				//
 			}
 		});
 
+		JLabel jlabelFootnote = new JLabel("*" + m_rb.getString("medreg"));
+		jlabelFootnote.setFont(new Font("Dialog", Font.ITALIC, 11));
+		jlabelFootnote.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,7, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
+		jPanel.add(jlabelFootnote, gbc);
+		
 		return jPanel;
+	}
+
+	private boolean validateAddress(JTextArea textArea) {
+		if (textArea.getText().contains("***")) {
+			textArea.setBorder(new LineBorder(color_red, 5, false));
+			textArea.setBackground(color_red);  
+			return false;			
+		} else {
+			textArea.setBorder(new LineBorder(color_ok, 5, false));
+			textArea.setBackground(color_ok);  
+			return true;			
+		}
+	}
+	
+	/**
+	 * Validate email addres: do a quick sanity check on the email address
+	 * @param emailStr
+	 * @return
+	 */
+	private boolean validateEmail(String emailStr) {
+		if (emailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
+			mTextFieldEmail.setBorder(new LineBorder(color_ok, 5, false));
+			mTextFieldEmail.setBackground(color_ok);  
+			return true;
+		} else {
+			mTextFieldEmail.setBorder(new LineBorder(color_red, 5, false));
+			mTextFieldEmail.setBackground(color_red); 
+			return false;
+		}
+	}
+	
+	/**
+	 * Validate phone number: do a quick sanity check on the phone number
+	 * @param phoneStr
+	 * @return
+	 */
+	private boolean validatePhone(String phoneStr) {
+		if (phoneStr.matches("[+][\\d]+-[\\d]+")) {
+			mTextFieldPhone.setBorder(new LineBorder(color_ok, 5, false));
+			mTextFieldPhone.setBackground(color_ok);
+			return true;
+		} else {
+			mTextFieldPhone.setBorder(new LineBorder(color_red, 5, false));
+			mTextFieldPhone.setBackground(color_red);
+			return false;
+		}
 	}
 	
 	private GridBagConstraints getGbc(int x, int y, double wx, double wy, int fill) {
@@ -577,40 +695,4 @@ public class SettingsPage extends JDialog {
 			}
 		}
 	}
-	
-	/*
-	private void generateAndSendEmail() throws AddressException, MessagingException {
-		Properties mailServerProperties;
-		Session getMailSession;
-		MimeMessage generateMailMessage;
-
-		// Step1
-		System.out.println("\n 1st ===> setup Mail Server Properties..");
-		mailServerProperties = System.getProperties();
-		mailServerProperties.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
-		mailServerProperties.put("mail.transport.protocol", "smtps");
-		mailServerProperties.put("mail.smtps.host", "smtp.gmail.com");
-		mailServerProperties.put("mail.smtps.auth", "true"); // Enable Authentication
-
-		// Step2
-		System.out.println("\n\n 2nd ===> get Mail Session..");
-		getMailSession = Session.getDefaultInstance(mailServerProperties, null);
-		getMailSession.setDebug(true);
-		generateMailMessage = new MimeMessage(getMailSession);
-		generateMailMessage.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress("user1@hostname.com"));
-		generateMailMessage.addRecipient(javax.mail.Message.RecipientType.CC, new InternetAddress("user2@hostname.com"));
-		generateMailMessage.setFrom(new InternetAddress("user3@hostname.com"));
-		generateMailMessage.setSubject("Greetings from Cybermax...");
-		String emailBody = "Test email by Crunchify.com JavaMail API example. "
-				+ "<br><br> Regards, <br>Crunchify Admin";
-		generateMailMessage.setContent(emailBody, "text/html");
-
-		// Step3
-		Transport transport = getMailSession.getTransport("smtps");
-		// Enter your correct gmail UserID and Password
-		transport.connect("smtp.ifi.uzh.ch", 465, "username", "password");
-		transport.sendMessage(generateMailMessage, generateMailMessage.getAllRecipients());
-		transport.close();
-	}
-	*/
 }

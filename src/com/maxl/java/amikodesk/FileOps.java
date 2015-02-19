@@ -46,7 +46,7 @@ public class FileOps {
 		String file_str = "";		
         try {
         	FileInputStream fis = new FileInputStream(filename);
-            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+            BufferedReader br = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
             String line;
             while ((line = br.readLine()) != null) {
                 file_str += (line + "\n");

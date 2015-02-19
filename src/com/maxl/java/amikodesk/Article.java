@@ -20,6 +20,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package com.maxl.java.amikodesk;
 
 public class Article implements java.io.Serializable {
+	
+	private static final long serialVersionUID = 1L;
+	
 	private String pack_title;
 	private String pack_size;
 	private String pack_unit;
@@ -51,7 +54,7 @@ public class Article implements java.io.Serializable {
 					= pack_unit = public_price = exfactory_price = additional_info = "k.A.";
 			} else if (Utilities.appLanguage().equals("fr")) {
 				ean_code = pharma_code = pack_title = pack_size 
-						= pack_unit = public_price = exfactory_price = additional_info = "p.c.";
+						= pack_unit = public_price = exfactory_price = additional_info = "n.s.";
 			}
 			if (author!=null && !author.isEmpty())
 				this.author = author;
@@ -197,42 +200,17 @@ public class Article implements java.io.Serializable {
     	} else { // for all other categories
     		return true;
     	}
-    	
-    	/*
-    	if (author.toLowerCase().contains("ibsa")) {
-	    	if (user_category.equals("arzt") || user_category.equals("apotheke"))
-	    		return ((visible & 0x08)>0);
-	    	else if (user_category.equals("drogerie")) {
-	    		String swissmedic_cat = getCategories();
-	    		if (!swissmedic_cat.isEmpty()) {
-	    			String s[] = swissmedic_cat.split(",");
-	    			if (s.length>0)
-	    				swissmedic_cat = s[0].trim();
-	    		}
-	    		return ((visible & 0x04)>0 
-	    				&& (swissmedic_cat.equals("D") || swissmedic_cat.equals("E") || swissmedic_cat.equals("CE")));
-	    	} else if (user_category.equals("spital"))
-	    		return ((visible & 0x02)>0);
-	    	else if (user_category.equals("grossist"))
-	    		return ((visible & 0x01)>0);    	
-	    	else	// for all other categories
-	    		return false;
-    	} else {
-    		// For authors return always true...
-    		return true;    	
-    	}
-    	*/
     }
     
-	public boolean isSpecial() {
-		return additional_info.contains("SL");
+	public boolean isSpecial() {		
+		return (additional_info.contains("SL") || additional_info.contains("LS"));
 	}
 	
 	public float getVat() {
 		if (value_added_tax!=null && !value_added_tax.isEmpty())
 			return Float.parseFloat(value_added_tax);
 		else
-			return 8.0f;
+			return 2.5f;
 	}
 	
 	/**
@@ -290,8 +268,12 @@ public class Article implements java.io.Serializable {
 		String price_pruned = price.replaceAll("[^\\d.]", "");
 		if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
 			price = price_pruned;
-		else
-			price = "k.A.";
+		else {
+			if (Utilities.appLanguage().equals("de"))
+				price = "k.A.";
+			else if (Utilities.appLanguage().equals("fr"))
+				price = "n.s.";
+		}
 		return price;
 	}
 	
@@ -325,7 +307,10 @@ public class Article implements java.io.Serializable {
 		if (!price_pruned.isEmpty() && !price_pruned.equals(".."))
 			price = price_pruned;
 		else
-			price = "k.A.";
+			if (Utilities.appLanguage().equals("de"))
+				price = "k.A.";
+			else if (Utilities.appLanguage().equals("fr"))
+				price = "n.s.";
 		return price;
 	}
 	
@@ -346,14 +331,14 @@ public class Article implements java.io.Serializable {
 	 * FAP
 	 */
 	public String getFapPrice() {
-		return this.fep_price;
+		return this.fap_price;
 	}
 	
 	/**
 	 * FEP
 	 */
 	public String getFepPrice() {
-		return this.fap_price;
+		return this.fep_price;
 	}
 		
 	/**
@@ -412,18 +397,6 @@ public class Article implements java.io.Serializable {
 	 * @return
 	 */
 	public float getCashRebate() {
-		/*
-		if (quantity+draufgabe>0) {
-			float buying_rebated = tot_buying_price/(quantity+draufgabe);
-			if (buying_rebated>0.0f) {
-				float diff = buying_price-buying_rebated;
-				if (diff>0.0f)
-					return (int)(0.5f+100.0f*(diff/buying_price));
-				else 
-					return 0;
-			}
-		}
-		*/
 		if ((cash_rebate>=0.0f && cash_rebate<0.01f) || (cash_rebate<=0.0f && cash_rebate>-0.01f))
 			cash_rebate = 0.0f;
 		if (draufgabe>0)

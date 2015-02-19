@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ResourceBundle;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -340,18 +341,17 @@ public class AmiKoDialogs extends JDialog {
 		this.setVisible(true);
 	}
 	
-	public void ShoppingCartDialog(String ean, boolean to_shopping_cart) {
-        final JDialog dialog = new JDialog(this, "Warenkorb", true);
+	public void ShoppingCartDialog(String ean, boolean to_shopping_cart, ResourceBundle rb) {
+        final JDialog dialog = new JDialog(this, rb.getString("shoppingCart"), true);
 		JPanel panel = new JPanel();
-		JLabel label = new JLabel();		
+		JLabel label = new JLabel();	
 		int display_time = 2000;		
-		int dialog_width = 240;
+		int dialog_width = 340;
 		int dialog_height = 60;
-		if (to_shopping_cart)
-			label.setText("<html><b>" + ean + "</b> in den Warenkorb...</html>");
-		else {
-			label.setText("<html>Produkt hat keinen Preis oder darf nicht bestellt werden.<br>"
-					+ "Bitte treten Sie mit dem Hersteller in Verbindung.</html>");
+		if (to_shopping_cart) {
+			label.setText("<html><b>" + ean + "</b> " + rb.getString("addCart") + "</html>");
+		} else {
+			label.setText("<html>" + rb.getString("noPrice") + "<br>" + rb.getString("callAuth") + "</html>");
 			display_time = 4000;
 			dialog_width = 340;
 			dialog_height = 80;
@@ -381,17 +381,21 @@ public class AmiKoDialogs extends JDialog {
 	}
 	
 	public void AgbDialog() {		
-        final JDialog dialog = new JDialog(this, "AGB/CG", true);		
-		JWebBrowser jAgb = new JWebBrowser(NSComponentOptions.destroyOnFinalization());
+		String title = "Allgemeine Geschäftsbedingungen";
+		if (Utilities.appLanguage().equals("fr"))
+			title = "Conditions générales";		
+        final JDialog dialog = new JDialog(this, title, true);		
+		
+        JWebBrowser jAgb = new JWebBrowser(NSComponentOptions.destroyOnFinalization());
 		jAgb.setBarsVisible(false);	
-		// Default AGBs
-		String agb_text = "<html>No AGBs...</html>";
-		String agb_file = Utilities.appDataFolder() + Constants.AGBS_HTML + Utilities.appLanguage() + ".html";
+		// Default AGB text
+		String agb_html = "<html>No AGBs...</html>";
+		String agb_file = Utilities.appDataFolder() + "/" + Constants.AGBS_HTML + Utilities.appLanguage() + ".html";
 		if ((new File(agb_file)).exists())
-			agb_text = FileOps.readFromFile(agb_file);
+			agb_html = FileOps.readFromFile(agb_file);
 		else 
-			agb_text = FileOps.readFromFile("./shop/agbs_" + Utilities.appLanguage() + ".html");				
-		jAgb.setHTMLContent("<html>" + agb_text + "</html>");
+			agb_html = FileOps.readFromFile("./shop/agbs_" + Utilities.appLanguage() + ".html");				
+		jAgb.setHTMLContent("<html>" + agb_html + "</html>");
 		jAgb.setVisible(true);
 		
 		dialog.getContentPane().add(jAgb);

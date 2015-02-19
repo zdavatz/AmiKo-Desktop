@@ -3,7 +3,7 @@
 
 #define MyAppFolder "08_comeddesk_zurrose_exe32"
 #define MyAppName "CoMed Desktop ZR"
-#define MyVersion "1.1.9"
+#define MyVersion "1.3.0"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "comeddeskzr.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"

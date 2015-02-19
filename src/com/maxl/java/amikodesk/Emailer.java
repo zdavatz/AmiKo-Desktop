@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Observer;
+import java.util.ResourceBundle;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
 
@@ -74,10 +75,13 @@ public class Emailer {
 	private boolean m_is_sending = false;	
 	private Observer m_observer;
 	
-	public Emailer() {
+	private ResourceBundle m_rb;
+	
+	public Emailer(ResourceBundle rb) {
 		m_el = "amiko@ywesee.com";
 		m_map_of_attachments = new TreeMap<String, String>();
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
+		m_rb = rb;
 		loadMap();
 	}
 	
@@ -124,10 +128,6 @@ public class Emailer {
 			map = (TreeMap<String, String>)(FileOps.deserialize(serialized_bytes));									
 			m_ep = ((String)map.get(m_el)).split(";")[0];
 			m_es = ((String)map.get(m_el)).split(";")[1];
-			/*
-			m_fp = ((String)map.get(m_fl)).split(";")[0];
-			m_fs = ((String)map.get(m_fl)).split(";")[1];
-			*/
 		}
 	}
 	
@@ -269,13 +269,13 @@ public class Emailer {
 	public String orderFileName() {
 		String gln_code = m_prefs.get("glncode", "7610000000000");
 		DateTime dT = new DateTime();
-		DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyyMMdd'T'HHmmss");
+		DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
 		return (gln_code + "_" + fmt.print(dT));			
 	}
 	
 	private class SendOrderDialog extends JFrame implements PropertyChangeListener {
 		
-		private JDialog dialog = new JDialog(this, "Sending orders", true);
+		private JDialog dialog = new JDialog(this, m_rb.getString("sendingOrder"), true);
 	    private JProgressBar progressBar = new JProgressBar(0, 100);		
 		private JPanel panel = new JPanel();
 		private JLabel label = new JLabel();
@@ -286,7 +286,7 @@ public class Emailer {
 	    	progressBar.setStringPainted(true);			
 			progressBar.setValue(0);
 			
-			label.setText("Bestellungen Versand");
+			label.setText(m_rb.getString("sendingOrder"));
 			
 			// Button pane
 			JPanel buttonPane = new JPanel();
@@ -401,17 +401,19 @@ public class Emailer {
 					}
 					mDialog.setLabel("Successfully sent " + index + " orders.");
 				} else
-					mDialog.setLabel("Sorry. No Internet connection.");
+					mDialog.setLabel(m_rb.getString("noInternet"));
 			}
 			// Save the rest on the desktop
 			File desktop = new File(System.getProperty("user.home"), "Desktop");
 			path = desktop.getAbsolutePath();
 			if (mSbasket.getMedsWithNoAuthor()>0) {
-				mSbasket.generatePdf(null, path + "\\" + "amiko_" + name + ".pdf", "rest");	
-				mSbasket.generateCsv(null, path + "\\" + "amiko_" + name + ".csv", "rest");
+				if (Utilities.appLanguage().equals("de"))
+					mSbasket.generatePdf(null, path + "\\" + "amiko_" + name + ".pdf", "rest");	
+				else if (Utilities.appLanguage().equals("fr"))
+					mSbasket.generatePdf(null, path + "\\" + "comed_" + name + ".pdf", "rest");	
 			}			
 			if (num_authors==0)
-				mDialog.setLabel("Order pdfs saved to desktop.");
+				mDialog.setLabel(m_rb.getString("savedPdf"));
 			
 			return null;
 		}

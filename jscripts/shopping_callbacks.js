@@ -49,6 +49,10 @@ function agbsAccepted(event) {
 	invokeJava("agbs_accepted",event.checked);
 }
 
+function showAgbs() {
+	invokeJava("show_agbs",0);
+}
+
 function changeQty(tableID,currentRow) {
     try {
 		var key = window.event.keyCode;
