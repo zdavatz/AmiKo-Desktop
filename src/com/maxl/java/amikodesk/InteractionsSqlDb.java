@@ -28,7 +28,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-public class InteractionsDb {
+public class InteractionsSqlDb {
 	
 	public static final String KEY_ROWID = "_id";
 	public static final String KEY_ATC1 = "atc1";

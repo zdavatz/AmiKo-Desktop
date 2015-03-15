@@ -399,7 +399,14 @@ public class Emailer {
 							setProgress((int)(100.0f*index/(float)num_authors));
 						}
 					}
-					mDialog.setLabel("Successfully sent " + index + " orders.");
+					if (Utilities.appLanguage().equals("de"))
+						mDialog.setLabel("Successfully sent " + index + " orders.");
+					else if (Utilities.appLanguage().equals("fr")) {
+						if (index>1)
+							mDialog.setLabel("Envoi de les " + index + " commandes avec succès.");
+						else
+							mDialog.setLabel("Envoi de la commande avec succès.");
+					}
 				} else
 					mDialog.setLabel(m_rb.getString("noInternet"));
 			}

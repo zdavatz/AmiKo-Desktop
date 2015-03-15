@@ -23,18 +23,27 @@ public class Article implements java.io.Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
+	private long id;
 	private String pack_title;
 	private String pack_size;
 	private String pack_unit;
+	private String pack_galen;
+	private String active_substance;
+	private String atc_code;
+	private String atc_class;
 	private String exfactory_price = "";
 	private String public_price = "";
 	private String fap_price = "";
 	private String fep_price = "";
 	private String value_added_tax = "";
 	private String additional_info;
-	private String ean_code;
-	private String pharma_code;
+	private String regnr = "";
+	private String ean_code = "";
+	private String pharma_code = "";
+	private String therapy_code = "";
 	private String author = "";
+	private String supplier = "";
+	private String availability = "";
 	private String dropdown_str;
 	private String author_code = "";
 	private float margin = -1.0f;	// <0.0f -> not initialized
@@ -46,6 +55,10 @@ public class Article implements java.io.Serializable {
 	private float cash_rebate = 0.0f; // [%]
 	private int onstock;
 	private int visible;
+	
+	public Article() {
+		//
+	}
 	
 	public Article(String[] entry, String author) {
 		if (entry!=null) {
@@ -90,36 +103,12 @@ public class Article implements java.io.Serializable {
 		}
 	}
 	
-	public String getEanCode() {
-		return ean_code;
+	public long getId() {
+		return id;
 	}
 	
-	public void setEanCode(String ean_code) {
-		this.ean_code = ean_code;
-	}
-	
-	public String getPharmaCode() {
-		return pharma_code;
-	}
-
-	public void setPharmaCode(String pharma_code) {
-		this.pharma_code = pharma_code;
-	}
-	
-	public String getAuthor() {
-		return author;
-	}
-	
-	public void setAuthor(String author) {
-		this.author = author;
-	}
-	
-	public String getCode() {
-		return author_code;
-	}
-	
-	public void setCode(String code) {
-		this.author_code = code;
+	public void setId(long id) {
+		this.id = id;
 	}
 	
 	public String getPackTitle() {
@@ -146,14 +135,101 @@ public class Article implements java.io.Serializable {
 		this.pack_unit = pack_unit;
 	}
 	
+	public String getPackGalen() {
+		return pack_galen;
+	}
+	
+	public void setPackGalen(String pack_galen) {
+		this.pack_galen = pack_galen;
+	}
+
+	public void setRegnr(String regnr) {
+		this.regnr = regnr;
+	}
+	
+	public String getRegnr() {
+		return regnr;
+	}
+	
+	public String getEanCode() {
+		return ean_code;
+	}
+	
+	public void setEanCode(String ean_code) {
+		this.ean_code = ean_code;
+	}
+	
+	public String getPharmaCode() {
+		return pharma_code;
+	}
+
+	public void setPharmaCode(String pharma_code) {
+		this.pharma_code = pharma_code;
+	}
+	
+	public String getAuthor() {
+		return author;
+	}
+	
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+	
+	public String getSupplier() {
+		return supplier;
+	}
+	
+	public void setSupplier(String supplier) {
+		this.supplier = supplier;
+	}
+	
+	public String getCode() {
+		return author_code;
+	}
+	
+	public void setCode(String code) {
+		this.author_code = code;
+	}
+	
+	public String getActiveSubstance() {
+		return active_substance;
+	}
+	
+	public void setActiveSubstance(String active_substance) {
+		this.active_substance = active_substance;
+	}
+		
+	public String getAtcCode() {
+		return atc_code;
+	}
+	
+	public void setAtcCode(String atc_code) {
+		this.atc_code = atc_code;
+	}
+
+	public String getAtcClass() {
+		return atc_class;
+	}
+	
+	public void setAtcClass(String atc_class) {
+		this.atc_class = atc_class;
+	}
+	
+	public String getTherapyCode() {
+		return therapy_code;
+	}
+	
+	public void setTherapyCode(String therapy_code) {
+		this.therapy_code = therapy_code;
+	}
+	
 	public String getDropDownStr() {
 		return dropdown_str;
 	}
 	
 	public void setDropDownStr(String dropdown_str) {
 		this.dropdown_str = dropdown_str;
-	}
-	
+	}	
 	
 	public String getAdditionalInfo() {
 		return additional_info;
@@ -456,5 +532,13 @@ public class Article implements java.io.Serializable {
 	
 	public int getItemsOnStock() {
 		return onstock;
+	}
+	
+	public void setAvailability(String availability) {
+		this.availability = availability;
+	}
+	
+	public String getAvailability() {
+		return availability;
 	}
 }

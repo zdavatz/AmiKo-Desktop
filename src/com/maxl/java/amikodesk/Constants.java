@@ -30,6 +30,7 @@ public class Constants {
 	public static final String DEFAULT_INTERACTION_CSV_BASE = "drug_interactions_csv_";
 	public static final String AGBS_HTML = "agbs_";
 	public static final String GLN_CODES_FILE = "gln_codes_csv.csv";
+	public static final String DEFAULT_ROSE_DB = "rose_db_full.db";
 	
 	// Important folders and files
 	public static final String IMG_FOLDER = "./images/";	
@@ -59,14 +60,14 @@ public class Constants {
 	public static final String ZURROSE_ICON = "./icons/amiko_icon.png";
 	
 	// -->> Note: uncomment name of app to compile!
-	public static final String APP_NAME = AMIKO_NAME;
+	// public static final String APP_NAME = AMIKO_NAME;
 	// public static final String APP_NAME = COMED_NAME;
 	// public static final String APP_NAME = AMIKO_DESITIN_NAME;
 	// public static final String APP_NAME = COMED_DESITIN_NAME;
 	// public static final String APP_NAME = AMIKO_MEDDRUGS_NAME;
 	// public static final String APP_NAME = COMED_MEDDRUGS_NAME;
-	// public static final String APP_NAME = AMIKO_ZURROSE_NAME;
+	public static final String APP_NAME = AMIKO_ZURROSE_NAME;
 	// public static final String APP_NAME = COMED_ZURROSE_NAME;
-	public static final String APP_VERSION = "1.3.0 (32-bit)";	
-	public static final String GEN_DATE = "13.02.2015";	
+	public static final String APP_VERSION = "1.3.1 (32-bit)";	
+	public static final String GEN_DATE = "07.03.2015";	
 }

@@ -42,6 +42,7 @@ import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileFilter;
 
 public class FileOps {
+	
 	static public String readFromFile(String filename) {
 		String file_str = "";		
         try {

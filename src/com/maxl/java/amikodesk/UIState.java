@@ -28,6 +28,7 @@ public class UIState {
 	static int med_index = -1;
 	static boolean seek_interactions = false;
 	static boolean shopping_mode = false;
+	static boolean compare_mode = false;
 	
 	public UIState(String use) {		
 		use_mode = use;
@@ -35,22 +36,32 @@ public class UIState {
 			database_used = "aips";
 			seek_interactions = false;
 			shopping_mode = false;
+			compare_mode = false;			
 		} else if (use_mode.equals("favorites")) {
 			database_used = "favorites";
 			seek_interactions = false;
 			shopping_mode = false;
+			compare_mode = false;			
 		} else if (use_mode.equals("interactions")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = true;
 			shopping_mode = false;
+			compare_mode = false;			
 		} else if (use_mode.equals("shopping") || use_mode.equals("loadcart")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = false;
-			shopping_mode = true;	
+			shopping_mode = true;
+			compare_mode = false;			
+		} else if (use_mode.equals("comparison")) {
+			database_used = "aips";
+			seek_interactions = false;
+			shopping_mode = false;
+			compare_mode = true;			
 		} else {
 			database_used = "aips";
 			seek_interactions = false;
 			shopping_mode = false;
+			compare_mode = false;			
 		}
 	}
 
@@ -61,22 +72,32 @@ public class UIState {
 			database_used = "aips";
 			seek_interactions = false;
 			shopping_mode = false;
+			compare_mode = false;			
 		} else if (use_mode.equals("favorites")) {
 			database_used = "favorites";
 			seek_interactions = false;
 			shopping_mode = false;
+			compare_mode = false;			
 		} else if (use_mode.equals("interactions")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = true;
 			shopping_mode = false;
+			compare_mode = false;			
 		} else if (use_mode.equals("shopping") || use_mode.equals("loadcart")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = false;
 			shopping_mode = true;
+			compare_mode = false;			
+		} else if (use_mode.equals("comparison")) {
+			database_used = "aips";
+			seek_interactions = false;
+			shopping_mode = false;
+			compare_mode = true;			
 		} else {
 			database_used = "aips";
 			seek_interactions = false;
 			shopping_mode = false;
+			compare_mode = false;			
 		}
 	}
 	
@@ -89,7 +110,7 @@ public class UIState {
 	}
 	
 	public boolean isSearchMode() {
-		return (!seek_interactions && !shopping_mode);
+		return (!seek_interactions && !shopping_mode && !compare_mode);
 	}
 	
 	public boolean isInteractionsMode() {
@@ -102,6 +123,10 @@ public class UIState {
 	
 	public boolean isLoadCart() {
 		return use_mode.equals("loadcart");
+	}
+	
+	public boolean isComparisonMode() {
+		return compare_mode;
 	}
 	
 	public void setDatabaseUsed(String database) {
