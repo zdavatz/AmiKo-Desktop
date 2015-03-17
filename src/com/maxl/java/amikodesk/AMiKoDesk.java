@@ -196,8 +196,6 @@ public class AMiKoDesk {
 	private static String m_application_data_folder = null;
 	private static Emailer m_emailer;
 	
-	// Update classes
-	
 	// Panels
 	private static ListPanel m_list_titles = null;
 	private static ListPanel m_list_auths = null;
@@ -687,21 +685,20 @@ public class AMiKoDesk {
 				else if (m_curr_uistate.isShoppingMode())	// Display shopping cart
 					m_web_panel.updateListOfPackages();		
 				else if (m_curr_uistate.isComparisonMode()) {
-					// TODO: Goes into separate function...
-					m_comparison_basket.clear();					
 					Article article = list_of_articles.get(med_index);
-					String ean_code = article.getEanCode();
 					String atc_code = article.getAtcCode();
-					// m_comparison_basket.put(ean_code, article);
-					if (atc_code!=null) {
+					if (atc_code!=null && atc_code.matches("^[a-zA-Z0-9]*$")) {
+						m_comparison_basket.clear();
 						rose_search = m_rosedb.searchATC(atc_code);
 						for (Article a : rose_search) {
 							m_comparison_basket.put(a.getEanCode(), a);
-						}						
-						m_web_panel.updateComparisonCart();
+						}
+						// Sort everything
+						m_comparison_cart.setComparisonBasket(m_comparison_basket);
+						m_comparison_cart.sortCart(0);
 					}
-				}
-				else										// Display Fachinformation, default usage!				
+					m_web_panel.updateComparisonCart();
+				} else										// Display Fachinformation, default usage!				
 					m_web_panel.updateText();
 			}
 		}
@@ -918,6 +915,12 @@ public class AMiKoDesk {
 						else if (msg.equals("delete_row"))
 							m_med_basket.remove(row_key);
 						m_web_panel.updateInteractionsHtml();
+					} else if (m_curr_uistate.isComparisonMode()) {
+						if (msg.equals("sort_cart")) {
+							int type = (int)Float.parseFloat(row_key);
+							m_comparison_cart.sortCart(type);
+							m_web_panel.updateComparisonCart();
+						}
 					} else if (m_curr_uistate.isShoppingMode()) {
 						if (msg.equals("delete_all")) {
 							m_shopping_basket.clear();
@@ -1381,12 +1384,12 @@ public class AMiKoDesk {
 		}
 		
 		public void updateComparisonCart() {
-			// Retrieve main html
-			String html_str = m_comparison_cart.updateComparisonCartHtml(m_comparison_basket);			
-			// Update html	
-			jWeb.setJavascriptEnabled(true);			
+			// Retrieve main html			
+			String html_str = m_comparison_cart.updateComparisonCartHtml();
+			// Update html
+			jWeb.setJavascriptEnabled(true);
 			jWeb.setHTMLContent(html_str);
-			jWeb.setVisible(true);		
+			jWeb.setVisible(true);
 		}
 		
 		public void dispose() {

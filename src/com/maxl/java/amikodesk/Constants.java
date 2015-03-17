@@ -40,6 +40,7 @@ public class Constants {
 	public static final String CSS_SHEET = "./css/amiko_stylesheet.css";
 	public static final String INTERACTIONS_SHEET = "./css/interactions_css.css";
 	public static final String SHOPPING_SHEET = "./css/shopping_css.css";
+	public static final String ROSE_SHEET = "./css/zurrose_css.css";
 
 	// App names
 	public static final String AMIKO_NAME = "AmiKo Desktop";

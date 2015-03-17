@@ -11,18 +11,18 @@ import java.util.List;
 
 public class RoseSqlDb {
 
-	private static final String KEY_ROWID = "_id";
+	// private static final String KEY_ROWID = "_id";
 	private static final String KEY_TITLE = "title";
-	private static final String KEY_SIZE = "size";
-	private static final String KEY_GALEN = "galen";
-	private static final String KEY_UNIT = "unit";
+	// private static final String KEY_SIZE = "size";
+	// private static final String KEY_GALEN = "galen";
+	// private static final String KEY_UNIT = "unit";
 	private static final String KEY_EAN = "eancode";
-	private static final String KEY_PHARMA = "pharmacode";
+	// private static final String KEY_PHARMA = "pharmacode";
 	private static final String KEY_ATC = "atc";
-	private static final String KEY_THERAPY = "theracode";
-	private static final String KEY_STOCK = "stock";
-	private static final String KEY_PRICE = "price";
-	private static final String KEY_AVAIL = "availability";
+	// private static final String KEY_THERAPY = "theracode";
+	// private static final String KEY_STOCK = "stock";
+	// private static final String KEY_PRICE = "price";
+	// private static final String KEY_AVAIL = "availability";
 	private static final String KEY_SUPPLIER = "supplier";
 	
 	private static final String ROSE_DB_TABLE = "rosedb";
@@ -75,7 +75,7 @@ public class RoseSqlDb {
 	
 	public List<Article> searchTitle(String title) {
 		List<Article> list_of_articles = new ArrayList<Article>();
-		
+
 		try {
 			m_stat = m_conn.createStatement();
 			String query = "select * from " + ROSE_DB_TABLE + " where " 
@@ -123,7 +123,7 @@ public class RoseSqlDb {
 			while (m_rs.next()) {
 				list_of_articles.add(cursorToArticle(m_rs));
 			}
-			
+
 		} catch(SQLException e) {
 			System.err.println(">> RoseSqlDb: SQLException in searchATC!");
 		}
