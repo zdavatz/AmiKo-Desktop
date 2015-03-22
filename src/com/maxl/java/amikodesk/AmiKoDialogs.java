@@ -407,4 +407,36 @@ public class AmiKoDialogs extends JDialog {
 		dialog.setAlwaysOnTop(true);
         dialog.setVisible(true); 	// If modal, application will pause here
 	}
+	
+	public void UploadDialog(String msg) {
+        final JDialog dialog = new JDialog(this, "Preisvergleich", true);
+		JPanel panel = new JPanel();
+		JLabel label = new JLabel();	
+		int display_time = 3000;		
+		int dialog_width = 340;
+		int dialog_height = 60;
+		label.setText("<html>" + msg + "</html>");
+			
+        Timer timer = new Timer(display_time, new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                dialog.setVisible(false);
+                dialog.dispose();
+            }
+        });
+        timer.setRepeats(false);
+        timer.start();
+        
+		panel = new JPanel(new BorderLayout(5, 5));
+		panel.add(label, BorderLayout.NORTH);
+		panel.setBorder(BorderFactory.createEmptyBorder(7, 7, 7, 7));
+
+		dialog.getContentPane().add(panel);
+		dialog.pack();
+		dialog.setLocationRelativeTo(null);
+		dialog.setModal(false);
+		dialog.setSize(dialog_width, dialog_height);
+		dialog.setResizable(false);
+		dialog.setAlwaysOnTop(true);
+        dialog.setVisible(true); 	// If modal, application will pause here
+	}
 }

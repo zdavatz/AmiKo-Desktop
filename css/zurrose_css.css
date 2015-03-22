@@ -11,8 +11,6 @@
 #compare .container {background-color:#ffffff;}
 #compare .left {font-size:0.85em;margin:16px;}
 #compare .right {font-size:0.85em;margin-right:16px;}
-#compare .chart div {display:inline;font:0.85em;sans-serif;text-align:left;padding:4px;margin:0px;color:white;}
 #compare .tooltip div {display:none;color:#000;padding:3px;cursor:pointer;text-decoration:none;}
 #compare .tooltip:hover div {display:block;position:absolute;left:30%;font-size:0.75em;background-color:#efefff;border:2px solid;border-color:#fff;margin:6px;padding:6px;}
-#buttons button {cursor:pointer;background-color:#dcdcfa;border-style:solid;border-color:#fff;font-size:0.9em;} 
-#buttons .buttonPressed {background-color:#f0f0f0;}
+#buttons button {cursor:pointer;background-color:#dcdcfa;border:2px solid;border-color:#fff;font:bold 0.85em/100px;border-radius:50px;} 

@@ -1,5 +1,9 @@
 package com.maxl.java.amikodesk;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -8,20 +12,38 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Observer;
 import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.TreeMap;
+
+import org.apache.commons.net.ftp.FTP;
+import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPReply;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 public class ComparisonCart implements java.io.Serializable {
 
 	private static ResourceBundle m_rb = ResourceBundle.getBundle("amiko_de_CH", new Locale("de", "CH"));
 
 	private static String m_images_dir = System.getProperty("user.dir") + "/images/";	
+
+	private static Observer m_observer;
 	
+	// Map of eancodes vs articles
 	private static Map<String, Article> m_comparison_basket = null;
+	// List of eancodes that will be uploaded...
+	private static List<String> m_upload_list = new ArrayList<String>();
 	
 	private static String m_html_str = "";
 	private static String m_jscripts_str = null;
 	private static String m_css_str = null;	
+
+	private String m_el;
+	private String m_ep;
+	private String m_es;
 	
 	private static int button_state[] = new int[] {1, 1, 1, 1, 1, 1, 1, 1};
 	
@@ -35,10 +57,46 @@ public class ComparisonCart implements java.io.Serializable {
 			m_rb = ResourceBundle.getBundle("amiko_de_CH", new Locale("de", "CH"));
 		else if (Utilities.appLanguage().equals("fr"))
 			m_rb = ResourceBundle.getBundle("amiko_fr_CH", new Locale("fr", "CH"));	
+		// 
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\access_rose.ami.ser");
+		if (encrypted_msg==null) {		
+			encrypted_msg = FileOps.readBytesFromFile(Constants.ROSE_FOLDER + "access_rose.ami.ser");
+			System.out.println("Loading access_rose.ami.ser from default folder...");
+		}
+		// Decrypt and deserialize
+		if (encrypted_msg!=null) {
+			m_el = "P_ywesee";
+			Crypto crypto = new Crypto();
+			byte[] serialized_bytes = crypto.decrypt(encrypted_msg);
+			TreeMap<String, String> map = new TreeMap<String, String>();
+			map = (TreeMap<String, String>)(FileOps.deserialize(serialized_bytes));									
+			m_ep = ((String)map.get(m_el)).split(";")[0];
+			m_es = ((String)map.get(m_el)).split(";")[1];
+		}
 	}
 	
 	public void setComparisonBasket(Map<String, Article> comparison_basket) {
 		m_comparison_basket = comparison_basket;
+		m_upload_list.clear();
+	}
+	
+	public void addObserver(Observer observer) {
+		m_observer = observer;
+	}
+	
+	protected void notifyObserver(String msg) {
+		m_observer.update(null, msg);
+	}
+	
+	public void clearUploadList() {
+		m_upload_list.clear();
+	}
+	
+	public void updateUploadList(String eancode) {
+		if (m_upload_list.contains(eancode))
+			m_upload_list.remove(eancode);
+		else
+			m_upload_list.add(eancode);
 	}
 	
 	/**
@@ -53,38 +111,48 @@ public class ComparisonCart implements java.io.Serializable {
 
 		if (m_comparison_basket!=null && m_comparison_basket.size()>0) {			
 			
-			String sort_name_button = "<button style=\"text-align:left;\" onclick=\"sortCart(this,1)\"><b>Artikel</b></button>";	
-			String sort_supplier_button = "<button style=\"text-align:left;\" onclick=\"sortCart(this,2)\"><b>Lieferant</b></button>";		
-			String sort_unit_button = "<button style=\"text-align:right;\" onclick=\"sortCart(this,3)\"><b>Stärke</b></button>";	
-			String sort_size_button = "<button style=\"text-align:right;\" onclick=\"sortCart(this,4)\"><b>Packung</b></button>";	
-			String sort_price_button = "<button	style=\"text-align:right;\" onclick=\"sortCart(this,5)\"><b>RBP</b></button>";
-			String sort_stock_button = "<button	style=\"text-align:right;\" onclick=\"sortCart(this,6)\"><b>Lager</b></button>";
+			String sort_name_button = 		"<button style=\"text-align:left;\" onclick=\"sortCart(this,1)\"><b>Artikel</b></button>";	
+			String sort_supplier_button = 	"<button style=\"text-align:left;\" onclick=\"sortCart(this,2)\"><b>Lieferant</b></button>";		
+			String sort_unit_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,3)\"><b>Stärke</b></button>";	
+			String sort_size_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,4)\"><b>Packung</b></button>";	
+			String sort_price_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,5)\"><b>RBP</b></button>";
+			String sort_stock_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,6)\"><b>Lager</b></button>";
 			
 			basket_html_str += "<tr style=\"background-color:lightgray;\">"
-					+ "<td padding-bottom:8px;\" width=\"35%\">" + sort_name_button + "</td>"							
-					+ "<td style=\"text-align:left; padding-bottom:8px;\" width=\"7%\"><b>ATC Code</b></td>"										
-					+ "<td padding-bottom:8px;\" width=\"30%\">" + sort_supplier_button + "</td>"			
-					+ "<td style=\"text-align:right;\" padding-bottom:8px;\" width=\"10%\">" + sort_unit_button + "</td>"						
-					+ "<td style=\"text-align:right;\" padding-bottom:8px;\" width=\"14%\">" + sort_size_button + "</td>"																				
-					+ "<td style=\"text-align:right;\" padding-bottom:8px;\" width=\"6%\">" + sort_price_button + "</td>"		
-					+ "<td style=\"text-align:right;\" padding-bottom:8px;\" width=\"5%\">" + sort_stock_button + "</td>"	
+					+ "<td style=\"text-align:left; padding-bottom:8px;\" width=\"35%\">" + sort_name_button + "</td>"														
+					+ "<td style=\"text-align:left; padding-bottom:8px;\" width=\"30%\">" + sort_supplier_button + "</td>"			
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"12%\">" + sort_unit_button + "</td>"						
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"18%\">" + sort_size_button + "</td>"																				
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"8%\">" + sort_price_button + "</td>"		
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"7%\">" + sort_stock_button + "</td>"	
+					+ "<td style=\"text-align:center; padding-bottom:8px;\"; width=\"3%\"></td>"					
 					+ "</tr>";
 
 			int num_rows = 0;
 			for (Map.Entry<String, Article> entry : m_comparison_basket.entrySet()) {
 				Article article = entry.getValue();
 				String ean_code = article.getEanCode();			
-				if (num_rows%2==0)
-					basket_html_str += "<tr id=\"" + ean_code + "\" style=\"background-color:blanchedalmond;\">";
-				else 
-					basket_html_str += "<tr id=\"" + ean_code + "\" style=\"background-color:whitesmoke;\">";
-				basket_html_str += "<td style=\"text-align:left;\">" + article.getPackTitle() + "</td>"
-						+ "<td style=\"text-align:left;\">" + article.getAtcCode() + "</td>"								
+				if (num_rows%2==0) {
+					basket_html_str += "<tr id=\"" + ean_code + "\" style=\"background-color:blanchedalmond;\" " +
+							"onmouseover=\"changeColorEven(this,true);\" " +
+							"onmouseout=\"changeColorEven(this,false);\" " +
+							"onclick=\"uploadArticle(this);\">";
+				} else { 
+					basket_html_str += "<tr id=\"" + ean_code + "\" style=\"background-color:whitesmoke;\" " +
+							"onmouseover=\"changeColorOdd(this,true);cursor:pointer;\" " +
+							"onmouseout=\"changeColorOdd(this,false);\" " +
+							"onclick=\"uploadArticle(this);\">";
+				}
+				basket_html_str += "<td style=\"text-align:left;\">" + article.getPackTitle() + "</td>"						
 						+ "<td style=\"text-align:left;\">" + article.getSupplier() + "</td>"					
 						+ "<td style=\"text-align:right;\">" + article.getPackUnit() + "</td>"								
 						+ "<td style=\"text-align:right;\">" + article.getPackSize() + " " + article.getPackGalen() + "</td>"														
 						+ "<td style=\"text-align:right;\">" + String.format("%.2f",article.getExfactoryPriceAsFloat()) + "</td>"
-						+ "<td style=\"text-align:right;\">" + article.getItemsOnStock() + "</td>";											
+						+ "<td style=\"text-align:right;\">" + article.getItemsOnStock() + "</td>";
+				if (m_upload_list.contains(ean_code))			
+					basket_html_str += "<td style=\"text-align:center;\"><img src=\"" + m_images_dir + "checkmark_icon_14.png\"></td>";						
+				else
+					basket_html_str += "<td style=\"text-align:center;\"><img src=\"" + m_images_dir + "empty_icon_14.png\"></td>";	
 				basket_html_str += "</tr>";
 				if (atc_code.isEmpty())
 					atc_code = article.getAtcCode();
@@ -93,24 +161,105 @@ public class ComparisonCart implements java.io.Serializable {
 				num_rows++;
 			}
 		}
-
-		// Sorting buttons
-		String sort_everything_button = "<button style=\"padding:0.3em;text-align:left;\" onclick=\"sortCart(this,0)\">" 
-				+ "<img src=\"" + m_images_dir + "sort_up.png\" /><img src=\"" + m_images_dir + "sort_down.png\" />"				
-				+ "Sortieren nach Lieferant, Stärke, Packung und Preis</button>";
 		
+		// Button 1
+		String sort_everything_button = "<td style=\"text-align:center;\"><div class=\"right\" id=\"sort_everything\">"
+				+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"sortCart(this,0)\"><img src=\"" 
+				+ m_images_dir + "filter_icon.png\" /></button></div></td>";
+		String sort_everything_text = "<td><div class=\"right\">" + "Sortieren" + "</div></td>";
+		
+		// Button 2
+		String upload_button = "";
+		String upload_text = "";
+		if (m_upload_list.size()>0) {
+			upload_button = "<td style=\"text-align:center;\"><div class=\"right\" id=\"upload_server\">"
+					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"uploadToServer(this)\"><img src=\"" 
+					+ m_images_dir + "upload2_icon.png\" /></button></div></td>";	
+			upload_text = "<td><div class=\"right\">" + "Upload" + "</div></td>";;
+		}
+
 		String atc_html_str = "ATC Code: " + atc_code + " [" + atc_class + "]";						
 		String jscript_str = "<script language=\"javascript\">" + m_jscripts_str + "</script>";
 		m_html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_str + "</head>"
-				+ "<body><div id=\"compare\">"
-				+ "<p>" + atc_html_str + "</p>"
-				+ "<div id=\"buttons\">" + sort_everything_button + "</div>"
-				+ "<div>" + basket_html_str + "<br /></div>"
-				+ "</div></body></html>";		
+				+ "<body>"
+				+ "<div id=\"compare\">"
+				+ "<p style=\"font-size:0.85em; padding-left:0.4em;\">" + atc_html_str + "</p>"				
+				+ "<form><table class=\"container\"><tr>" + sort_everything_button + upload_button + "</tr>"
+				+ "<tr>" + sort_everything_text + upload_text + "</tr></table></form>"
+				+ "<div>" + basket_html_str + "</div>"
+				+ "</div></body>"
+				+ "</html>";		
 		
 		return m_html_str;
 	}
 
+	public void uploadToServer() {
+		if (m_upload_list.size()>0) {
+			String string_to_write = "";
+			for (String s : m_upload_list) {
+				string_to_write += s + "\n";
+			}
+			// Get time stamp
+			DateTime dT = new DateTime();
+			DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
+			String file_name = "rose_" + fmt.print(dT) + ".csv";			
+			// Save m_upload_list to file
+			String local_dir = Utilities.appDataFolder() + "/rose/";
+			try {				
+				FileOps.writeToFile(string_to_write, local_dir, file_name, "UTF-8"); 
+			} catch(IOException e) {
+				e.printStackTrace();
+			}
+			// Upload to server
+			uploadToFTPServer(file_name, local_dir + file_name);
+		}
+	}
+	
+	private void uploadToFTPServer(String remote_file, String local_path) {
+		FTPClient ftp_client = new FTPClient();
+	    try {
+	    	ftp_client.connect(m_es, 21);
+	    	ftp_client.login(m_el, m_ep);
+	    	ftp_client.enterLocalPassiveMode(); 
+	    	ftp_client.changeWorkingDirectory("ywesee in");
+	    	ftp_client.setFileType(FTP.BINARY_FILE_TYPE);
+            
+            int reply = ftp_client.getReplyCode();                        
+            if (!FTPReply.isPositiveCompletion(reply)) {
+            	ftp_client.disconnect();
+                System.err.println("FTP server refused connection.");
+                return;
+            } 
+            
+            File local_file = new File(local_path); 
+            InputStream is = new FileInputStream(local_file); 
+            System.out.print("Uploading file " + remote_file + " to server " + m_es + "... ");
+
+            boolean done = ftp_client.storeFile(remote_file, is);
+            if (done) {
+                System.out.println("file uploaded successfully.");
+                notifyObserver("Die Daten wurden erfolgreich übermittelt!");
+            }
+            else {
+            	System.out.println("error.");
+                notifyObserver("Fehler beim übermitteln den Daten...");            	
+            }
+            is.close();            
+	     } catch (IOException ex) {
+	    	 System.out.println("Error: " + ex.getMessage());
+	         ex.printStackTrace();
+	     } finally {
+	    	 try {
+	    		 if (ftp_client.isConnected()) {
+	    			 ftp_client.logout();
+	                 ftp_client.disconnect();
+	    		 }
+	    	 } catch (IOException ex) {
+	    		 ex.printStackTrace();
+	    	 }
+	     }
+	}
+	
 	/**
 	 * Sorting according to Lieferant
 	 */

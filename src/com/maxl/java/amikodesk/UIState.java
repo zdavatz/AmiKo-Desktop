@@ -105,6 +105,10 @@ public class UIState {
 		use_mode = prev_use_mode;
 	}
 	
+	public String getPrevUseMode() {
+		return prev_use_mode;
+	}
+	
 	public String getUseMode() {
 		return use_mode;
 	}

@@ -36,7 +36,7 @@ public class RoseSqlDb {
 			// Initialize org.sqlite.JDBC driver
 			Class.forName("org.sqlite.JDBC");
 			// Create connection to db
-			String db_path = "./dbs/rose_db_full.db";
+			String db_path = Constants.ROSE_FOLDER + "/rose_db_full.db";
 			m_conn = DriverManager.getConnection("jdbc:sqlite:" + db_path);		
 			m_stat = m_conn.createStatement();
 		} catch (SQLException e ) {
@@ -118,7 +118,7 @@ public class RoseSqlDb {
 			m_stat = m_conn.createStatement();
 			String query = "select * from " + ROSE_DB_TABLE + " where " 
 					+ KEY_ATC + " like " + "'" + atccode + "%' or "
-					+ KEY_ATC + " like " + "'%; " + atccode + "%'"; 
+					+ KEY_ATC + " like " + "'%;" + atccode + "%'"; 
 			m_rs = m_stat.executeQuery(query);
 			while (m_rs.next()) {
 				list_of_articles.add(cursorToArticle(m_rs));
@@ -138,7 +138,7 @@ public class RoseSqlDb {
 			m_stat = m_conn.createStatement();
 			String query = "select * from " + ROSE_DB_TABLE + " where " 
 					+ KEY_EAN + " like " + "'" + eancode + "%' or "
-					+ KEY_EAN + " like " + "'%; " + eancode + "%'";
+					+ KEY_EAN + " like " + "'%;" + eancode + "%'";
 			m_rs = m_stat.executeQuery(query);
 			while (m_rs.next()) {
 				list_of_articles.add(cursorToArticle(m_rs));

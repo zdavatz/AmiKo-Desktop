@@ -66,7 +66,7 @@ public class FileOps {
 	   	File wdir = new File(dir_name);
 	   	if (!wdir.exists())
 	   		wdir.mkdirs();
-		File wfile = new File(dir_name+file_name);
+		File wfile = new File(dir_name+"/"+file_name);
 		if (!wfile.exists())
 			wfile.createNewFile();
 		

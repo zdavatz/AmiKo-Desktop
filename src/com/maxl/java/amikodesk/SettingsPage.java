@@ -185,12 +185,15 @@ public class SettingsPage extends JDialog {
 				new EmptyBorder(5,5,5,5)));		
 		
 		JCheckBox updateNeverCBox = new JCheckBox(m_rb.getString("manual"));
+		JCheckBox updateHourlyCBox = new JCheckBox(m_rb.getString("hourly"));
 		JCheckBox updateDailyCBox = new JCheckBox(m_rb.getString("daily"));
 		JCheckBox updateWeeklyCBox = new JCheckBox(m_rb.getString("weekly"));
 		JCheckBox updateMonthlyCBox = new JCheckBox(m_rb.getString("monthly"));		
 		
 		// Add to buttongroup to ensure that only one box is selected at a time
 		bg.add(updateNeverCBox);
+		if (Utilities.appCustomization().equals("zurrose"))
+			bg.add(updateHourlyCBox);
 		bg.add(updateDailyCBox);
 		bg.add(updateWeeklyCBox);
 		bg.add(updateMonthlyCBox);
@@ -201,6 +204,9 @@ public class SettingsPage extends JDialog {
 		case 0:
 			updateNeverCBox.setSelected(true);
 			break;
+		case 4:
+			updateHourlyCBox.setSelected(true);
+			break;			
 		case 1:
 			updateDailyCBox.setSelected(true);
 			break;				
@@ -220,6 +226,12 @@ public class SettingsPage extends JDialog {
 				mPrefs.putInt(UpdateID, 0);
 			}
 		});
+		updateHourlyCBox.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				mPrefs.putInt(UpdateID, 4);
+			}
+		});	
 		updateDailyCBox.addItemListener(new ItemListener() {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
@@ -239,6 +251,8 @@ public class SettingsPage extends JDialog {
 			}
 		});
 		jPanel.add(updateNeverCBox);
+		if (Utilities.appCustomization().equals("zurrose"))
+			jPanel.add(updateHourlyCBox);
 		jPanel.add(updateDailyCBox);		
 		jPanel.add(updateWeeklyCBox);
 		jPanel.add(updateMonthlyCBox);

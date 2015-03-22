@@ -35,7 +35,8 @@ public class Constants {
 	// Important folders and files
 	public static final String IMG_FOLDER = "./images/";	
 	public static final String JS_FOLDER = "./jscripts/";
-	public static final String SHOP_FOLDER = "./shop/";
+	public static final String SHOP_FOLDER = "./modules/shop/";
+	public static final String ROSE_FOLDER = "./modules/rose/";
 	public static final String HTML_FILES = "./fis/fi_de_html/";
 	public static final String CSS_SHEET = "./css/amiko_stylesheet.css";
 	public static final String INTERACTIONS_SHEET = "./css/interactions_css.css";
@@ -70,5 +71,5 @@ public class Constants {
 	public static final String APP_NAME = AMIKO_ZURROSE_NAME;
 	// public static final String APP_NAME = COMED_ZURROSE_NAME;
 	public static final String APP_VERSION = "1.3.1 (32-bit)";	
-	public static final String GEN_DATE = "07.03.2015";	
+	public static final String GEN_DATE = "22.03.2015";	
 }
