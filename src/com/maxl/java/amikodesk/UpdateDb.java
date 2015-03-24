@@ -75,6 +75,7 @@ public class UpdateDb {
 	private String m_app_lang;
 	private String m_customization;
 	private boolean m_loadedDBisZipped = false;
+	private boolean m_full_update = false;
 	
 	UpdateDb(MainSqlDb sqldb) {
 		m_sqldb = sqldb;
@@ -91,13 +92,9 @@ public class UpdateDb {
 	public void addObserver(Observer observer) {
 		m_observer = observer;
 	}
-	
-	protected void notify(String str) {
-		m_observer.update(null, str);
-	}	
-	
-	protected void notifyObserver(String db) {
-		notify("Loaded database: " + db);
+		
+	protected void notifyObserver(String msg) {
+		m_observer.update(null, msg);
 	}
 	
 	/**
@@ -107,31 +104,45 @@ public class UpdateDb {
 	 * @param app_folder
 	 * @return
 	 */
-	public String doIt(JFrame frame, String db_lang, String custom, String app_folder) {
+	public String doIt(JFrame frame, String db_lang, String custom, String app_folder, boolean full_update) {
 		// Default is "de"
-		String db_unzipped = app_folder + "\\amiko_db_full_idx_de.db";
-		String amiko_report = app_folder + "\\amiko_report_de.html";
-		String drug_interactions_unzipped = app_folder + "\\drug_interactions_csv_de.csv";
-		String shop_files_zipped = app_folder + "\\shop_files.zip";
 		String db_url = "http://pillbox.oddb.org/amiko_db_full_idx_de.zip";
-		String report_url = "http://pillbox.oddb.org/amiko_report_de.html";
+		String amiko_report_url = "http://pillbox.oddb.org/amiko_report_de.html";
 		String drug_interactions_url = "http://pillbox.oddb.org/drug_interactions_csv_de.zip";
 		String shop_files_url = "http://pillbox.oddb.org/shop.zip";
+		String rose_files_url = "http://pillbox.oddb.org/rose.zip";
+		// These are the local filenames
+		String db_unzipped = app_folder + "\\amiko_db_full_idx_de.db";
+		String amiko_report_plain = app_folder + "\\amiko_report_de.html";
+		String drug_interactions_unzipped = app_folder + "\\drug_interactions_csv_de.csv";
+		String shop_files_zipped = app_folder + "\\shop_files.zip";
+		String rose_files_zipped = app_folder + "\\rose_files.zip";		
+		
 		// ... works also for "fr"
 		if (db_lang.equals("fr")) {
-			db_unzipped = app_folder + "\\amiko_db_full_idx_fr.db";
-			amiko_report = app_folder + "\\amiko_report_fr.html";
-			drug_interactions_unzipped = app_folder + "\\drug_interactions_csv_fr.csv";
 			db_url = "http://pillbox.oddb.org/amiko_db_full_idx_fr.zip";
-			report_url = "http://pillbox.oddb.org/amiko_report_fr.html";
-			drug_interactions_url = "http://pillbox.oddb.org/drug_interactions_csv_fr.zip";
+			amiko_report_url = "http://pillbox.oddb.org/amiko_report_fr.html";
+			drug_interactions_url = "http://pillbox.oddb.org/drug_interactions_csv_fr.zip";			
+			// 
+			db_unzipped = app_folder + "\\amiko_db_full_idx_fr.db";
+			amiko_report_plain = app_folder + "\\amiko_report_fr.html";
+			drug_interactions_unzipped = app_folder + "\\drug_interactions_csv_fr.csv";
 		}
 		
 		m_app_lang = db_lang;
 		m_customization = custom;
+		m_full_update = full_update;
+		
 		if (Utilities.isInternetReachable())
-			new DownloadDialog(db_url, report_url, drug_interactions_url, shop_files_url,
-					amiko_report, db_unzipped, drug_interactions_unzipped, shop_files_zipped);
+			new DownloadDialog(
+					db_url, amiko_report_url, 
+					drug_interactions_url, 
+					shop_files_url, 
+					rose_files_url,
+					amiko_report_plain, db_unzipped, 
+					drug_interactions_unzipped, 
+					shop_files_zipped, 
+					rose_files_zipped);
 		else {
 			AmiKoDialogs cd = new AmiKoDialogs(db_lang, custom);
 			cd.NoInternetDialog();
@@ -148,8 +159,15 @@ public class UpdateDb {
 	    private JLabel label = new JLabel();
 	    private JButton okButton = new JButton();
 	    
-	    public DownloadDialog(String databaseURL, String reportURL, String drugInteractionsURL, String shopFilesURL,
-	    		String amikoReport, String unzippedDB, String drugInteractionsUnzipped, String shopFilesZipped) {
+	    public DownloadDialog(
+	    		String databaseURL, String reportURL, 
+	    		String drugInteractionsURL, 
+	    		String shopFilesURL, 
+	    		String roseFilesURL,
+	    		String amikoReport, String unzippedDB, 
+	    		String drugInteractionsUnzipped, 
+	    		String shopFilesZipped, 
+	    		String roseFilesZipped) {
 	    	progressBar.setPreferredSize(new Dimension(640, 30));
 	    	progressBar.setStringPainted(true);			
 			progressBar.setValue(0);	    	
@@ -186,19 +204,26 @@ public class UpdateDb {
 			setLocationRelativeTo(null);    // center on screen
 	        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			
-			final DownloadWorker downloadWorker = new DownloadWorker(this, 
-					databaseURL, reportURL, drugInteractionsURL, shopFilesURL, 
-					new File(unzippedDB), new File(amikoReport), new File(drugInteractionsUnzipped), new File(shopFilesZipped)); 
+	        // These files are downloaded either daily or later...
+			final MainDownloadWorker mainDownloadWorker = new MainDownloadWorker(this, 
+					databaseURL, reportURL, 
+					drugInteractionsURL, 
+					shopFilesURL, 
+					roseFilesURL,
+					new File(unzippedDB), new File(amikoReport), 
+					new File(drugInteractionsUnzipped), 
+					new File(shopFilesZipped),
+					new File(roseFilesZipped)); 
 			// Attach property listener to it
-    		downloadWorker.addPropertyChangeListener(this);
+    		mainDownloadWorker.addPropertyChangeListener(this);
     		// Launch SwingWorker
-    		downloadWorker.execute();
+    		mainDownloadWorker.execute();
     		
 		    okButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent event) {
 					System.out.println("Database update done.");
-					downloadWorker.cancel(true);
+					mainDownloadWorker.cancel(true);
 					dialog.dispatchEvent(new WindowEvent(dialog, WindowEvent.WINDOW_CLOSING)); 
 				}
 			});     		
@@ -228,50 +253,55 @@ public class UpdateDb {
 	    }
 	}	
 	
-	private class DownloadWorker extends SwingWorker<Void, Integer> {
+	private class MainDownloadWorker extends SwingWorker<Void, Integer> {
+
+		private DownloadDialog mDialog;
 		private String mDatabaseURL;
 		private String mReportURL;
 		private String mDrugInteractionsURL;
 		private String mShopFilesURL;
+		private String mRoseFilesURL;
 		private File mAmikoDatabase;
 		private File mAmikoReport;
 		private File mDrugInteractions;
 		private File mShopFiles;
-		private DownloadDialog mDialog;
+		private File mRoseFiles;
 
-		public DownloadWorker(DownloadDialog dialog, String databaseURL, String reportURL, 
-				String drugInteractionsURL, String shopFilesURL,
-				File amikoDatabase, File amikoReport, File drugInteractions, File shopFiles) {
+		public MainDownloadWorker(DownloadDialog dialog, 
+				String databaseURL, String reportURL, 
+				String drugInteractionsURL, 
+				String shopFilesURL,
+				String roseFilesURL,
+				File amikoDatabase, File amikoReport, 
+				File drugInteractions, 
+				File shopFiles,
+				File roseFiles) {
+			mDialog = dialog;			
 			mDatabaseURL = databaseURL;
 			mReportURL = reportURL;
 			mDrugInteractionsURL = drugInteractionsURL;			
 			mShopFilesURL = shopFilesURL;
+			mRoseFilesURL = roseFilesURL;
 			mAmikoDatabase = amikoDatabase;
 			mAmikoReport = amikoReport;
 			mDrugInteractions = drugInteractions;
 			mShopFiles = shopFiles;
-			mDialog = dialog;
+			mRoseFiles = roseFiles;
 		}
 		
-		/**
-		 * Executed in background thread
-		 */
-		@Override
-		protected Void doInBackground() throws Exception {
+		private File downloader(String what, String download_url, File file) throws Exception {
 			byte buffer[] = new byte[4096];
 			int bytesRead = -1;
 			long totBytesRead = 0;
 			int percentCompleted = 0;
-
-			String appDataFolder = Utilities.appDataFolder();
 			
-			// **** Download database ****
-			mDialog.setLabel("Downloading database...");
-			URL url = new URL(mDatabaseURL);
+			mDialog.setLabel("Downloading " + what + "...");
+			
+			URL url = new URL(download_url);
 			InputStream is = url.openStream();
 			// Retrieve file length from http header
 			int sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
-			File downloadedFile = new File(mAmikoDatabase.getAbsolutePath() + ".zip");
+			File downloadedFile = new File(file.getAbsolutePath() + ".zip");
 			OutputStream os = new FileOutputStream(downloadedFile);
 
 			try {
@@ -282,155 +312,34 @@ public class UpdateDb {
 					if (percentCompleted > 100)
 						percentCompleted = 100;
 					setProgress(percentCompleted);
-					mDialog.setLabel("Downloading database... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
+					mDialog.setLabel("Downloading " + what + "... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
 				}
 				os.close();
 			} catch (IOException e) {
-				mDialog.getLabel().setText("Error downloading database file: " + e.getMessage());
-				e.printStackTrace();
-				setProgress(0);
-				cancel(true);
-			}
-				
-			// Unzip database file
-			mDialog.setLabel("Unzipping database...");
-			
-			try {
-				if (!isCancelled()) {
-					ZipFile zipFile = new ZipFile(downloadedFile);
-					Enumeration<?> enu = zipFile.entries();
-					while (enu.hasMoreElements()) {
-						ZipEntry zipEntry = (ZipEntry) enu.nextElement();
-						// String name = zipEntry.getName();
-						long unzippedSize = zipEntry.getSize();
-						// Zip file inputstream
-						InputStream zin = zipFile.getInputStream(zipEntry);
-						// Copy data from ZipEntry to file
-						FileOutputStream fos = new FileOutputStream(mAmikoDatabase);
-						totBytesRead = 0;
-						while (!isCancelled() && (bytesRead = zin.read(buffer)) != -1) {
-							fos.write(buffer, 0, bytesRead);
-							totBytesRead += bytesRead;
-							percentCompleted = (int) (totBytesRead * 100 / unzippedSize);
-							if (percentCompleted > 100)
-								percentCompleted = 100;
-							setProgress(percentCompleted);
-							mDialog.setLabel("Unzipping database... " + totBytesRead/1000 + "kB out of " + (int)(unzippedSize/1000) + "kB");
-						}
-						fos.close();
-						zin.close();					
-					}
-					zipFile.close();
-				}
-			} catch (IOException e) {
-				mDialog.getLabel().setText("Error unzipping database file: " + e.getMessage());
+				mDialog.getLabel().setText("Error downloading " + what + " file: " + e.getMessage());
 				e.printStackTrace();
 				setProgress(0);
 				cancel(true);
 			}
 			
-			// **** Download report file ****
-			if (!isCancelled()) {
-				mDialog.setLabel("Downloading report...");
-				url = new URL(mReportURL);
-				is = url.openStream();
-				// Retrieve file length from http header
-				sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
-				downloadedFile = new File(mAmikoReport.getAbsolutePath());
-				os = new FileOutputStream(downloadedFile);
-				totBytesRead = 0;
-				try {
-					while (!isCancelled() && (bytesRead = is.read(buffer)) != -1) {
-						os.write(buffer, 0, bytesRead);
-						totBytesRead += bytesRead;
-						percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
-						if (percentCompleted > 100)
-							percentCompleted = 100;
-						setProgress(percentCompleted);
-					}
-					os.close();
-				} catch (IOException e) {
-					mDialog.getLabel().setText("Error downloading report file: " + e.getMessage());
-					e.printStackTrace();
-					setProgress(0);
-					cancel(true);
-				}
-				is.close();
-			}
-			
-			// **** Download drug interactions ****
-			mDialog.setLabel("Downloading drug interactions...");
-			url = new URL(mDrugInteractionsURL);
-			is = url.openStream();
-			// Retrieve file length from http header
-			sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
-			downloadedFile = new File(mDrugInteractions.getAbsolutePath() + ".zip");
-			os = new FileOutputStream(downloadedFile);
-
-			try {
-				while (!isCancelled() && (bytesRead = is.read(buffer)) != -1) {
-					os.write(buffer, 0, bytesRead);
-					totBytesRead += bytesRead;
-					percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
-					if (percentCompleted > 100)
-						percentCompleted = 100;
-					setProgress(percentCompleted);
-					mDialog.setLabel("Downloading drug interactions... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
-				}
-				os.close();
-			} catch (IOException e) {
-				mDialog.getLabel().setText("Error downloading drug interactions file: " + e.getMessage());
-				e.printStackTrace();
-				setProgress(0);
-				cancel(true);
-			}
-			
-			// Unzip files
-			unzipper(downloadedFile, mDrugInteractions, appDataFolder);
-			
-			// **** Download shop files ****
-			mDialog.setLabel("Downloading shopping files...");
-			url = new URL(mShopFilesURL);
-			is = url.openStream();
-			// Retrieve file length from http header
-			sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
-			downloadedFile = new File(mShopFiles.getAbsolutePath());
-			os = new FileOutputStream(downloadedFile);
-
-			try {
-				while (!isCancelled() && (bytesRead = is.read(buffer)) != -1) {
-					os.write(buffer, 0, bytesRead);
-					totBytesRead += bytesRead;
-					percentCompleted = (int) (totBytesRead * 100 / (sizeDB_in_bytes));
-					if (percentCompleted > 100)
-						percentCompleted = 100;
-					setProgress(percentCompleted);
-					mDialog.setLabel("Downloading shopping files... " + totBytesRead/1000 + "kB out of " + sizeDB_in_bytes/1000 + "kB");
-				}
-				os.close();
-			} catch (IOException e) {
-				mDialog.getLabel().setText("Error downloading shopping files: " + e.getMessage());
-				e.printStackTrace();
-				setProgress(0);
-				cancel(true);
-			}
-			
-			// Unzip files
-			unzipper(downloadedFile, mShopFiles, appDataFolder);
-			
-			return null;
+			return downloadedFile;
 		}
-
-		private void unzipper(File downloadedFile, File unzippedFile, String dataFolder) {
+		
+		private void unzipper(File downloadedFile, File unzippedFile) {
 			byte buffer[] = new byte[4096];
 			int bytesRead = -1;
 			long totBytesRead = 0;
 			int percentCompleted = 0;
 			String unzippedPath = "";
+			String file_being_unzipped = unzippedFile.getName();
 			
 			// Unzip database file
-			mDialog.setLabel("Unzipping shopping files...");
+			mDialog.setLabel("Unzipping " + file_being_unzipped + "...");
 
+			System.out.println("Unzipping "+ file_being_unzipped);
+			
+			String dataFolder = Utilities.appDataFolder();
+			
 			try {
 				if (!isCancelled()) {
 					ZipFile zipFile = new ZipFile(downloadedFile);
@@ -452,7 +361,7 @@ public class UpdateDb {
 							if (percentCompleted > 100)
 								percentCompleted = 100;
 							setProgress(percentCompleted);
-							mDialog.setLabel("Unzipping shopping files... " + totBytesRead/1000 + "kB out of " + (int)(unzippedSize/1000) + "kB");
+							mDialog.setLabel("Unzipping " + file_being_unzipped + "... " + (int)(totBytesRead/1000.0) + "kB out of " + (int)(unzippedSize/1000.0) + "kB");
 						}
 						fos.close();
 						zin.close();					
@@ -468,59 +377,89 @@ public class UpdateDb {
 		}
 		
 		/**
+		 * Executed in background thread
+		 */
+		@Override
+		protected Void doInBackground() throws Exception {
+			File downloadedFile = null;
+
+			if (m_full_update==true) {
+				downloadedFile = downloader("database", mDatabaseURL, mAmikoDatabase);			
+				unzipper(downloadedFile, mAmikoDatabase);
+				
+				downloadedFile = downloader("report", mReportURL, mAmikoReport);
+	
+				downloadedFile = downloader("drug interactions", mDrugInteractionsURL, mDrugInteractions);
+				unzipper(downloadedFile, mDrugInteractions);
+				
+				downloadedFile = downloader("shopping files", mShopFilesURL, mShopFiles);
+				unzipper(downloadedFile, mShopFiles);
+			}
+						
+			downloadedFile = downloader("rose files", mRoseFilesURL, mRoseFiles);
+			unzipper(downloadedFile, mRoseFiles);
+			
+			return null;
+		}
+		
+		/**
 		 * Executed in Swing's event dispatching thread
 		 */
 		@Override
 		protected void done() {
-			if (!isCancelled()) {
-				setProgress(100);
-				Toolkit.getDefaultToolkit().beep();
-	        	// Close previous DB
-				m_sqldb.closeDB();
-	        	String db_file = mAmikoDatabase.getAbsolutePath();
-			    mDialog.setOKButton("OK");
-	        	if (m_sqldb.loadDBFromPath(db_file)>0 && m_sqldb.getUserVersion()>0 && m_sqldb.getNumRecords()>0) {
-	        		// Setup icon
-	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
-	    			if (m_customization.equals("desitin"))
-	    				icon = new ImageIcon(Constants.DESITIN_ICON);	        		
-	    	        Image img = icon.getImage();
-	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
-	    		    icon = new ImageIcon(scaled_img);
-	    		    // Get number of interactions in interaction database
-	    		    int numInteractions = m_sqldb.getNumLinesInFile(mDrugInteractions.getAbsolutePath());
-	    		    // Display friendly message
-	    		    if (numInteractions>0) {
-		    		    if (m_app_lang.equals("de")) {
-		    		    	mDialog.getLabel().setText("<html>Neue AmiKo Datenbank mit " + m_sqldb.getNumRecords() + " Fachinfos und "
-		    		    			+ numInteractions + " Interaktionen erfolgreich geladen!</html>");
-		    		    } else if (m_app_lang.equals("fr")) {
-		    		    	mDialog.getLabel().setText("<html>Nouvelle base de données avec " + m_sqldb.getNumRecords() + " notice infopro et "
-		    		    			+ numInteractions + " interactions chargée avec succès!</html>");
+			if (m_full_update==true) {
+				if (!isCancelled()) {
+					setProgress(100);
+					Toolkit.getDefaultToolkit().beep();
+		        	// Close previous DB
+					m_sqldb.closeDB();
+		        	String db_file = mAmikoDatabase.getAbsolutePath();
+				    mDialog.setOKButton("OK");
+		        	if (m_sqldb.loadDBFromPath(db_file)>0 && m_sqldb.getUserVersion()>0 && m_sqldb.getNumRecords()>0) {
+		        		// Setup icon
+		        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
+		    			if (m_customization.equals("desitin"))
+		    				icon = new ImageIcon(Constants.DESITIN_ICON);	        		
+		    	        Image img = icon.getImage();
+		    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
+		    		    icon = new ImageIcon(scaled_img);
+		    		    // Get number of interactions in interaction database
+		    		    int numInteractions = m_sqldb.getNumLinesInFile(mDrugInteractions.getAbsolutePath());
+		    		    // Display friendly message
+		    		    if (numInteractions>0) {
+			    		    if (m_app_lang.equals("de")) {
+			    		    	mDialog.getLabel().setText("<html>Neue AmiKo Datenbank mit " + m_sqldb.getNumRecords() + " Fachinfos und "
+			    		    			+ numInteractions + " Interaktionen erfolgreich geladen!</html>");
+			    		    } else if (m_app_lang.equals("fr")) {
+			    		    	mDialog.getLabel().setText("<html>Nouvelle base de données avec " + m_sqldb.getNumRecords() + " notice infopro et "
+			    		    			+ numInteractions + " interactions chargée avec succès!</html>");
+			    		    }
+		    		    } else {
+			    		    if (m_app_lang.equals("de")) {
+			    		    	mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + m_sqldb.getNumRecords() + " Fachinfos "
+			    		    			+ "erfolgreich geladen!");
+			    		    } else if (m_app_lang.equals("fr")) {
+			    		    	mDialog.getLabel().setText("Nouvelle base de données avec " + m_sqldb.getNumRecords() + " notice infopro"
+			    		    			+ " chargée avec succès!");
+			    		    }
 		    		    }
-	    		    } else {
-		    		    if (m_app_lang.equals("de")) {
-		    		    	mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + m_sqldb.getNumRecords() + " Fachinfos "
-		    		    			+ "erfolgreich geladen!");
-		    		    } else if (m_app_lang.equals("fr")) {
-		    		    	mDialog.getLabel().setText("Nouvelle base de données avec " + m_sqldb.getNumRecords() + " notice infopro"
-		    		    			+ " chargée avec succès!");
-		    		    }
-	    		    }
-	    		    // Notify to GUI, update database 		    
-	    		    notifyObserver(db_file);
-	        	} else {
-	        		// Show message: db not kosher!
-	        		if (m_app_lang.equals("de")) 
-	        			mDialog.getLabel().setText("Fehler beim laden der Datenbank mit Version " + m_sqldb.getUserVersion() + "!");
-	        		else if (m_app_lang.equals("fr"))
-	        			mDialog.getLabel().setText("Erreurs lors du chargement de la base de données version " + m_sqldb.getUserVersion() + "!");	        		
+		    		    // Notify to GUI, update database 		    
+		    		    notifyObserver("Main update done!");
+		        	} else {
+		        		// Show message: db not kosher!
+		        		if (m_app_lang.equals("de")) 
+		        			mDialog.getLabel().setText("Fehler beim laden der Datenbank mit Version " + m_sqldb.getUserVersion() + "!");
+		        		else if (m_app_lang.equals("fr"))
+		        			mDialog.getLabel().setText("Erreurs lors du chargement de la base de données version " + m_sqldb.getUserVersion() + "!");	        		
+		        		// Load standard db
+		        		m_sqldb.loadDB("de");
+		        	}							
+				} else {
 	        		// Load standard db
-	        		m_sqldb.loadDB("de");
-	        	}							
+					m_sqldb.loadDB("de");	
+				}
 			} else {
-        		// Load standard db
-				m_sqldb.loadDB("de");	
+				notifyObserver("Quick update done!");
 			}
 		}
 	}

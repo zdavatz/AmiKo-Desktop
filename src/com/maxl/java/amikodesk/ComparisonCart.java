@@ -45,7 +45,7 @@ public class ComparisonCart implements java.io.Serializable {
 	private String m_ep;
 	private String m_es;
 	
-	private static int button_state[] = new int[] {1, 1, 1, 1, 1, 1, 1, 1};
+	private static int button_state[] = new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 	
 	public ComparisonCart() {
 		// Load javascripts
@@ -110,21 +110,27 @@ public class ComparisonCart implements java.io.Serializable {
 		String basket_html_str = "<table id=\"Warenkorb\" width=\"99%25\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">";
 
 		if (m_comparison_basket!=null && m_comparison_basket.size()>0) {			
-			
-			String sort_name_button = 		"<button style=\"text-align:left;\" onclick=\"sortCart(this,1)\"><b>Artikel</b></button>";	
-			String sort_supplier_button = 	"<button style=\"text-align:left;\" onclick=\"sortCart(this,2)\"><b>Lieferant</b></button>";		
-			String sort_unit_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,3)\"><b>Stärke</b></button>";	
-			String sort_size_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,4)\"><b>Packung</b></button>";	
-			String sort_price_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,5)\"><b>RBP</b></button>";
-			String sort_stock_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,6)\"><b>Lager</b></button>";
+			// Artikel, Stärke, Packung, PC, GTIN (EAN), RBP, PP, Lieferant, Lager, kürz. Verfall
+			String sort_name_button = 		"<button style=\"text-align:left;\"  onclick=\"sortCart(this,1)\"><b>Artikel</b></button>";		
+			String sort_unit_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,2)\"><b>Stärke</b></button>";	
+			String sort_size_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,3)\"><b>Packung</b></button>";					
+			String sort_pharma_button = 	"<button style=\"text-align:right;\" onclick=\"sortCart(this,4)\"><b>Pharma</b></button>";
+			String sort_ean_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,5)\"><b>EAN</b></button>";
+			String sort_rb_price_button =	"<button style=\"text-align:right;\" onclick=\"sortCart(this,6)\"><b>RBP</b></button>";
+			String sort_pu_price_button =   "<button style=\"text-align:right;\" onclick=\"sortCart(this,7)\"><b>PP</b></button>";
+			String sort_supplier_button = 	"<button style=\"text-align:left;\"  onclick=\"sortCart(this,8)\"><b>Lieferant</b></button>";		
+			String sort_stock_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,9)\"><b>Lager</b></button>";
 			
 			basket_html_str += "<tr style=\"background-color:lightgray;\">"
-					+ "<td style=\"text-align:left; padding-bottom:8px;\" width=\"35%\">" + sort_name_button + "</td>"														
-					+ "<td style=\"text-align:left; padding-bottom:8px;\" width=\"30%\">" + sort_supplier_button + "</td>"			
-					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"12%\">" + sort_unit_button + "</td>"						
-					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"18%\">" + sort_size_button + "</td>"																				
-					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"8%\">" + sort_price_button + "</td>"		
-					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"7%\">" + sort_stock_button + "</td>"	
+					+ "<td style=\"text-align:left; padding-bottom:8px;\" width=\"30%\">" + sort_name_button + "</td>"						
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"8%\">" + sort_unit_button + "</td>"							
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"12%\">" + sort_size_button + "</td>"							
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"8%\">" + sort_pharma_button + "</td>"	
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"8%\">" + sort_ean_button + "</td>"						
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"5%\">" + sort_rb_price_button + "</td>"	
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"5%\">" + sort_pu_price_button + "</td>"	
+					+ "<td style=\"text-align:left; padding-bottom:8px;\" width=\"30%\">" + sort_supplier_button + "</td>"																								
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"8%\">" + sort_stock_button + "</td>"							
 					+ "<td style=\"text-align:center; padding-bottom:8px;\"; width=\"3%\"></td>"					
 					+ "</tr>";
 
@@ -143,11 +149,15 @@ public class ComparisonCart implements java.io.Serializable {
 							"onmouseout=\"changeColorOdd(this,false);\" " +
 							"onclick=\"uploadArticle(this);\">";
 				}
-				basket_html_str += "<td style=\"text-align:left;\">" + article.getPackTitle() + "</td>"						
-						+ "<td style=\"text-align:left;\">" + article.getSupplier() + "</td>"					
-						+ "<td style=\"text-align:right;\">" + article.getPackUnit() + "</td>"								
-						+ "<td style=\"text-align:right;\">" + article.getPackSize() + " " + article.getPackGalen() + "</td>"														
+				// Artikel, Stärke, Packung, PC, GTIN (EAN), RBP, PP, Lieferant, Lager, kürz. Verfall
+				basket_html_str += "<td style=\"text-align:left;\">" + article.getPackTitle() + "</td>"	
+						+ "<td style=\"text-align:right;\">" + article.getPackUnit() + "</td>"														
+						+ "<td style=\"text-align:right;\">" + article.getPackSize() + " " + article.getPackGalen() + "</td>"	
+						+ "<td style=\"text-align:right;\">" + article.getPharmaCode() + "</td>"														
+						+ "<td style=\"text-align:right;\">" + article.getEanCode() + "</td>"																										
 						+ "<td style=\"text-align:right;\">" + String.format("%.2f",article.getExfactoryPriceAsFloat()) + "</td>"
+						+ "<td style=\"text-align:right;\">" + String.format("%.2f",article.getPublicPriceAsFloat()) + "</td>"	
+						+ "<td style=\"text-align:left;\">" + article.getSupplier() + "</td>"						
 						+ "<td style=\"text-align:right;\">" + article.getItemsOnStock() + "</td>";
 				if (m_upload_list.contains(ean_code))			
 					basket_html_str += "<td style=\"text-align:center;\"><img src=\"" + m_images_dir + "checkmark_icon_14.png\"></td>";						
@@ -163,19 +173,25 @@ public class ComparisonCart implements java.io.Serializable {
 		}
 		
 		// Button 1
-		String sort_everything_button = "<td style=\"text-align:center;\"><div class=\"right\" id=\"sort_everything\">"
-				+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"sortCart(this,0)\"><img src=\"" 
-				+ m_images_dir + "filter_icon.png\" /></button></div></td>";
-		String sort_everything_text = "<td><div class=\"right\">" + "Sortieren" + "</div></td>";
+		String show_all_button = "<td style=\"text-align:center;\"><div class=\"center\" id=\"show_all\">"
+				+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"showAll(this)\"><img src=\"" 
+				+ m_images_dir + "show_all_icon.png\" /></button></div></td>";
+		String show_all_text = "<td><div class=\"center\">" + "Komplett" + "</div></td>";
 		
 		// Button 2
+		String sort_everything_button = "<td style=\"text-align:center;\"><div class=\"center\" id=\"sort_everything\">"
+				+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"sortCart(this,0)\"><img src=\"" 
+				+ m_images_dir + "filter_icon.png\" /></button></div></td>";
+		String sort_everything_text = "<td><div class=\"center\">" + "Sortieren" + "</div></td>";
+		
+		// Button 3
 		String upload_button = "";
 		String upload_text = "";
 		if (m_upload_list.size()>0) {
-			upload_button = "<td style=\"text-align:center;\"><div class=\"right\" id=\"upload_server\">"
+			upload_button = "<td style=\"text-align:center;\"><div class=\"center\" id=\"upload_server\">"
 					+ "<button type=\"button\" tabindex=\"-1\" onmouseup=\"uploadToServer(this)\"><img src=\"" 
 					+ m_images_dir + "upload2_icon.png\" /></button></div></td>";	
-			upload_text = "<td><div class=\"right\">" + "Upload" + "</div></td>";;
+			upload_text = "<td><div class=\"center\">" + "Upload" + "</div></td>";;
 		}
 
 		String atc_html_str = "ATC Code: " + atc_code + " [" + atc_class + "]";						
@@ -184,8 +200,8 @@ public class ComparisonCart implements java.io.Serializable {
 				+ "<body>"
 				+ "<div id=\"compare\">"
 				+ "<p style=\"font-size:0.85em; padding-left:0.4em;\">" + atc_html_str + "</p>"				
-				+ "<form><table class=\"container\"><tr>" + sort_everything_button + upload_button + "</tr>"
-				+ "<tr>" + sort_everything_text + upload_text + "</tr></table></form>"
+				+ "<form><table class=\"container\"><tr>" + show_all_button + sort_everything_button + upload_button + "</tr>"
+				+ "<tr>" + show_all_text + sort_everything_text + upload_text + "</tr></table></form>"
 				+ "<div>" + basket_html_str + "</div>"
 				+ "</div></body>"
 				+ "</html>";		
@@ -261,6 +277,46 @@ public class ComparisonCart implements java.io.Serializable {
 	}
 	
 	/**
+	 * Sorting according to package name (Präparatname)
+	 */
+	public int sortName(Article a1, Article a2) {
+		return (a1.getPackTitle())
+				.compareTo(a2.getPackTitle());
+	}
+		
+	/*
+	 * Sort according to "Stärke" (unit, dosierung)
+	 */
+	public int sortUnit(Article a1, Article a2) {
+		/*
+		return a1.getPackUnit()
+				.compareTo(a2.getPackUnit());
+		*/
+		return (new AlphanumComp().compare(a1.getPackUnit(), a2.getPackUnit()));
+	}
+	
+	/*
+	 * Sort according to package size (e.g. how many tablets, drops, etc.)
+	 */
+	public int sortSize(Article a1, Article a2) {
+		/*
+		return (Integer.valueOf(a1.getPackSize())
+				.compareTo(Integer.valueOf(a2.getPackSize())));
+		*/
+		String o1 = a1.getPackSize() + " " + a1.getPackGalen();
+		String o2 =  a2.getPackSize() + " " + a2.getPackGalen();
+		return (new AlphanumComp().compare(o1, o2));
+	}
+		
+	/**
+	 * Sorting according to price
+	 */
+	public int sortPrice(Article a1, Article a2) {
+		return Float.valueOf(a1.getExfactoryPriceAsFloat())
+				.compareTo(a2.getExfactoryPriceAsFloat());
+	}
+	
+	/**
 	 * Sorting according to Lieferant
 	 */
 	public int sortSupplier(Article a1, Article a2) {
@@ -295,56 +351,52 @@ public class ComparisonCart implements java.io.Serializable {
 		return (Integer.valueOf(a1.getItemsOnStock())
 				.compareTo(a2.getItemsOnStock()));
 	}
-		
-	/*
-	 * Sort according to "Stärke" (unit, dosierung)
+	
+	/**
+	 * Generic sorts
 	 */
-	public int sortUnit(Article a1, Article a2) {
-		/*
-		return a1.getPackUnit()
-				.compareTo(a2.getPackUnit());
-		*/
-		return (new AlphanumComp().compare(a1.getPackUnit(), a2.getPackUnit()));
+	public int sortFloats(float f1, float f2) {
+		return Float.valueOf(f1)
+				.compareTo(f2);
 	}
 	
-	/*
-	 * Sort according to package size (e.g. how many tablets, drops, etc.)
-	 */
-	public int sortSize(Article a1, Article a2) {
-		/*
-		return (Integer.valueOf(a1.getPackSize())
-				.compareTo(Integer.valueOf(a2.getPackSize())));
-		*/
-		String o1 = a1.getPackSize() + " " + a1.getPackGalen();
-		String o2 =  a2.getPackSize() + " " + a2.getPackGalen();
-		return (new AlphanumComp().compare(o1, o2));
+	public int sortInts(int i1, int i2) {
+		return Integer.valueOf(i1)
+				.compareTo(i2);
+	}
+	
+	public int sortStrings(String s1, String s2) {
+		return new AlphanumComp().compare(s1, s2);
 	}
 	
 	/**
-	 * Sorting according to price
+	 * Main sort function
+	 * @param type
+	 * @param sort
 	 */
-	public int sortPrice(Article a1, Article a2) {
-		return Float.valueOf(a1.getExfactoryPriceAsFloat())
-				.compareTo(a2.getExfactoryPriceAsFloat());
-	}
-		
-	/**
-	 * Sorting according to package name (Präparatname)
-	 */
-	public int sortName(Article a1, Article a2) {
-		return (a1.getPackTitle())
-				.compareTo(a2.getPackTitle());
-	}
-	
-	public void sortCart(int type) {
+	public void sortCart(int type, boolean sort) {
 		Set<Entry<String, Article>> set = m_comparison_basket.entrySet();
 		List<Entry<String, Article>> list_of_entries = new ArrayList<Entry<String, Article>>(set);
 
 		// Toggle state
-		button_state[type] = -button_state[type];
+		if (sort==true)
+			button_state[type] = -button_state[type];
 		final int state = button_state[type];
 		
-		// Sort...
+		/**
+		 * Types
+		 *  1: Artikel 
+		 *  2: Stärke
+		 *  3: Packung
+		 *  4: PharmaCode
+		 *  5: GTIN (EAN) 
+		 *  6: RBP
+		 *  7: PP
+		 *  8: Lieferant
+		 *  9: Lager
+		 * 10: kürz. Verfall
+		 */
+		
 		if (type==0) {
 			// Packungsname
 			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
@@ -367,7 +419,7 @@ public class ComparisonCart implements java.io.Serializable {
 				}
 			});
 		} else if (type==1) {
-			// Packungsname
+			// Packungsname (Artikel)
 			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
 				@Override
 				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
@@ -375,6 +427,58 @@ public class ComparisonCart implements java.io.Serializable {
 				}
 			});
 		} else if (type==2) {
+			// Packung / Unit
+			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
+				@Override
+				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
+					return state*sortUnit(a1.getValue(), a2.getValue());
+				}
+			});
+		} else if (type==3) {
+			// Stärke / Size
+			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
+				@Override
+				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
+					return state*sortSize(a1.getValue(), a2.getValue());
+				}
+			});
+
+		} else if (type==4) {
+			// Pharmacode
+			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
+				@Override
+				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
+					return state*sortStrings(a1.getValue().getPharmaCode(), 
+							a2.getValue().getPharmaCode());
+				}
+			});	
+		} else if (type==5) {			
+			// Eancode
+			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
+				@Override
+				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
+					return state*sortStrings(a1.getValue().getEanCode(), 
+							a2.getValue().getEanCode());
+				}
+			});				
+		} else if (type==6) {
+			// Rose Basis Preis
+			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
+				@Override
+				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
+					return state*sortPrice(a1.getValue(), a2.getValue());
+				}
+			});			
+		} else if (type==7) {
+			// Publikumspreis
+			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
+				@Override
+				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
+					return state*sortFloats(a1.getValue().getPublicPriceAsFloat(), 
+							a2.getValue().getPublicPriceAsFloat());
+				}
+			});						
+		} else if (type==8) {
 			// Hersteller / Lieferant
 			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
 				@Override
@@ -382,31 +486,7 @@ public class ComparisonCart implements java.io.Serializable {
 					return state*sortSupplier(a1.getValue(), a2.getValue());
 				}
 			});
-		} else if (type==3) {
-			// Unit
-			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
-				@Override
-				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
-					return state*sortUnit(a1.getValue(), a2.getValue());
-				}
-			});
-		} else if (type==4) {
-			// Packung / Size
-			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
-				@Override
-				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
-					return state*sortSize(a1.getValue(), a2.getValue());
-				}
-			});
-		} else if (type==5) {
-			// Preis
-			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
-				@Override
-				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
-					return state*sortPrice(a1.getValue(), a2.getValue());
-				}
-			});
-		} else if (type==6) {
+		} else if (type==9) {
 			// Lagerbestand / Stock
 			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
 				@Override
@@ -414,6 +494,14 @@ public class ComparisonCart implements java.io.Serializable {
 					return state*sortStock(a1.getValue(), a2.getValue());
 				}
 			});
+		} else if (type==10) {
+			// kürz. Verfall
+			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
+				@Override
+				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
+					return 0;
+				}
+			});		
 		}
 		
 		m_comparison_basket.clear();

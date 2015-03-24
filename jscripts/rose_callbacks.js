@@ -2,6 +2,10 @@ function sortCart(event,index) {
 	invokeJava("sort_cart", index);
 }
 
+function showAll(event) {
+	invokeJava("show_all", 0);
+}
+
 function uploadArticle(object) {
 	invokeJava("upload_article",object.id);
 }

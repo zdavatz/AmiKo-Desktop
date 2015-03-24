@@ -17,7 +17,7 @@ public class RoseSqlDb {
 	// private static final String KEY_GALEN = "galen";
 	// private static final String KEY_UNIT = "unit";
 	private static final String KEY_EAN = "eancode";
-	// private static final String KEY_PHARMA = "pharmacode";
+	private static final String KEY_PHARMA = "pharmacode";
 	private static final String KEY_ATC = "atc";
 	// private static final String KEY_THERAPY = "theracode";
 	// private static final String KEY_STOCK = "stock";
@@ -131,14 +131,15 @@ public class RoseSqlDb {
 		return list_of_articles;		
 	}
 	
-	public List<Article> searchEan(String eancode) {
+	public List<Article> searchEan(String code) {
 		List<Article> list_of_articles = new ArrayList<Article>();
 		
 		try {
 			m_stat = m_conn.createStatement();
 			String query = "select * from " + ROSE_DB_TABLE + " where " 
-					+ KEY_EAN + " like " + "'" + eancode + "%' or "
-					+ KEY_EAN + " like " + "'%;" + eancode + "%'";
+					+ KEY_EAN + " like " + "'" + code + "%' or "
+					+ KEY_EAN + " like " + "'%;" + code + "%' or "
+					+ KEY_PHARMA + " like " + "'" + code + "%'";
 			m_rs = m_stat.executeQuery(query);
 			while (m_rs.next()) {
 				list_of_articles.add(cursorToArticle(m_rs));
