@@ -32,24 +32,14 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.URL;
-import java.nio.channels.FileChannel;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.Observer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -357,11 +347,11 @@ public class UpdateDb {
 						while (!isCancelled() && (bytesRead = zin.read(buffer)) != -1) {
 							fos.write(buffer, 0, bytesRead);
 							totBytesRead += bytesRead;
-							percentCompleted = (int) (totBytesRead * 100 / unzippedSize);
+							percentCompleted = (int) (totBytesRead * 100.0f / unzippedSize);
 							if (percentCompleted > 100)
 								percentCompleted = 100;
 							setProgress(percentCompleted);
-							mDialog.setLabel("Unzipping " + file_being_unzipped + "... " + (int)(totBytesRead/1000.0) + "kB out of " + (int)(unzippedSize/1000.0) + "kB");
+							mDialog.setLabel("Unzipping " + file_being_unzipped + "... " + (int)(totBytesRead/1000.0f) + "kB out of " + (int)(unzippedSize/1000.0f) + "kB");
 						}
 						fos.close();
 						zin.close();					
@@ -459,6 +449,18 @@ public class UpdateDb {
 					m_sqldb.loadDB("de");	
 				}
 			} else {
+				mDialog.setOKButton("OK");
+                mDialog.dispose();
+				/*
+		        Timer timer = new Timer(2000, new ActionListener() {
+		            public void actionPerformed(ActionEvent e) {
+		                mDialog.setVisible(false);
+		                mDialog.dispose();
+		            }
+		        });
+		        timer.setRepeats(false);
+		        timer.start();
+				*/
 				notifyObserver("Quick update done!");
 			}
 		}

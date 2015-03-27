@@ -70,6 +70,7 @@ import javax.swing.filechooser.FileFilter;
 public class SettingsPage extends JDialog {
 
 	private static String UpdateID = "update";
+	private static String ComparisonID = "update-comp";
 	private static String LogoImageID = "logo";
 	private static String GLNCodeID = "glncode";
 	private static String HumanID = "ishuman";
@@ -123,15 +124,19 @@ public class SettingsPage extends JDialog {
 		
 		this.setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		
-		add(Box.createRigidArea(new Dimension(0, 10)));
-		
+		add(Box.createRigidArea(new Dimension(0, 10)));		
 		JPanel jplInnerPanel1 = globalAmiKoSettings();
 		this.add(jplInnerPanel1);
 		
-		add(Box.createRigidArea(new Dimension(0, 10)));
+		if (Utilities.appCustomization().equals("zurrose")) {
+			add(Box.createRigidArea(new Dimension(0, 10)));		
+			JPanel jplInnerPanel2 = comparisonSettings();
+			this.add(jplInnerPanel2);
+		}
 		
-		JPanel jplInnerPanel2 = shoppingBasketSettings();
-		this.add(jplInnerPanel2);
+		add(Box.createRigidArea(new Dimension(0, 10)));		
+		JPanel jplInnerPanel3 = shoppingBasketSettings();
+		this.add(jplInnerPanel3);
 		
 		add(Box.createRigidArea(new Dimension(0, 10)));
 		
@@ -141,7 +146,10 @@ public class SettingsPage extends JDialog {
 		// Centers the dialog
 		this.setLocationRelativeTo(null);
 		// Set size
-		this.setSize(512, 680);		
+		if (Utilities.appCustomization().equals("zurrose"))
+			this.setSize(512, 780);		
+		else
+			this.setSize(512, 680);
 		this.setResizable(false);
 		
 		this.addWindowListener(new WindowAdapter() {
@@ -184,16 +192,13 @@ public class SettingsPage extends JDialog {
 				new TitledBorder(m_rb.getString("data-update")),
 				new EmptyBorder(5,5,5,5)));		
 		
-		JCheckBox updateNeverCBox = new JCheckBox(m_rb.getString("manual"));
-		JCheckBox updateHourlyCBox = new JCheckBox(m_rb.getString("hourly"));
+		JCheckBox updateManualCBox = new JCheckBox(m_rb.getString("manual"));
 		JCheckBox updateDailyCBox = new JCheckBox(m_rb.getString("daily"));
 		JCheckBox updateWeeklyCBox = new JCheckBox(m_rb.getString("weekly"));
 		JCheckBox updateMonthlyCBox = new JCheckBox(m_rb.getString("monthly"));		
 		
 		// Add to buttongroup to ensure that only one box is selected at a time
-		bg.add(updateNeverCBox);
-		if (Utilities.appCustomization().equals("zurrose"))
-			bg.add(updateHourlyCBox);
+		bg.add(updateManualCBox);
 		bg.add(updateDailyCBox);
 		bg.add(updateWeeklyCBox);
 		bg.add(updateMonthlyCBox);
@@ -202,11 +207,8 @@ public class SettingsPage extends JDialog {
 		// Default: manual update
 		switch(mPrefs.getInt(UpdateID, 0)) {
 		case 0:
-			updateNeverCBox.setSelected(true);
-			break;
-		case 4:
-			updateHourlyCBox.setSelected(true);
-			break;			
+			updateManualCBox.setSelected(true);
+			break;		
 		case 1:
 			updateDailyCBox.setSelected(true);
 			break;				
@@ -220,18 +222,12 @@ public class SettingsPage extends JDialog {
 			break;
 		}
 		
-		updateNeverCBox.addItemListener(new ItemListener() {
+		updateManualCBox.addItemListener(new ItemListener() {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
 				mPrefs.putInt(UpdateID, 0);
 			}
 		});
-		updateHourlyCBox.addItemListener(new ItemListener() {
-			@Override
-			public void itemStateChanged(ItemEvent e) {
-				mPrefs.putInt(UpdateID, 4);
-			}
-		});	
 		updateDailyCBox.addItemListener(new ItemListener() {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
@@ -250,12 +246,84 @@ public class SettingsPage extends JDialog {
 				mPrefs.putInt(UpdateID, 3);
 			}
 		});
-		jPanel.add(updateNeverCBox);
-		if (Utilities.appCustomization().equals("zurrose"))
-			jPanel.add(updateHourlyCBox);
+		jPanel.add(updateManualCBox);
 		jPanel.add(updateDailyCBox);		
 		jPanel.add(updateWeeklyCBox);
 		jPanel.add(updateMonthlyCBox);
+		
+		return jPanel;
+	}
+	
+	protected JPanel comparisonSettings() {
+		JPanel jPanel = new JPanel();
+		jPanel.setLayout(new GridLayout(1, 4));
+		
+		ButtonGroup bg = new ButtonGroup();
+		
+		jPanel.setOpaque(false);
+		jPanel.setBorder(new CompoundBorder(
+				new TitledBorder(m_rb.getString("comp-update")),
+				new EmptyBorder(5,5,5,5)));		
+		
+		JCheckBox updateManualCBox = new JCheckBox(m_rb.getString("manual"));
+		JCheckBox updateHalfHourlyCBox = new JCheckBox(m_rb.getString("half-hourly"));
+		JCheckBox updateHourlyCBox = new JCheckBox(m_rb.getString("hourly"));	
+		JCheckBox updateHalfDailyCBox = new JCheckBox(m_rb.getString("half-daily"));
+		
+		// Add to buttongroup to ensure that only one box is selected at a time
+		bg.add(updateManualCBox);
+		bg.add(updateHalfHourlyCBox);
+		bg.add(updateHourlyCBox);
+		bg.add(updateHalfDailyCBox);
+
+		// Retrieve update frequency from preferences...
+		// Default: manual update
+		switch(mPrefs.getInt(ComparisonID, 0)) {
+		case 0:
+			updateManualCBox.setSelected(true);
+			break;
+		case 1:
+			updateHalfHourlyCBox.setSelected(true);
+			break;			
+		case 2:
+			updateHourlyCBox.setSelected(true);
+			break;			
+		case 3:
+			updateHalfDailyCBox.setSelected(true);
+			break;
+		default:
+			break;
+		}
+		
+		updateManualCBox.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				mPrefs.putInt(ComparisonID, 0);
+			}
+		});
+		updateHalfHourlyCBox.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				mPrefs.putInt(ComparisonID, 1);
+			}
+		});	
+		updateHourlyCBox.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				mPrefs.putInt(ComparisonID, 2);
+			}
+		});	
+		updateHalfDailyCBox.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				mPrefs.putInt(ComparisonID, 3);
+			}
+		});	
+		
+		jPanel.add(updateManualCBox);
+		jPanel.add(updateHalfHourlyCBox);		
+		jPanel.add(updateHourlyCBox);
+		jPanel.add(updateHalfDailyCBox);
 		
 		return jPanel;
 	}
@@ -396,7 +464,13 @@ public class SettingsPage extends JDialog {
 						if (!old_user_type.equals(new_user_type))
 							delete_shopping_carts();
 						return;
-					} 
+					} else {
+						// Innendienst identification
+						if (Utilities.appCustomization().equals("zurrose")) {
+							m_user = new User();
+							m_user.setGlnCode(mGLNCodeStr);
+						}
+					}
 				}
 				mTextFieldGLN.setBorder(new LineBorder(color_red, 5, false));
 				mTextFieldGLN.setBackground(color_red);

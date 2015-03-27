@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.prefs.Preferences;
 import java.util.Observer;
 import java.util.ResourceBundle;
 import java.util.Set;
@@ -32,6 +33,8 @@ public class ComparisonCart implements java.io.Serializable {
 
 	private static Observer m_observer;
 	
+	private static Preferences m_prefs = null;
+	
 	// Map of eancodes vs articles
 	private static Map<String, Article> m_comparison_basket = null;
 	// List of eancodes that will be uploaded...
@@ -45,13 +48,15 @@ public class ComparisonCart implements java.io.Serializable {
 	private String m_ep;
 	private String m_es;
 	
-	private static int button_state[] = new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+	private static int button_state[] = new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 	
 	public ComparisonCart() {
 		// Load javascripts
 		m_jscripts_str = FileOps.readFromFile(Constants.JS_FOLDER + "rose_callbacks.js");
 		// Load shopping cart css style sheet
 		m_css_str = "<style type=\"text/css\">" + FileOps.readFromFile(Constants.ROSE_SHEET) + "</style>";
+		// Prefs
+		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
 		// 
 		if (Utilities.appLanguage().equals("de"))
 			m_rb = ResourceBundle.getBundle("amiko_de_CH", new Locale("de", "CH"));
@@ -110,7 +115,7 @@ public class ComparisonCart implements java.io.Serializable {
 		String basket_html_str = "<table id=\"Warenkorb\" width=\"99%25\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">";
 
 		if (m_comparison_basket!=null && m_comparison_basket.size()>0) {			
-			// Artikel, Stärke, Packung, PC, GTIN (EAN), RBP, PP, Lieferant, Lager, kürz. Verfall
+			// Artikel, Stärke, Packung, PC, GTIN (EAN), RBP, PP, Lieferant, Lager, Likes, kürz. Verfall
 			String sort_name_button = 		"<button style=\"text-align:left;\"  onclick=\"sortCart(this,1)\"><b>Artikel</b></button>";		
 			String sort_unit_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,2)\"><b>Stärke</b></button>";	
 			String sort_size_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,3)\"><b>Packung</b></button>";					
@@ -120,6 +125,7 @@ public class ComparisonCart implements java.io.Serializable {
 			String sort_pu_price_button =   "<button style=\"text-align:right;\" onclick=\"sortCart(this,7)\"><b>PP</b></button>";
 			String sort_supplier_button = 	"<button style=\"text-align:left;\"  onclick=\"sortCart(this,8)\"><b>Lieferant</b></button>";		
 			String sort_stock_button = 		"<button style=\"text-align:right;\" onclick=\"sortCart(this,9)\"><b>Lager</b></button>";
+			String sort_likes_button =		"<button style=\"text-align:right;\" onclick=\"sortCart(this,10)\"><b>Likes</b></button>";
 			
 			basket_html_str += "<tr style=\"background-color:lightgray;\">"
 					+ "<td style=\"text-align:left; padding-bottom:8px;\" width=\"30%\">" + sort_name_button + "</td>"						
@@ -130,7 +136,8 @@ public class ComparisonCart implements java.io.Serializable {
 					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"5%\">" + sort_rb_price_button + "</td>"	
 					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"5%\">" + sort_pu_price_button + "</td>"	
 					+ "<td style=\"text-align:left; padding-bottom:8px;\" width=\"30%\">" + sort_supplier_button + "</td>"																								
-					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"8%\">" + sort_stock_button + "</td>"							
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"5%\">" + sort_stock_button + "</td>"
+					+ "<td style=\"text-align:right; padding-bottom:8px;\" width=\"5%\">" + sort_likes_button + "</td>"						
 					+ "<td style=\"text-align:center; padding-bottom:8px;\"; width=\"3%\"></td>"					
 					+ "</tr>";
 
@@ -158,7 +165,9 @@ public class ComparisonCart implements java.io.Serializable {
 						+ "<td style=\"text-align:right;\">" + String.format("%.2f",article.getExfactoryPriceAsFloat()) + "</td>"
 						+ "<td style=\"text-align:right;\">" + String.format("%.2f",article.getPublicPriceAsFloat()) + "</td>"	
 						+ "<td style=\"text-align:left;\">" + article.getSupplier() + "</td>"						
-						+ "<td style=\"text-align:right;\">" + article.getItemsOnStock() + "</td>";
+						+ "<td style=\"text-align:right;\">" + article.getItemsOnStock() + "</td>"
+						+ "<td style=\"text-align:right;\">" + article.getLikes() + "</td>";	
+				
 				if (m_upload_list.contains(ean_code))			
 					basket_html_str += "<td style=\"text-align:center;\"><img src=\"" + m_images_dir + "checkmark_icon_14.png\"></td>";						
 				else
@@ -218,7 +227,13 @@ public class ComparisonCart implements java.io.Serializable {
 			// Get time stamp
 			DateTime dT = new DateTime();
 			DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
-			String file_name = "rose_" + fmt.print(dT) + ".csv";			
+			// Generate user id
+			String gln_code = m_prefs.get("glncode", "1234567899999");
+			String id = "99999";
+			if (gln_code.length()==13)
+				id = gln_code.substring(8);
+			// Generate file name
+			String file_name = "rose_" + fmt.print(dT) + "_" + id +".csv";		
 			// Save m_upload_list to file
 			String local_dir = Utilities.appDataFolder() + "/rose/";
 			try {				
@@ -495,6 +510,14 @@ public class ComparisonCart implements java.io.Serializable {
 				}
 			});
 		} else if (type==10) {
+			// Likes
+			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
+				@Override
+				public int compare(Entry<String, Article> a1, Entry<String, Article> a2) {
+					return state*sortInts(a1.getValue().getLikes(), a2.getValue().getLikes());
+				}
+			});
+		} else if (type==11) {
 			// kürz. Verfall
 			Collections.sort(list_of_entries, new Comparator<Entry<String, Article>>() {
 				@Override

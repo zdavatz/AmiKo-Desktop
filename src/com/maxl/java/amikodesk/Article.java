@@ -54,6 +54,7 @@ public class Article implements java.io.Serializable {
 	private int draufgabe = 0;
 	private float cash_rebate = 0.0f; // [%]
 	private int onstock;
+	private int likes;
 	private int visible;
 	
 	public Article() {
@@ -532,6 +533,14 @@ public class Article implements java.io.Serializable {
 	
 	public int getItemsOnStock() {
 		return onstock;
+	}
+	
+	public void setLikes(int likes) {
+		this.likes = likes;
+	}
+	
+	public int getLikes() {
+		return likes;
 	}
 	
 	public void setAvailability(String availability) {

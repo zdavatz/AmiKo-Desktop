@@ -34,6 +34,8 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Shape;
 import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -190,6 +192,8 @@ public class AMiKoDesk {
 	private static MainSqlDb m_sqldb = null;
 	private static RoseSqlDb m_rosedb = null;
 	private static UpdateDb m_maindb_update = null;
+	private static boolean m_full_db_update = true;
+	private static boolean m_mutex_update = false;
 	private static InteractionsCart m_interactions_cart = null;
 	private static ShoppingCart m_shopping_cart = null;
 	private static ComparisonCart m_comparison_cart = null;
@@ -936,7 +940,7 @@ public class AMiKoDesk {
 				public Object invoke(JWebBrowser webBrowser, Object... args) {
 					String msg = args[0].toString().trim();
 					String row_key = args[1].toString().trim();
-					System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
+					// System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
 					//
 					if (m_curr_uistate.isInteractionsMode()) {
 						if (msg.equals("delete_all"))
@@ -952,6 +956,11 @@ public class AMiKoDesk {
 						} else if (msg.equals("show_all")) {
 							m_compare_show_all = !m_compare_show_all;
 							m_web_panel.updateComparisonCart();
+						} else if (msg.equals("pharma_code")) {
+							// Copy the clipboard
+							StringSelection stringSelection = new StringSelection (row_key);
+							Clipboard clpbrd = Toolkit.getDefaultToolkit ().getSystemClipboard ();
+							clpbrd.setContents (stringSelection, null);
 						} else if (msg.equals("upload_article")) {
 							m_comparison_cart.updateUploadList(row_key);
 							m_web_panel.updateComparisonCartHtml();
@@ -2860,14 +2869,19 @@ public class AMiKoDesk {
 		updatedb_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				String db_file = m_maindb_update.doIt(jframe, Utilities.appLanguage(), Utilities.appCustomization(), m_application_data_folder, true);
-				// ... and update time
-				DateTime dT = new DateTime();
-				m_prefs.put("updateTime", dT.now().toString());		
-				//
-				if (!db_file.isEmpty()) {
-					// Save db path (can't hurt)
-					WindowSaver.setDbPath(db_file);
+				if (m_mutex_update==false) {
+					m_mutex_update = true;
+					String db_file = m_maindb_update.doIt(jframe, Utilities.appLanguage(), Utilities.appCustomization(), m_application_data_folder, m_full_db_update);
+					// ... and update time
+					if (m_full_db_update==true) {
+						DateTime dT = new DateTime();
+						m_prefs.put("updateTime", dT.now().toString());		
+					}
+					//
+					if (!db_file.isEmpty()) {
+						// Save db path (can't hurt)
+						WindowSaver.setDbPath(db_file);
+					}
 				}
 			}
 		});
@@ -2895,6 +2909,9 @@ public class AMiKoDesk {
 			@Override
 			public void update(Observable o, Object arg) {
 				System.out.println(arg);
+				// Reset flag
+				m_full_db_update = true;
+				m_mutex_update = false;
 				// Refresh some stuff after update
 				loadAuthors();
 				m_emailer.loadMap();
@@ -2949,20 +2966,15 @@ public class AMiKoDesk {
 				startAppWithRegnr(but_regnr);
 		}
 
-		// Check if update is required and start update...
-		checkIfUpdateRequired(updatedb_item);
-
-		if (Utilities.appCustomization().equals("zurrose")) {
-			// Start timer
-			Timer global_timer = new Timer();
-			// Time checks all 2 minutes (120'000 milliseconds)
-			global_timer.scheduleAtFixedRate(new TimerTask() {
-				@Override
-				public void run() {
-					checkIfUpdateRequired(updatedb_item);
-				}
-			}, 2 * 60 * 1000, 2 * 60 * 1000);
-		}
+		// Start timer
+		Timer global_timer = new Timer();
+		// Time checks all 2 minutes (120'000 milliseconds)
+		global_timer.scheduleAtFixedRate(new TimerTask() {
+			@Override
+			public void run() {
+				checkIfUpdateRequired(updatedb_item);
+			}
+		}, 2 * 60 * 1000, 2 * 60 * 1000);
 	}
 
 	static int retrieveAipsSearchResults(boolean simple) {
@@ -3041,33 +3053,57 @@ public class AMiKoDesk {
 		Minutes diffMin = Minutes.minutesBetween(uT, dT);
 		// Do this only when the application is freshly installed
 		int timeDiff = diffMin.getMinutes();
+		/*
 		if (timeDiff == 0)
 			m_prefs.put("updateTime", dT.now().toString());
-
-		switch (m_prefs.getInt("update", 0)) {
+		*/		
+		// First check if everything needs to be updated...
+		switch(m_prefs.getInt("update", 0)) {
 		case 0: // Manual
-			break;
-		case 4: // Hourly
-			if (timeDiff > 60) {
-				// Download files
-				update_item.doClick();
-			}
+			// do nothing
 			break;
 		case 1: // Daily
 			if (timeDiff > 60 * 24) {
-				// Download files
+				m_full_db_update = true;
 				update_item.doClick();
 			}
 			break;
 		case 2: // Weekly
 			if (timeDiff > 60 * 24 * 7) {
-				// Download files
+				m_full_db_update = true;
 				update_item.doClick();
 			}
 			break;
 		case 3: // Monthly
 			if (timeDiff > 60 * 24 * 30) {
-				// Download files
+				m_full_db_update = true;
+				update_item.doClick();
+			}
+			break;
+		default:
+			break;
+		}
+		
+		// else proceed with the Preisvergleich-only update
+		switch(m_prefs.getInt("update-comp", 0)) {
+		case 0: // Manual
+			// do nothing
+			break;
+		case 1: // Half-hourly
+			if (timeDiff % 30 == 0) {
+				m_full_db_update = false;
+				update_item.doClick();
+			}
+			break;
+		case 2: // Hourly
+			if (timeDiff % 60 == 0) {
+				m_full_db_update = false;
+				update_item.doClick();
+			}
+			break;
+		case 3: // Half-daily
+			if (timeDiff % (4 * 60) == 0) {
+				m_full_db_update = false;
 				update_item.doClick();
 			}
 			break;

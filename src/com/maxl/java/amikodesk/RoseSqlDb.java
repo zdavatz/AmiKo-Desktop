@@ -21,6 +21,7 @@ public class RoseSqlDb {
 	private static final String KEY_ATC = "atc";
 	// private static final String KEY_THERAPY = "theracode";
 	// private static final String KEY_STOCK = "stock";
+	// private static final String KEY_LIKES = "likes";
 	// private static final String KEY_PRICE = "price";
 	// private static final String KEY_AVAIL = "availability";
 	private static final String KEY_SUPPLIER = "supplier";
@@ -204,6 +205,7 @@ public class RoseSqlDb {
 			article.setExfactoryPrice(result.getString(11));// KEY_PRICE			
 			article.setAvailability(result.getString(12));	// KEY_AVAIL
 			article.setSupplier(result.getString(13));		// KEY_SUPPLIER
+			article.setLikes(result.getInt(14));			// KEY_LIKES		
 		} catch (SQLException e) {
 			System.err.println(">> RoseSqlDb: SQLException in cursorToArticle");
 		}
