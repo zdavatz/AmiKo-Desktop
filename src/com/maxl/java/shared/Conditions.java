@@ -3,7 +3,6 @@ package com.maxl.java.shared;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.ObjectStreamClass;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

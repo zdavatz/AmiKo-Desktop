@@ -34,8 +34,6 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.prefs.Preferences;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Entities.EscapeMode;

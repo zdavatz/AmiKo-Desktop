@@ -341,7 +341,7 @@ public class UpdateDb {
 						// Zip file inputstream
 						InputStream zin = zipFile.getInputStream(zipEntry);
 						// Copy data from ZipEntry to file
-						unzippedPath = dataFolder + "\\" + zipEntry.getName();					
+						unzippedPath = dataFolder + "\\" + zipEntry.getName();		
 						FileOutputStream fos = new FileOutputStream( /*unzippedFile*/ unzippedPath);
 						totBytesRead = 0;
 						while (!isCancelled() && (bytesRead = zin.read(buffer)) != -1) {
@@ -351,7 +351,10 @@ public class UpdateDb {
 							if (percentCompleted > 100)
 								percentCompleted = 100;
 							setProgress(percentCompleted);
-							mDialog.setLabel("Unzipping " + file_being_unzipped + "... " + (int)(totBytesRead/1000.0f) + "kB out of " + (int)(unzippedSize/1000.0f) + "kB");
+							if (totBytesRead>1000)
+								mDialog.setLabel("Unzipping " + file_being_unzipped + "... " + (int)(totBytesRead/1000.0f) + "kB out of " + (int)(unzippedSize/1000.0f) + "kB");
+							else
+								mDialog.setLabel("Unzipping " + file_being_unzipped + "... " + (int)(totBytesRead) + "bytes out of " + (int)(unzippedSize) + "bytes");
 						}
 						fos.close();
 						zin.close();					

@@ -2674,10 +2674,7 @@ public class AMiKoDesk {
 						public void run() {
 							m_start_time = System.currentTimeMillis();
 							// Set right panel title
-							String updateTime = m_prefs.get("updateTime", "nie");
-							DateTime uT = new DateTime(updateTime);
-							DateTimeFormatter fmt = DateTimeFormat.forPattern("dd-MM-yyyy HH:mm:ss");
-							m_web_panel.setTitle(m_rb.getString("priceComp") + " (aktualisiert am " + fmt.print(uT) + ")");
+							m_web_panel.setTitle(getTitle("priceComp"));	
 							if (med_index >= 0) {
 								if (med_id != null && med_index < med_id.size()) {
 									Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
@@ -2927,6 +2924,8 @@ public class AMiKoDesk {
 						m_web_panel.saveShoppingCartWithIndex(index);
 					m_web_panel.updateShoppingHtml();
 				}
+				if (m_curr_uistate.isComparisonMode())
+					m_web_panel.setTitle(getTitle("priceComp"));
 			}
 		});
 
@@ -2949,14 +2948,14 @@ public class AMiKoDesk {
 			@Override
 			public void update(Observable o, Object arg) {
 				System.out.println(arg);
+				m_web_panel.setTitle(getTitle("priceComp"));
 				m_comparison_cart.clearUploadList();
-				m_web_panel.updateComparisonCartHtml();
+				m_web_panel.updateComparisonCartHtml();			
 				new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization()).UploadDialog((String)arg);
 			}			
 		});	
 		
-		// If command line options are provided start app with a particular
-		// title or eancode
+		// If command line options are provided start app with a particular title or eancode
 		if (commandLineOptionsProvided()) {
 			if (!CML_OPT_TITLE.isEmpty())
 				startAppWithTitle(but_title);
@@ -2977,6 +2976,14 @@ public class AMiKoDesk {
 		}, 2 * 60 * 1000, 2 * 60 * 1000);
 	}
 
+	static String getTitle(String key) {
+		String updateTime = m_prefs.get("updateTime", "nie");
+		DateTime uT = new DateTime(updateTime);
+		DateTimeFormatter fmt = DateTimeFormat.forPattern("dd-MM-yyyy HH:mm:ss");
+		String title = m_rb.getString(key) + " (aktualisiert am " + fmt.print(uT) + ")";
+		return title;
+	}
+	
 	static int retrieveAipsSearchResults(boolean simple) {
 		switch (m_curr_uistate.getQueryType()) {
 		case 0:

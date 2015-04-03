@@ -27,12 +27,8 @@ import org.joda.time.format.DateTimeFormatter;
 
 public class ComparisonCart implements java.io.Serializable {
 
-	private static ResourceBundle m_rb = ResourceBundle.getBundle("amiko_de_CH", new Locale("de", "CH"));
-
 	private static String m_images_dir = System.getProperty("user.dir") + "/images/";	
-
-	private static Observer m_observer;
-	
+	private static Observer m_observer;	
 	private static Preferences m_prefs = null;
 	
 	// Map of eancodes vs articles
@@ -57,11 +53,6 @@ public class ComparisonCart implements java.io.Serializable {
 		m_css_str = "<style type=\"text/css\">" + FileOps.readFromFile(Constants.ROSE_SHEET) + "</style>";
 		// Prefs
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
-		// 
-		if (Utilities.appLanguage().equals("de"))
-			m_rb = ResourceBundle.getBundle("amiko_de_CH", new Locale("de", "CH"));
-		else if (Utilities.appLanguage().equals("fr"))
-			m_rb = ResourceBundle.getBundle("amiko_fr_CH", new Locale("fr", "CH"));	
 		// 
 		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\access_rose.ami.ser");
 		if (encrypted_msg==null) {		
