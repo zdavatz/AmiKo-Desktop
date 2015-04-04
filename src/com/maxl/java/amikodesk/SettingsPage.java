@@ -126,6 +126,9 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		String title = "";
 		String fname = "";
 		String lname = "";
+		String name1 = "";
+		String name2 = "";
+		String name3 = "";
 		String street = "";
 		String zip = "";
 		String city = "";
@@ -162,16 +165,15 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		JTextField aTextFieldTitle = null;
 		JTextField aTextFieldFName = null;
 		JTextField aTextFieldLName = null;
+		JTextField aTextFieldName1 = null;
+		JTextField aTextFieldName2 = null;
+		JTextField aTextFieldName3 = null;		
 		JTextField aTextFieldAddress = null;
 		JTextField aTextFieldZip = null;
 		JTextField aTextFieldCity = null;
 		JTextField aTextFieldEmail = null;
 		JTextField aTextFieldPhone = null;
-		
-		JLabel aLabelTitle = null;
-		JLabel aLabelFName = null;
-		JLabel aLabelLName = null;
-		
+				
 		private int pad_left = 8;
 		
 		private String m_address_type = "";
@@ -201,8 +203,8 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 	        	gridwidth is REMAINDER for fields, 1 for labels
 			*/
 			
-			// -----------------------------
-			aLabelTitle = new JLabel("Title");
+			// -----------------------------------------------------------
+			JLabel aLabelTitle = new JLabel("Title");
 			aLabelTitle.setHorizontalAlignment(JLabel.LEFT);
 			gbc = getGbc(0,0, 0.1,1.0, GridBagConstraints.HORIZONTAL);
 			gbc.gridwidth = 1;
@@ -213,29 +215,44 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			gbc = getGbc(1,0 ,1.0,1.0, GridBagConstraints.HORIZONTAL);	
 			gbc.gridwidth = 1;
 			this.add(aTextFieldTitle, gbc);
-		
-			// -----------------------------
-			if (!address_type.equals("S")) {
-				final JCheckBox jcheckAddress = new JCheckBox("Lieferadresse übernehmen");
-				jcheckAddress.setBorder(new EmptyBorder(new Insets(1,1,1,1)));
-				jcheckAddress.setHorizontalAlignment(JLabel.LEFT);
-				gbc = getGbc(4,0, 0.1,1.0, GridBagConstraints.HORIZONTAL);
-				gbc.gridwidth = 2;
-				this.add(jcheckAddress, gbc);
-				
-				jcheckAddress.addItemListener(new ItemListener() {
-					@Override
-					public void itemStateChanged(ItemEvent e) {
-						if (jcheckAddress.isSelected())
-							copyDataFromShippingPanel();
-						else
-							clearData();
-					}
-				});
-			}
 			
-			// -----------------------------
-			aLabelFName = new JLabel("Vorname");
+			aTextFieldTitle.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validateText(aTextFieldTitle);
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+			
+			JLabel aLabelName1 = new JLabel("Firma");
+			aLabelName1.setHorizontalAlignment(JLabel.LEFT);
+			aLabelName1.setBorder(new EmptyBorder(0,pad_left,0,0));	
+			gbc = getGbc(2,0, 0.1,1.0, GridBagConstraints.HORIZONTAL);
+			gbc.gridwidth = 1;
+			this.add(aLabelName1, gbc);
+			
+			aTextFieldName1 = new JTextField("");
+			aTextFieldName1.setBorder(new CompoundBorder(new LineBorder(color_white), new EmptyBorder(0,0,0,0)));			
+			gbc = getGbc(3,0 ,1.0,1.0, GridBagConstraints.HORIZONTAL);		
+			gbc.gridwidth = 3;
+			this.add(aTextFieldName1, gbc);
+
+			aTextFieldName1.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validateText(aTextFieldName1);
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+			
+			// -----------------------------------------------------------
+			JLabel aLabelFName = new JLabel("Vorname");
 			aLabelFName.setHorizontalAlignment(JLabel.LEFT);
 			gbc = getGbc(0,1, 0.1,1.0, GridBagConstraints.HORIZONTAL);
 			gbc.gridwidth = 1;
@@ -244,62 +261,165 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			aTextFieldFName = new JTextField("");
 			aTextFieldFName.setBorder(new CompoundBorder(new LineBorder(color_white), new EmptyBorder(0,0,0,0)));			
 			gbc = getGbc(1,1 ,1.0,1.0, GridBagConstraints.HORIZONTAL);		
-			gbc.gridwidth = 2;
+			gbc.gridwidth = 1;
 			this.add(aTextFieldFName, gbc);
 
-			aLabelLName = new JLabel("Name");
+			aTextFieldFName.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validateText(aTextFieldFName);
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+			
+			JLabel aLabelLName = new JLabel("Name");
 			aLabelLName.setHorizontalAlignment(JLabel.LEFT);	
 			aLabelLName.setBorder(new EmptyBorder(0,pad_left,0,0));		
-			gbc = getGbc(3,1, 0.1,1.0, GridBagConstraints.HORIZONTAL);
+			gbc = getGbc(2,1, 0.1,1.0, GridBagConstraints.HORIZONTAL);
 			gbc.gridwidth = 1;
 			this.add(aLabelLName, gbc);
 			
 			aTextFieldLName = new JTextField("");
 			aTextFieldLName.setBorder(new CompoundBorder(new LineBorder(color_white), new EmptyBorder(0,0,0,0)));			
-			gbc = getGbc(4,1 ,1.0,1.0, GridBagConstraints.HORIZONTAL);	
-			gbc.gridwidth = 2;
+			gbc = getGbc(3,1 ,1.0,1.0, GridBagConstraints.HORIZONTAL);	
+			gbc.gridwidth = 3;
 			this.add(aTextFieldLName, gbc);
 			
-			// -----------------------------
+			aTextFieldLName.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validateText(aTextFieldLName);
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+			
+			// -----------------------------------------------------------		
+			JLabel aLabelName2 = new JLabel("Name 2");
+			aLabelName2.setHorizontalAlignment(JLabel.LEFT);
+			gbc = getGbc(0,2, 0.1,1.0, GridBagConstraints.HORIZONTAL);
+			gbc.gridwidth = 1;
+			this.add(aLabelName2, gbc);
+			
+			aTextFieldName2 = new JTextField("");
+			aTextFieldName2.setBorder(new CompoundBorder(new LineBorder(color_white), new EmptyBorder(0,0,0,0)));			
+			gbc = getGbc(1,2 ,1.0,1.0, GridBagConstraints.HORIZONTAL);		
+			gbc.gridwidth = 1;
+			this.add(aTextFieldName2, gbc);
+
+			aTextFieldName2.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validateText(aTextFieldName2);
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+			
+			JLabel aLabelName3 = new JLabel("Name 3");
+			aLabelName3.setHorizontalAlignment(JLabel.LEFT);
+			aLabelName3.setBorder(new EmptyBorder(0,pad_left,0,0));	
+			gbc = getGbc(2,2, 0.1,1.0, GridBagConstraints.HORIZONTAL);
+			gbc.gridwidth = 1;
+			this.add(aLabelName3, gbc);
+			
+			aTextFieldName3 = new JTextField("");
+			aTextFieldName3.setBorder(new CompoundBorder(new LineBorder(color_white), new EmptyBorder(0,0,0,0)));			
+			gbc = getGbc(3,2 ,1.0,1.0, GridBagConstraints.HORIZONTAL);		
+			gbc.gridwidth = 3;
+			this.add(aTextFieldName3, gbc);
+
+			aTextFieldName3.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validateText(aTextFieldName3);
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+			
+			// -----------------------------------------------------------
 			JLabel jlabelAddress = new JLabel("Strasse");
 			jlabelAddress.setHorizontalAlignment(JLabel.LEFT);
-			gbc = getGbc(0,2, 0.1,1.0, GridBagConstraints.HORIZONTAL);
+			gbc = getGbc(0,3, 0.1,1.0, GridBagConstraints.HORIZONTAL);
 			gbc.gridwidth = 1;			
 			this.add(jlabelAddress, gbc);
 			
 			aTextFieldAddress = new JTextField("");
 			aTextFieldAddress.setBorder(new CompoundBorder(new LineBorder(color_white), new EmptyBorder(0,0,0,0)));			
-			gbc = getGbc(1,2 ,1.0,1.0, GridBagConstraints.HORIZONTAL);		
-			gbc.gridwidth = 5;
+			gbc = getGbc(1,3 ,1.0,1.0, GridBagConstraints.HORIZONTAL);		
+			gbc.gridwidth = 1;
 			this.add(aTextFieldAddress, gbc);
 			
-			// -----------------------------
+			aTextFieldAddress.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validateText(aTextFieldAddress);
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+
 			JLabel jlabelZip = new JLabel("PLZ");
 			jlabelZip.setHorizontalAlignment(JLabel.LEFT);
-			gbc = getGbc(0,3, 0.1,1.0, GridBagConstraints.HORIZONTAL);
+			jlabelZip.setBorder(new EmptyBorder(0,pad_left,0,0));	
+			gbc = getGbc(2,3, 0.1,1.0, GridBagConstraints.HORIZONTAL);
 			gbc.gridwidth = 1;			
 			this.add(jlabelZip, gbc);
 			
 			aTextFieldZip = new JTextField("");
 			aTextFieldZip.setBorder(new CompoundBorder(new LineBorder(color_white), new EmptyBorder(0,0,0,0)));			
-			gbc = getGbc(1,3 ,1.0,1.0, GridBagConstraints.HORIZONTAL);	
-			gbc.gridwidth = 2;
+			gbc = getGbc(3,3 ,1.0,1.0, GridBagConstraints.HORIZONTAL);	
+			gbc.gridwidth = 1;
 			this.add(aTextFieldZip, gbc);
 
+			aTextFieldZip.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validateZip(aTextFieldZip.getText());
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+			
 			JLabel jlabelCity = new JLabel("Ort");
 			jlabelCity.setBorder(new EmptyBorder(0,pad_left,0,0));		
 			jlabelCity.setHorizontalAlignment(JLabel.LEFT);			
-			gbc = getGbc(3,3, 0.1,1.0, GridBagConstraints.HORIZONTAL);
+			gbc = getGbc(4,3, 0.1,1.0, GridBagConstraints.HORIZONTAL);
 			gbc.gridwidth = 1;			
 			this.add(jlabelCity, gbc);
 			
 			aTextFieldCity = new JTextField("");
 			aTextFieldCity.setBorder(new CompoundBorder(new LineBorder(color_white), new EmptyBorder(0,0,0,0)));				
-			gbc = getGbc(4,3 ,1.0,1.0, GridBagConstraints.HORIZONTAL);	
-			gbc.gridwidth = 2;
+			gbc = getGbc(5,3, 1.0,1.0, GridBagConstraints.HORIZONTAL);	
+			gbc.gridwidth = 1;
 			this.add(aTextFieldCity, gbc);
 			
-			// -----------------------------
+			aTextFieldCity.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validateText(aTextFieldCity);
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+			
+			// -----------------------------------------------------------
 			JLabel jlabelPhone = new JLabel("Telefon");
 			jlabelPhone.setHorizontalAlignment(JLabel.LEFT);
 			gbc = getGbc(0,4, 0.1,1.0, GridBagConstraints.HORIZONTAL);
@@ -309,72 +429,185 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			aTextFieldPhone = new JTextField("");
 			aTextFieldPhone.setBorder(new CompoundBorder(new LineBorder(color_white), new EmptyBorder(0,0,0,0)));			
 			gbc = getGbc(1,4 ,1.0,1.0, GridBagConstraints.HORIZONTAL);	
-			gbc.gridwidth = 2;
+			gbc.gridwidth = 1;
 			this.add(aTextFieldPhone, gbc);
 
+			aTextFieldPhone.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validatePhone(aTextFieldPhone.getText());
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+			
 			JLabel jlabelEmail = new JLabel("Email");
 			jlabelEmail.setHorizontalAlignment(JLabel.LEFT);
 			jlabelEmail.setBorder(new EmptyBorder(0,pad_left,0,0));		
-			gbc = getGbc(3,4, 0.1,1.0, GridBagConstraints.HORIZONTAL);
+			gbc = getGbc(2,4, 0.1,1.0, GridBagConstraints.HORIZONTAL);
 			gbc.gridwidth = 1;			
 			this.add(jlabelEmail, gbc);
 			
 			aTextFieldEmail = new JTextField("");
 			aTextFieldEmail.setBorder(new CompoundBorder(new LineBorder(color_white), new EmptyBorder(0,0,0,0)));			
-			gbc = getGbc(4,4 ,1.0,1.0, GridBagConstraints.HORIZONTAL);	
-			gbc.gridwidth = 2;
+			gbc = getGbc(3,4 ,1.0,1.0, GridBagConstraints.HORIZONTAL);	
+			gbc.gridwidth = 3;
 			this.add(aTextFieldEmail, gbc);
-		}
-		
-		void setNameLabels(String title, String fname, String lname) {
-			aLabelTitle.setText(title);
-			aLabelFName.setText(fname);
-			aLabelLName.setText(lname);
-		}
-		
-		void setDataWithUserInfo(User u, boolean is_human) {
-			if (is_human) {
-				aTextFieldTitle.setText(u.title);
-				aTextFieldFName.setText(u.first_name);
-				aTextFieldLName.setText(u.last_name);
-			} else {
-				aTextFieldTitle.setText(u.name1);
-				aTextFieldFName.setText(u.name2);
-				aTextFieldLName.setText(u.name3);
+			
+			aTextFieldEmail.addKeyListener(new KeyListener() { 
+				@Override 
+				public void keyPressed(KeyEvent keyEvent) { }
+				@Override
+				public void keyReleased(KeyEvent keyEvent) {
+					validateEmail(aTextFieldEmail.getText());
+				}
+				@Override 
+				public void keyTyped(KeyEvent keyEvent) { }
+			});
+
+			/*
+			// -----------------------------------------------------------
+			if (!address_type.equals("S")) {
+				final JCheckBox jcheckAddress = new JCheckBox("Lieferadresse übernehmen");
+				jcheckAddress.setBorder(new EmptyBorder(new Insets(1,1,1,1)));
+				jcheckAddress.setHorizontalAlignment(JLabel.LEFT);
+				gbc = getGbc(5,4, 0.1,1.0, GridBagConstraints.HORIZONTAL);
+				gbc.gridwidth = 1;
+				this.add(jcheckAddress, gbc);
+				
+				jcheckAddress.addItemListener(new ItemListener() {
+					@Override
+					public void itemStateChanged(ItemEvent e) {
+						if (jcheckAddress.isSelected()) {
+							copyDataFromShippingPanel();
+							revalidate();
+							repaint();
+						} else
+							clearData();
+					}
+				});
 			}
+			*/
+		}
+		
+		boolean validateText(JTextField textField) {
+			if (textField.getText().matches("^[âôéèàöÖäÄüÜß'.a-zA-Z0-9 \\-]{1,}$")) {
+				textField.setBorder(new LineBorder(color_white, 1, false));
+				textField.setBackground(color_white);				
+				return true;
+			} else {
+				textField.setBorder(new LineBorder(color_red, 1, false));
+				textField.setBackground(color_red);				
+				return false;
+			}
+		}
+		
+		boolean validateZip(String zipStr) {
+			if (zipStr.matches("[\\d]{2,6}")) {
+				aTextFieldZip.setBorder(new LineBorder(color_white, 1, false));
+				aTextFieldZip.setBackground(color_white);
+				return true;
+			} else {
+				aTextFieldZip.setBorder(new LineBorder(color_red, 1, false));
+				aTextFieldZip.setBackground(color_red);
+				return false;
+			}
+		}
+		
+		boolean validatePhone(String phoneStr) {
+			if (phoneStr.matches("(?:[0-9] ?){6,14}[0-9]")) {
+				aTextFieldPhone.setBorder(new LineBorder(color_white, 1, false));
+				aTextFieldPhone.setBackground(color_white);
+				return true;
+			} else {
+				aTextFieldPhone.setBorder(new LineBorder(color_red, 1, false));
+				aTextFieldPhone.setBackground(color_red);
+				return false;
+			}
+		}
+
+		boolean validateEmail(String emailStr) {
+			if (emailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
+				aTextFieldEmail.setBorder(new LineBorder(color_white, 1, false));
+				aTextFieldEmail.setBackground(color_white);  
+				return true;
+			} else {
+				aTextFieldEmail.setBorder(new LineBorder(color_red, 1, false));
+				aTextFieldEmail.setBackground(color_red); 
+				return false;
+			}
+		}
+		
+		void validateFields() {
+			validateText(aTextFieldTitle);
+			validateText(aTextFieldFName);
+			validateText(aTextFieldLName);
+			validateText(aTextFieldName1);
+			validateText(aTextFieldName2);
+			validateText(aTextFieldName3);			
+			validateText(aTextFieldAddress);
+			validateText(aTextFieldCity);
+			validateZip(aTextFieldZip.getText());
+			validatePhone(aTextFieldPhone.getText());
+			validateEmail(aTextFieldEmail.getText());
+		}
+		
+		void setDataWithUserInfo(User u) {
+			aTextFieldTitle.setText(u.title);
+			aTextFieldFName.setText(u.first_name);
+			aTextFieldLName.setText(u.last_name);
+			aTextFieldName1.setText(u.name1);
+			aTextFieldName2.setText(u.name2);
+			aTextFieldName3.setText(u.name3);
 			aTextFieldAddress.setText(u.street);
 			aTextFieldZip.setText(u.zip);
 			aTextFieldCity.setText(u.city);
 			aTextFieldPhone.setText(u.phone);
-			aTextFieldEmail.setText(u.email);
+			// Validate
+			validateFields();
 		}
 		
 		void clearData() {
 			aTextFieldTitle.setText("");
 			aTextFieldFName.setText("");
 			aTextFieldLName.setText("");
+			aTextFieldName1.setText("");
+			aTextFieldName2.setText("");
+			aTextFieldName3.setText("");
 			aTextFieldAddress.setText("");
 			aTextFieldZip.setText("");
 			aTextFieldCity.setText("");
 			aTextFieldPhone.setText("");
 			aTextFieldEmail.setText("");
+			// Validate
+			validateFields();
 		}
 		
 		void copyDataFromShippingPanel() {
 			aTextFieldTitle.setText(mShippingAddress.aTextFieldTitle.getText());
 			aTextFieldFName.setText(mShippingAddress.aTextFieldFName.getText());
 			aTextFieldLName.setText(mShippingAddress.aTextFieldLName.getText());
+			aTextFieldName1.setText(mShippingAddress.aTextFieldName1.getText());
+			aTextFieldName2.setText(mShippingAddress.aTextFieldName2.getText());
+			aTextFieldName3.setText(mShippingAddress.aTextFieldName3.getText());			
 			aTextFieldAddress.setText(mShippingAddress.aTextFieldAddress.getText());
 			aTextFieldZip.setText(mShippingAddress.aTextFieldZip.getText());
 			aTextFieldCity.setText(mShippingAddress.aTextFieldCity.getText());
 			aTextFieldPhone.setText(mShippingAddress.aTextFieldPhone.getText());
 			aTextFieldEmail.setText(mShippingAddress.aTextFieldEmail.getText());
+			// Validate
+			validateFields();
 		}
 		void storeDataToPreferences(boolean is_human) {
 			Address addr = new Address();
 			addr.title = aTextFieldTitle.getText();
 			addr.fname = aTextFieldFName.getText();
 			addr.lname = aTextFieldLName.getText();
+			addr.name1 = aTextFieldName1.getText();
+			addr.name2 = aTextFieldName2.getText();
+			addr.name3 = aTextFieldName3.getText();			
 			addr.street = aTextFieldAddress.getText();
 			addr.zip = aTextFieldZip.getText();
 			addr.city = aTextFieldCity.getText();
@@ -412,17 +645,19 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			aTextFieldTitle.setText(addr.title);
 			aTextFieldFName.setText(addr.fname);
 			aTextFieldLName.setText(addr.lname);
+			if (addr.name1!=null)
+				aTextFieldName1.setText(addr.name1);
+			if (addr.name2!=null)			
+				aTextFieldName2.setText(addr.name2);
+			if (addr.name3!=null)
+				aTextFieldName3.setText(addr.name3);			
 			aTextFieldAddress.setText(addr.street);
 			aTextFieldZip.setText(addr.zip);
 			aTextFieldCity.setText(addr.city);
 			aTextFieldPhone.setText(addr.phone);
 			aTextFieldEmail.setText(addr.email);
-			// Set labels
-			if (!addr.isHuman) {
-				aLabelTitle.setText("Name 1");
-				aLabelFName.setText("Name 2");
-				aLabelLName.setText("Name 3");
-			}
+			// Validate
+			validateFields();
 		}
 	}
 	
@@ -474,7 +709,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		this.setLocationRelativeTo(null);
 		// Set size
 		if (Utilities.appCustomization().equals("ywesee"))	// IBSA
-			this.setSize(600, 800);		
+			this.setSize(640, 800);		
 		else
 			this.setSize(512, 680);
 		this.setResizable(false);
@@ -979,6 +1214,9 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 	protected JPanel shoppingBasketSettings2() {
 		String GLNCodeStr = mPrefs.get(GLNCodeID, "7610000000000");
 		
+		final JCheckBox jcheckAddress1 = new JCheckBox("Rechnungsadresse = Lieferadresse");
+		final JCheckBox jcheckAddress2 = new JCheckBox("Bestelladresse = Lieferadresse");
+		
 		JPanel jPanel = new JPanel();
 		jPanel.setLayout(new GridBagLayout());
 
@@ -1018,6 +1256,10 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 					mPrefs.put(GLNCodeID, mGLNCodeStr);
 					m_user = m_user_map.get(mGLNCodeStr+"S");
 					if (m_user!=null) {
+						//
+						jcheckAddress1.setSelected(false);
+						jcheckAddress2.setSelected(false);
+						//
 						m_user.is_human = userIsHuman(m_user.category);
 						if (m_user.is_human)
 							mPrefs.put(HumanID, "yes");	
@@ -1028,35 +1270,42 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 						mPrefs.put(TypeID, new_user_type);
 						mPrefs.putInt(UserID, 17);	// Default
 						
-						if (m_user.is_human) {
-							mShippingAddress.setNameLabels("Titel", "Vorname", "Name");
-							mBillingAddress.setNameLabels("Titel", "Vorname", "Name");
-							mOfficeAddress.setNameLabels("Titel", "Vorname", "Name");
-							System.out.println("Person: " + m_user.gln_code + " - " + m_user.category + ", " + m_user.title + ", " + m_user.first_name + ", " + m_user.last_name);
-						} else {
-							mShippingAddress.setNameLabels("Name 1", "Name 2", "Name 3");
-							mBillingAddress.setNameLabels("Name 1", "Name 2", "Name 3");
-							mOfficeAddress.setNameLabels("Name 1", "Name 2", "Name 3");						
-							System.out.println("Company: " + m_user.gln_code + " - " + m_user.category + ", " + m_user.name1 + ", " + m_user.name2 + ", " + m_user.name3);
-						}
-						
+						// Change color of GLN field to denote success
 						mTextFieldGLN.setBorder(new LineBorder(color_ok, 5, false));
-						mTextFieldGLN.setBackground(color_ok);						
-					
-						mShippingAddress.setDataWithUserInfo(m_user, m_user.is_human);
+						mTextFieldGLN.setBackground(color_ok);							
+						// If necessary change labels
+						if (m_user.is_human) {
+							System.out.println("Person: " + m_user.gln_code + " - " + m_user.category + ", " 
+									+ m_user.title + ", " + m_user.first_name + ", " + m_user.last_name);
+						} else {
+							System.out.println("Company: " + m_user.gln_code + " - " + m_user.category + ", " 
+									+ m_user.name1 + ", " + m_user.name2 + ", " + m_user.name3);
+						}									
+						// Set shipping address
+						mShippingAddress.setDataWithUserInfo(m_user);
+						// Set billing address (if contained in DB)
 						if (m_user_map.containsKey(mGLNCodeStr+"B")) {
 							m_user = m_user_map.get(mGLNCodeStr+"B");
 							if (m_user!=null) {
 								m_user.is_human = userIsHuman(m_user.category);
-								mBillingAddress.setDataWithUserInfo(m_user, m_user.is_human);
+								mBillingAddress.setDataWithUserInfo(m_user);
+							} else {
+								mBillingAddress.clearData();
 							}
-						} 
+						} else {
+							mBillingAddress.clearData();
+						}
+						// Set office address (if contained in DB)
 						if (m_user_map.containsKey(mGLNCodeStr+"O")) {
 							m_user = m_user_map.get(mGLNCodeStr+"O");							
 							if (m_user!=null) {							
 								m_user.is_human = userIsHuman(m_user.category);
-								mOfficeAddress.setDataWithUserInfo(m_user, m_user.is_human);							
+								mOfficeAddress.setDataWithUserInfo(m_user);							
+							} else {
+								mOfficeAddress.clearData();
 							}
+						} else {
+							mOfficeAddress.clearData();
 						}
 						
 						// If old user and new user do not match, delete ALL shopping carts
@@ -1070,6 +1319,10 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 							m_user.gln_code = mGLNCodeStr;
 						}
 					}
+				} else {
+					mShippingAddress.clearData();
+					mBillingAddress.clearData();
+					mOfficeAddress.clearData();
 				}
 			}
 			@Override 
@@ -1078,11 +1331,50 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			}
 		});
 		
+		jcheckAddress1.setSelected(false);
+		jcheckAddress1.setBorder(new EmptyBorder(new Insets(1,1,1,1)));
+		jcheckAddress1.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,1, 1.0,1.0, GridBagConstraints.HORIZONTAL);
+		gbc.gridwidth = 2;
+		jPanel.add(jcheckAddress1, gbc);
+		
+		jcheckAddress1.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				if (jcheckAddress1.isSelected()) {
+					mBillingAddress.copyDataFromShippingPanel();
+					revalidate();
+					repaint();
+				} else
+					mBillingAddress.clearData();
+			}
+		});
+		
+		jcheckAddress2.setSelected(false);	
+		jcheckAddress2.setBorder(new EmptyBorder(new Insets(1,1,1,1)));
+		jcheckAddress2.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,2, 1.0,1.0, GridBagConstraints.HORIZONTAL);
+		gbc.gridwidth = 2;
+		jPanel.add(jcheckAddress2, gbc);
+		
+		jcheckAddress2.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				if (jcheckAddress2.isSelected()) {
+					mOfficeAddress.copyDataFromShippingPanel();
+					revalidate();
+					repaint();
+				} else
+					mOfficeAddress.clearData();
+			}
+		});
+		
 		// -----------------------------
 		JLabel jlabelLogo = new JLabel("Logo");
 		jlabelLogo.setHorizontalAlignment(JLabel.LEFT);
 		jlabelLogo.setBorder(new EmptyBorder(0,8,0,0));			
-		gbc = getGbc(2,0, 0.1,1.0, GridBagConstraints.HORIZONTAL);	
+		gbc = getGbc(2,1, 0.1,1.0, GridBagConstraints.HORIZONTAL);	
+		gbc.gridwidth = 1;
 		jPanel.add(jlabelLogo, gbc);
 		
 		String logoImageStr = mPrefs.get(LogoImageID, Constants.IMG_FOLDER + "empty_logo.png");	
@@ -1100,6 +1392,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		mButtonLogo.setBorder(new CompoundBorder(
 				new LineBorder(color_white), new EmptyBorder(0,3,0,0)));	
 		gbc = getGbc(3,0, 3.0,1.0, GridBagConstraints.HORIZONTAL);		
+		gbc.gridheight = 3;
 		jPanel.add(mButtonLogo, gbc);
 		
 		mButtonLogo.addActionListener(new ActionListener() {
@@ -1110,21 +1403,21 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		});
 
 		// -----------------------------
-		gbc = getGbc(0,1, 1.0,1.0, GridBagConstraints.HORIZONTAL);		
+		gbc = getGbc(0,3, 1.0,1.0, GridBagConstraints.HORIZONTAL);		
 		gbc.gridwidth = 4;
 		mShippingAddress = new AddressPanel("S");
 		mShippingAddress.retrieveDataFromPreferences();
 		jPanel.add(mShippingAddress, gbc);
 
 		// -----------------------------
-		gbc = getGbc(0,2, 1.0,1.0, GridBagConstraints.HORIZONTAL);		
+		gbc = getGbc(0,4, 1.0,1.0, GridBagConstraints.HORIZONTAL);		
 		gbc.gridwidth = 4;		
 		mBillingAddress = new AddressPanel("B");
 		mBillingAddress.retrieveDataFromPreferences();		
 		jPanel.add(mBillingAddress, gbc);
 
 		// -----------------------------
-		gbc = getGbc(0,3, 1.0,1.0, GridBagConstraints.HORIZONTAL);				
+		gbc = getGbc(0,5, 1.0,1.0, GridBagConstraints.HORIZONTAL);				
 		gbc.gridwidth = 4;		
 		mOfficeAddress = new AddressPanel("O");
 		mOfficeAddress.retrieveDataFromPreferences();		
@@ -1141,7 +1434,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 	}
 	
 	private boolean userIsHuman(String category) {
-		return category.equals("arzt");
+		return category.toLowerCase().equals("arzt");
 	}
 	
 	private boolean validateAddress(JTextArea textArea) {
@@ -1189,7 +1482,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			return false;
 		}
 	}
-	
+		
 	private GridBagConstraints getGbc(int x, int y, double wx, double wy, int fill) {
 		GridBagConstraints gbc = new GridBagConstraints();
 
