@@ -1012,8 +1012,7 @@ public class AMiKoDesk {
 							}
 						} else if (msg.equals("load_cart")) {
 							if (row_key.equals("0.0")) {
-								// List all old shopping carts in the central
-								// pane
+								// List all old shopping carts in the central pane
 								SwingUtilities.invokeLater(new Runnable() {
 									@Override
 									public void run() {
@@ -1035,8 +1034,7 @@ public class AMiKoDesk {
 												}
 											}
 										}
-										// Zeno-style sorting of the old
-										// shopping carts
+										// Zeno-style sorting of the old shopping carts
 										Collections.reverse(list_of_carts);
 										m_curr_uistate.setUseMode("loadcart");
 										String[] file_str = list_of_carts.toArray(new String[list_of_carts.size()]);
@@ -1336,8 +1334,7 @@ public class AMiKoDesk {
 			// Update shopping cart for ean code
 			updateShoppingCartRow(ean_code, article);
 			// Update shopping cart table for assorted articles
-			List<String> ean_codes_assorts = m_shopping_cart
-					.getAssortList(ean_code);
+			List<String> ean_codes_assorts = m_shopping_cart.getAssortList(ean_code);
 			if (ean_codes_assorts != null) {
 				for (String ean : ean_codes_assorts) {
 					if (m_shopping_basket.containsKey(ean)) {
@@ -2052,8 +2049,10 @@ public class AMiKoDesk {
 			toolBar.addSeparator();
 			toolBar.add(selectShoppingCartButton);
 		}
-		toolBar.addSeparator();
-		toolBar.add(selectComparisonCartButton);
+		if (Utilities.appCustomization().equals("zurrorse")) {
+			toolBar.addSeparator();
+			toolBar.add(selectComparisonCartButton);
+		}
 		toolBar.setRollover(true);
 		toolBar.setFloatable(false);
 		// Progress indicator (not working...)
@@ -2619,9 +2618,10 @@ public class AMiKoDesk {
 			@Override
 			public void actionPerformed(ActionEvent event) {
 				String email_adr = m_prefs.get("emailadresse", "");
-				if (email_adr != null && email_adr.length() > 0)
+				if (email_adr!=null && email_adr.length()>2)	// Two chars is the minimum lenght for an email address
 					m_preferences_ok = true;
 				if (m_preferences_ok) {
+					m_preferences_ok = false;	// Check always
 					new Toggle().toggleButton(selectShoppingCartButton);
 					// Set state 'shopping'
 					if (!m_curr_uistate.getUseMode().equals("shopping")) {

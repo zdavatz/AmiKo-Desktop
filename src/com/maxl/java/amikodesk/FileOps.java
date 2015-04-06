@@ -70,8 +70,6 @@ public class FileOps {
 		if (!wfile.exists())
 			wfile.createNewFile();
 		
-		// FileWriter fw = new FileWriter(wfile.getAbsoluteFile());
-		// Used to be UTF-8 --> does not work (@maxl: 08/Jun/2013)
 	   	CharsetEncoder encoder = Charset.forName(encoding).newEncoder();
 	   	encoder.onMalformedInput(CodingErrorAction.REPORT);
 	   	encoder.onUnmappableCharacter(CodingErrorAction.REPORT);

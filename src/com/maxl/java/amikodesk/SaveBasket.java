@@ -72,10 +72,15 @@ public class SaveBasket {
 	private static Map<String, Article> m_shopping_basket = null;
 	private static Map<String, Author> m_map_of_authors = null;
 
+	private static Preferences m_prefs;
+	
 	private static ResourceBundle m_rb = null;
 	
 	public SaveBasket(ShoppingCart shopping_cart) {
 		m_shopping_basket = shopping_cart.getShoppingBasket();
+
+		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
+		
 		m_rb = shopping_cart.getRB();
 	}
 	
@@ -159,15 +164,47 @@ public class SaveBasket {
     	return 0;
     }
     
+    private String getAddressAsString(String address_type) {
+    	String addr_str = "";
+    	
+    	Address addr = new Address();
+    	
+		// Default entries... empty
+		byte[] def = FileOps.serialize(addr);
+    	if (address_type.equals(LieferAdresseID)) {			// Shipping "S"
+			byte[] arr = m_prefs.getByteArray(LieferAdresseID, def);
+			if (arr!=null) {
+				addr = (Address)FileOps.deserialize(arr);
+				address_type = "S";
+			}
+    	} else if (address_type.equals(RechnungsAdresseID)) {	// Billing "B"
+			byte[] arr = m_prefs.getByteArray(RechnungsAdresseID, def);
+			if (arr!=null) {
+				addr = (Address)FileOps.deserialize(arr);
+				address_type = "B";
+			}
+    	} else if (address_type.equals(BestellAdresseID)) {		// Delivery, Office "O"
+			byte[] arr = m_prefs.getByteArray(BestellAdresseID, def);
+			if (arr!=null) {
+				addr = (Address)FileOps.deserialize(arr);
+				address_type = "O";
+			}
+    	}
+    	
+    	// Format additional information
+    	if (addr!=null)
+    		addr_str = addr.getAsClassicString(address_type);
+
+    	return addr_str;
+    }
+    
 	public void generatePdf(Author author, String filename, String type) {
 		// A4: 8.267in x 11.692in => 595.224units x 841.824units (72units/inch)
 		
 		// marginLeft, marginRight, marginTop, marginBottom
         Document document = new Document(PageSize.A4, 50, 50, 80, 50);
         try {
-            if (m_shopping_basket.size()>0) {
-	       		Preferences mPrefs = Preferences.userRoot().node(SettingsPage.class.getName());
-	       		        		
+            if (m_shopping_basket.size()>0) {	       		        		
 	       		PdfWriter writer = PdfWriter.getInstance(document, new FileOutputStream(filename));        		
 	       		writer.setBoxSize("art", new Rectangle(50, 50, 560, 790));
 	       		
@@ -183,7 +220,7 @@ public class SaveBasket {
 	       		document.addCreationDate();
 	       		
 	       		// Logo
-	       		String logoImageStr = mPrefs.get(LogoImageID, Constants.IMG_FOLDER + "empty_logo.png");	
+	       		String logoImageStr = m_prefs.get(LogoImageID, Constants.IMG_FOLDER + "empty_logo.png");	
 	       		File logoFile = new File(logoImageStr);
 	       		if (!logoFile.exists())
 	       			logoImageStr = Constants.IMG_FOLDER + "empty_logo.png";        		
@@ -195,8 +232,9 @@ public class SaveBasket {
 	      		document.add(Chunk.NEWLINE);
 	       		
 	       		// Bestelladresse
-	       		String bestellAdrStr = mPrefs.get(BestellAdresseID, m_rb.getString("noaddress1"));
-	       		Paragraph p = new Paragraph(12);
+	       		// --> String bestellAdrStr = m_prefs.get(BestellAdresseID, m_rb.getString("noaddress1")); 
+	       		String bestellAdrStr = getAddressAsString(BestellAdresseID);
+	      		Paragraph p = new Paragraph(12);
 	       		// p.setIndentationLeft(60);
 	       		p.add(new Chunk(bestellAdrStr, font_norm_10));
 	       		document.add(p);
@@ -216,9 +254,14 @@ public class SaveBasket {
 	      		// document.add(Chunk.NEWLINE);
 	        		
 	       		// Add addresses (Lieferadresse + Rechnungsadresse)
-	       		String lieferAdrStr = mPrefs.get(LieferAdresseID, m_rb.getString("noaddress2"));
-	       		String rechnungsAdrStr = mPrefs.get(RechnungsAdresseID, m_rb.getString("noaddress3"));        		
-	        		
+	       		/* --> OLD
+	       		String lieferAdrStr = m_prefs.get(LieferAdresseID, m_rb.getString("noaddress2"));
+	       		String rechnungsAdrStr = m_prefs.get(RechnungsAdresseID, m_rb.getString("noaddress3"));        		
+	        	*/
+	       		// --> NEW
+	       		String lieferAdrStr = getAddressAsString(LieferAdresseID);
+	       		String rechnungsAdrStr = getAddressAsString(RechnungsAdresseID);    
+	       		
 	            PdfPTable addressTable = new PdfPTable(new float[] {1,1});
 	            addressTable.setWidthPercentage(100f);
 	            addressTable.getDefaultCell().setPadding(5);
@@ -495,33 +538,41 @@ public class SaveBasket {
 							String skonto = "0.0";
 							// 1. Add article
 							if (article.getQuantity()>0) {
-								shopping_basket_str += (++pos) + "|" + date + "|" 
-										+ gln_code + "|" + email_address + "|"
-										+ article.getEanCode() + "|" 
-										+ article.getPackTitle() + "|" 
-										+ payment + "|" + article.getQuantity() + "|" 										
-										+ price_pruned + "|" + total_price_CHF + "|" 
-										+ article.getVat() + "|"
-										+ shipping_type + "|" 
-										+ user_id + "|"
-										+ skonto + "|" + cash_rebate
-										+ "\n"; 
+								shopping_basket_str += (++pos) + "|" 		//  1: Pos
+										+ date + "|" 						//  2: Timestamp
+										+ gln_code + "|" 					//  3: GLN customer	
+										+ email_address + "|"				//  4: E-mail shipping
+										+ article.getEanCode() + "|" 		//  5: EAN article
+										+ article.getPackTitle() + "|" 		//  6: Article description
+										+ payment + "|" 					//  7: Fakt/Bonus
+										+ article.getQuantity() + "|" 		//  8: Menge								
+										+ price_pruned + "|" 				//  9: Preis
+										+ total_price_CHF + "|" 			// 10: Fakturierter Betrag
+										+ article.getVat() + "|"			// 11: MwSt
+										+ shipping_type + "|" 				// 12: Versandart
+										+ user_id + "|"						// 13: Bestellart 
+										+ skonto + "|" 						// 14: Skonto
+										+ cash_rebate + "\n"; 				// 15: Rabatt %
 							}
 							// 2. Add draufgabe
 							if (article.getDraufgabe()>0) {
 								payment = "Gratis";
 								total_price_CHF = String.format("%.2f", article.getDraufgabe()*article.getBuyingPrice(0.0f));
-								shopping_basket_str += (++pos) + "|" + date + "|" 
-										+ gln_code + "|" + email_address + "|"
-										+ article.getEanCode() + "|" 
-										+ article.getPackTitle() + "|"
-										+ payment + "|" + article.getDraufgabe() + "|"
-										+ price_pruned + "|" + total_price_CHF + "|" 
-										+ article.getVat() + "|"
-										+ shipping_type + "|" 
-										+ user_id + "|"
-										+ skonto + "|" + cash_rebate
-										+ "\n";
+								shopping_basket_str += (++pos) + "|" 		//  1: Pos
+										+ date + "|" 						//  2: Timestamp
+										+ gln_code + "|" 					//  3: GLN customer
+										+ email_address + "|"				//  4: E-mail shipping
+										+ article.getEanCode() + "|" 		//  5: EAN article
+										+ article.getPackTitle() + "|"		//  6: Article description
+										+ payment + "|" 					//  7: Fakt/Bonus
+										+ article.getDraufgabe() + "|"		//  8: Bonus Menge
+										+ price_pruned + "|" 				//  9: Preis
+										+ total_price_CHF + "|" 			// 10: Rabattbetrag
+										+ article.getVat() + "|"			// 11: MwSt
+										+ shipping_type + "|" 				// 12: Versandart
+										+ user_id + "|"						// 13: Bestellart
+										+ skonto + "|" 						// 14: Skonto
+										+ cash_rebate + "\n";				// 15: Rabatt %
 							}
 						}
 					}

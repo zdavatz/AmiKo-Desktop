@@ -61,6 +61,10 @@ import org.joda.time.format.DateTimeFormatter;
 
 public class Emailer {
 
+	private static String BestellAdresseID = "bestelladresse";
+	private static String LieferAdresseID = "lieferadresse";
+	private static String RechnungsAdresseID = "rechnungsadresse";
+	
 	private String m_subject;
 	private String m_from;
 	private String m_recipient;
@@ -203,19 +207,30 @@ public class Emailer {
 		
 	private void sendWithAttachment(Author author, String attachment_name, String attachment_path) {
 		String gln_code = m_prefs.get("glncode", "7610000000000");
-		String address = m_prefs.get("bestelladresse", "Keine Bestelladresse");
 		String email_address = m_prefs.get("emailadresse", m_el);
 			
-		setSubject("AmiKo Bestellung " + attachment_name);
+    	Address addr = new Address();
+		String address = "";    	
+		// Default entries... empty
+		byte[] def = FileOps.serialize(addr);
+		byte[] arr = m_prefs.getByteArray(LieferAdresseID, def);
+		if (arr!=null) {
+			addr = (Address)FileOps.deserialize(arr);
+			address = addr.getAsClassicString("S");
+		}
 		
+		String email_body = author.getSalutation() + "\n\nSie haben eine neue Bestellung erhalten.\n\n"
+				+ "GLN code: " + gln_code + "\n\n" 
+				+ "Bestelladresse:\n" + address + "\n"
+				+ "Siehe PDF Attachment.\n\nMit freundlichen Grüssen\nZeno Davatz";
+
+		// Compose email
+		setSubject("AmiKo Bestellung " + attachment_name);		
 		setFrom(m_el);
 		setRecipient(author.getEmail());
 		setSingleCC(author.getEmailCC());
 		setReplyTo(email_address);			
-		setBody(author.getSalutation() + "\n\nSie haben eine neue Bestellung erhalten.\n\n"
-				+ "GLN code: " + gln_code + "\n\n" 
-				+ "Bestelladresse:\n" + address + "\n\n"
-				+ "Siehe PDF Attachment.\n\nMit freundlichen Grüssen\nZeno Davatz");
+		setBody(email_body);
 		addAttachment(attachment_name + ".pdf", attachment_path + ".pdf");
 		addAttachment(attachment_name + ".csv", attachment_path + ".csv");
 
@@ -266,11 +281,51 @@ public class Emailer {
 		}
 	}
 	
-	public String orderFileName() {
+	public String orderFileName(String prefix) {
 		String gln_code = m_prefs.get("glncode", "7610000000000");
 		DateTime dT = new DateTime();
 		DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
-		return (gln_code + "_" + fmt.print(dT));			
+		return (prefix + "_" + gln_code + "_" + fmt.print(dT));			
+	}
+	
+	
+	public String generateAddressFile() {    	
+		DateTime dT = new DateTime();
+		DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
+		String time_stamp = fmt.print(dT);		
+		String gln_code = m_prefs.get("glncode", "7610000000000");
+	
+		String addr_str = "";
+		Address addr = new Address();
+		
+		// Default entries... empty
+		byte[] def = FileOps.serialize(addr);
+
+		byte[] arr = m_prefs.getByteArray(LieferAdresseID, def);
+		if (arr!=null)
+			addr = (Address)FileOps.deserialize(arr);
+ 		addr_str = addr.getAsLongString(time_stamp, "S", gln_code) + "\n";
+		
+		arr = m_prefs.getByteArray(RechnungsAdresseID, def);
+		if (arr!=null)
+			addr = (Address)FileOps.deserialize(arr);
+ 		addr_str += addr.getAsLongString(time_stamp, "B", gln_code) + "\n";
+
+		arr = m_prefs.getByteArray(BestellAdresseID, def);
+		if (arr!=null)
+			addr = (Address)FileOps.deserialize(arr);
+		addr_str += addr.getAsLongString(time_stamp, "O", gln_code) + "\n";
+
+		// Save to A_GLN_timestamp.csv
+ 		String filename = "A_" + gln_code + "_" + time_stamp;
+ 		try {
+ 			FileOps.writeToFile(addr_str, Utilities.appDataFolder() + "\\shop", filename + ".csv", "UTF-8");
+ 			return filename;
+ 		}
+ 		catch (IOException e) {
+ 			e.printStackTrace();
+ 		}
+ 		return "";
 	}
 	
 	private class SendOrderDialog extends JFrame implements PropertyChangeListener {
@@ -371,7 +426,7 @@ public class Emailer {
 		@Override
 		protected Void doInBackground() throws Exception {		
 			String path = Utilities.appDataFolder() + "\\shop";
-			String name = orderFileName();		
+			String name = orderFileName("B");		
 			int num_authors = 0;
 			for (Author author : m_list_of_authors) {
 				if (mSbasket.getMedsForAuthor(author.getName())>0) {
@@ -392,9 +447,12 @@ public class Emailer {
 							mDialog.setLabel("Sending " + author.getCompany() + " order...");
 							// Send email							
 							sendWithAttachment(author, name, p);
+							// Generate address file
+							String address_file = generateAddressFile();
 							// If ibsa send FTP					
 							if (author.getS()!=null && !author.getS().isEmpty()) {
 								uploadToFTPServer(author, name, p + ".csv");
+								uploadToFTPServer(author, address_file, path + "\\" + address_file + ".csv");
 							}
 							setProgress((int)(100.0f*index/(float)num_authors));
 						}

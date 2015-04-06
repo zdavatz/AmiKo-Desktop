@@ -41,8 +41,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Observer;
@@ -69,6 +67,10 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileFilter;
+
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import com.maxl.java.shared.User;
 
@@ -110,55 +112,13 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 	private static Color color_ok = new Color(220,255,220);
 	// private static Color color_green = new Color(220,255,220);
 	private static Color color_red = new Color(255,220,220);
+	private static Color color_yellow = new Color(255,255,220);
 	
 	private static ResourceBundle m_rb;
 	
 	private Observer m_observer;
-	
-	/*
-	 * This classed is defined as static to allow serialization.
-	 * A private class will not be serialized and a ClassNotFoundException would be thrown.
-	 */
-	static class Address implements java.io.Serializable {
-		
-		private static final long serialVersionUID = 1L;
-		
-		String title = "";
-		String fname = "";
-		String lname = "";
-		String name1 = "";
-		String name2 = "";
-		String name3 = "";
-		String street = "";
-		String zip = "";
-		String city = "";
-		String email = "";
-		String phone = "";
-		boolean isHuman = true;
-		
-		public Address() {
-			// Struct
-		}
-		
-		/**
-		 * Always treat de-serialization as a full-blown constructor, by validating
-		 * the final state of the de-serialized object.
-		 */
-		private void readObject(ObjectInputStream ois)
-				throws ClassNotFoundException, IOException {
-			// always perform the default de-serialization first
-			ois.defaultReadObject();
-		}
 
-		/**
-		 * This is the default implementation of writeObject. Customise if necessary.
-		 */
-		private void writeObject(ObjectOutputStream oos)
-				throws IOException {
-			// perform the default serialization for all non-transient, non-static fields
-			oos.defaultWriteObject();
-		}
-	}
+	static private int border = 1;
 	
 	private class AddressPanel extends JPanel {
 		
@@ -174,11 +134,15 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		JTextField aTextFieldEmail = null;
 		JTextField aTextFieldPhone = null;
 				
+		JLabel aLabelName1 = null;
+		JLabel aLabelName2 = null;
+		JLabel aLabelName3 = null;
+		
 		private int pad_left = 8;
 		
 		private String m_address_type = "";
 		
-		public AddressPanel(String address_type) {
+		public AddressPanel(final String address_type) {
 
 			m_address_type = address_type;
 
@@ -204,7 +168,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			*/
 			
 			// -----------------------------------------------------------
-			JLabel aLabelTitle = new JLabel("Title");
+			JLabel aLabelTitle = new JLabel("Titel");
 			aLabelTitle.setHorizontalAlignment(JLabel.LEFT);
 			gbc = getGbc(0,0, 0.1,1.0, GridBagConstraints.HORIZONTAL);
 			gbc.gridwidth = 1;
@@ -227,7 +191,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 				public void keyTyped(KeyEvent keyEvent) { }
 			});
 			
-			JLabel aLabelName1 = new JLabel("Firma");
+			aLabelName1 = new JLabel("Firma");
 			aLabelName1.setHorizontalAlignment(JLabel.LEFT);
 			aLabelName1.setBorder(new EmptyBorder(0,pad_left,0,0));	
 			gbc = getGbc(2,0, 0.1,1.0, GridBagConstraints.HORIZONTAL);
@@ -300,7 +264,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			});
 			
 			// -----------------------------------------------------------		
-			JLabel aLabelName2 = new JLabel("Name 2");
+			aLabelName2 = new JLabel("Name 2");
 			aLabelName2.setHorizontalAlignment(JLabel.LEFT);
 			gbc = getGbc(0,2, 0.1,1.0, GridBagConstraints.HORIZONTAL);
 			gbc.gridwidth = 1;
@@ -323,7 +287,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 				public void keyTyped(KeyEvent keyEvent) { }
 			});
 			
-			JLabel aLabelName3 = new JLabel("Name 3");
+			aLabelName3 = new JLabel("Name 3");
 			aLabelName3.setHorizontalAlignment(JLabel.LEFT);
 			aLabelName3.setBorder(new EmptyBorder(0,pad_left,0,0));	
 			gbc = getGbc(2,2, 0.1,1.0, GridBagConstraints.HORIZONTAL);
@@ -443,7 +407,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 				public void keyTyped(KeyEvent keyEvent) { }
 			});
 			
-			JLabel jlabelEmail = new JLabel("Email");
+			JLabel jlabelEmail = new JLabel("Email**");
 			jlabelEmail.setHorizontalAlignment(JLabel.LEFT);
 			jlabelEmail.setBorder(new EmptyBorder(0,pad_left,0,0));		
 			gbc = getGbc(2,4, 0.1,1.0, GridBagConstraints.HORIZONTAL);
@@ -461,7 +425,11 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 				public void keyPressed(KeyEvent keyEvent) { }
 				@Override
 				public void keyReleased(KeyEvent keyEvent) {
-					validateEmail(aTextFieldEmail.getText());
+					String emailStr = aTextFieldEmail.getText();
+					if (validateEmail(emailStr)) {
+						if (address_type.equals("S"))
+							mPrefs.put(EmailAdresseID, emailStr);	
+					}
 				}
 				@Override 
 				public void keyTyped(KeyEvent keyEvent) { }
@@ -494,47 +462,47 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		
 		boolean validateText(JTextField textField) {
 			if (textField.getText().matches("^[âôéèàöÖäÄüÜß'.a-zA-Z0-9 \\-]{1,}$")) {
-				textField.setBorder(new LineBorder(color_white, 1, false));
+				textField.setBorder(new LineBorder(color_white, border, false));
 				textField.setBackground(color_white);				
 				return true;
 			} else {
-				textField.setBorder(new LineBorder(color_red, 1, false));
-				textField.setBackground(color_red);				
+				textField.setBorder(new LineBorder(color_yellow, border, false));
+				textField.setBackground(color_yellow);				
 				return false;
 			}
 		}
 		
 		boolean validateZip(String zipStr) {
 			if (zipStr.matches("[\\d]{2,6}")) {
-				aTextFieldZip.setBorder(new LineBorder(color_white, 1, false));
+				aTextFieldZip.setBorder(new LineBorder(color_white, border, false));
 				aTextFieldZip.setBackground(color_white);
 				return true;
 			} else {
-				aTextFieldZip.setBorder(new LineBorder(color_red, 1, false));
-				aTextFieldZip.setBackground(color_red);
+				aTextFieldZip.setBorder(new LineBorder(color_yellow, border, false));
+				aTextFieldZip.setBackground(color_yellow);
 				return false;
 			}
 		}
 		
 		boolean validatePhone(String phoneStr) {
 			if (phoneStr.matches("(?:[0-9] ?){6,14}[0-9]")) {
-				aTextFieldPhone.setBorder(new LineBorder(color_white, 1, false));
+				aTextFieldPhone.setBorder(new LineBorder(color_white, border, false));
 				aTextFieldPhone.setBackground(color_white);
 				return true;
 			} else {
-				aTextFieldPhone.setBorder(new LineBorder(color_red, 1, false));
-				aTextFieldPhone.setBackground(color_red);
+				aTextFieldPhone.setBorder(new LineBorder(color_yellow, border, false));
+				aTextFieldPhone.setBackground(color_yellow);
 				return false;
 			}
 		}
 
 		boolean validateEmail(String emailStr) {
 			if (emailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
-				aTextFieldEmail.setBorder(new LineBorder(color_white, 1, false));
+				aTextFieldEmail.setBorder(new LineBorder(color_white, border, false));
 				aTextFieldEmail.setBackground(color_white);  
 				return true;
 			} else {
-				aTextFieldEmail.setBorder(new LineBorder(color_red, 1, false));
+				aTextFieldEmail.setBorder(new LineBorder(color_red, border, false));
 				aTextFieldEmail.setBackground(color_red); 
 				return false;
 			}
@@ -553,6 +521,12 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			validatePhone(aTextFieldPhone.getText());
 			validateEmail(aTextFieldEmail.getText());
 		}
+		
+        void setNameLabels(String name1, String name2, String name3) {
+            aLabelName1.setText(name1);
+            aLabelName2.setText(name2);
+            aLabelName3.setText(name3);
+        }
 		
 		void setDataWithUserInfo(User u) {
 			aTextFieldTitle.setText(u.title);
@@ -616,9 +590,10 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			addr.isHuman = is_human;
 			// Store addr to preferences
 			byte[] arr = FileOps.serialize(addr);
-			if (m_address_type.equals("S"))
+			if (m_address_type.equals("S")) {
 				mPrefs.putByteArray(LieferAdresseID, arr);
-			else if (m_address_type.equals("B"))
+				mPrefs.put(EmailAdresseID, addr.email);				
+			} else if (m_address_type.equals("B"))
 				mPrefs.putByteArray(RechnungsAdresseID, arr);
 			else if (m_address_type.equals("O"))
 				mPrefs.putByteArray(BestellAdresseID, arr);
@@ -635,29 +610,39 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			} else if (m_address_type.equals("B")) {
 				byte[] arr = mPrefs.getByteArray(RechnungsAdresseID, def);
 				if (arr!=null)
-					addr = (Address)FileOps.deserialize(arr);
+					addr = (Address)FileOps.deserialize(arr);			
 			} else if (m_address_type.equals("O")) {
 				byte[] arr = mPrefs.getByteArray(BestellAdresseID, def);
 				if (arr!=null)
-					addr = (Address)FileOps.deserialize(arr);
+					addr = (Address)FileOps.deserialize(arr);		
 			}
 			// Fill all fields
-			aTextFieldTitle.setText(addr.title);
-			aTextFieldFName.setText(addr.fname);
-			aTextFieldLName.setText(addr.lname);
-			if (addr.name1!=null)
-				aTextFieldName1.setText(addr.name1);
-			if (addr.name2!=null)			
-				aTextFieldName2.setText(addr.name2);
-			if (addr.name3!=null)
-				aTextFieldName3.setText(addr.name3);			
-			aTextFieldAddress.setText(addr.street);
-			aTextFieldZip.setText(addr.zip);
-			aTextFieldCity.setText(addr.city);
-			aTextFieldPhone.setText(addr.phone);
-			aTextFieldEmail.setText(addr.email);
-			// Validate
-			validateFields();
+			if (addr!=null) {
+				if (addr.title!=null)
+					aTextFieldTitle.setText(addr.title);
+				if (addr.fname!=null)
+					aTextFieldFName.setText(addr.fname);
+				if (addr.lname!=null)
+					aTextFieldLName.setText(addr.lname);
+				if (addr.name1!=null)
+					aTextFieldName1.setText(addr.name1);
+				if (addr.name2!=null)			
+					aTextFieldName2.setText(addr.name2);
+				if (addr.name3!=null)
+					aTextFieldName3.setText(addr.name3);			
+				if (addr.street!=null)
+					aTextFieldAddress.setText(addr.street);
+				if (addr.zip!=null)
+					aTextFieldZip.setText(addr.zip);
+				if (addr.city!=null)
+					aTextFieldCity.setText(addr.city);
+				if (addr.phone!=null)
+					aTextFieldPhone.setText(addr.phone);
+				if (addr.email!=null)
+					aTextFieldEmail.setText(addr.email);
+				// Validate
+				validateFields();
+			}
 		}
 	}
 	
@@ -670,6 +655,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		
 		// Load gln codes file and create map
 		load_gln_codes();
+		
 		/* --- old code ---
 		String m_application_data_folder = Utilities.appDataFolder();
 		m_user_map = readFromCsvToMap(m_application_data_folder + "\\" + Constants.GLN_CODES_FILE);
@@ -679,6 +665,14 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			System.out.println("Loading gln codes from default folder...");
 		}
 		*/
+		
+		String gln_code_str = mPrefs.get(GLNCodeID, "7610000000000");
+		System.out.println("GLN code: " + gln_code_str);		
+		if (m_user_map!=null && m_user_map.containsKey(gln_code_str+"S")) {
+			m_user = m_user_map.get(gln_code_str+"S");
+		}
+		
+		// Layout stuff
 		this.setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
 		
 		add(Box.createRigidArea(new Dimension(0, 10)));		
@@ -719,6 +713,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			public void windowClosed(WindowEvent e) {
 				if (Utilities.appCustomization().equals("ywesee")) {	// IBSA
 					if (m_user!=null) {
+						// Store user info
 						mShippingAddress.storeDataToPreferences(m_user.is_human);
 						mBillingAddress.storeDataToPreferences(m_user.is_human);
 						mOfficeAddress.storeDataToPreferences(m_user.is_human);
@@ -964,11 +959,11 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		
 		mTextFieldGLN = new JTextField(GLNCodeStr);
 		if (!GLNCodeStr.matches("[\\d]{13}")) {
-			mTextFieldGLN.setBorder(new LineBorder(color_red, 5, false));
+			mTextFieldGLN.setBorder(new LineBorder(color_red, 1, false));
 			mTextFieldGLN.setBackground(color_red);
 		} else {
-			mTextFieldGLN.setBorder(new LineBorder(color_ok, 5, false));
-			mTextFieldGLN.setBackground(color_ok);
+			mTextFieldGLN.setBorder(new LineBorder(color_white, 1, false));
+			mTextFieldGLN.setBackground(color_white);
 		}
 			
 		gbc = getGbc(1,1 ,2.5,1.0, GridBagConstraints.HORIZONTAL);		
@@ -1234,11 +1229,11 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		
 		mTextFieldGLN = new JTextField(GLNCodeStr);
 		if (!GLNCodeStr.matches("[\\d]{13}")) {
-			mTextFieldGLN.setBorder(new LineBorder(color_red, 5, false));
+			mTextFieldGLN.setBorder(new LineBorder(color_red, 1, false));
 			mTextFieldGLN.setBackground(color_red);
 		} else {
-			mTextFieldGLN.setBorder(new LineBorder(color_ok, 5, false));
-			mTextFieldGLN.setBackground(color_ok);
+			mTextFieldGLN.setBorder(new LineBorder(color_white, 1, false));
+			mTextFieldGLN.setBackground(color_white);
 		}			
 		gbc = getGbc(1,0 ,3.0,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mTextFieldGLN, gbc);
@@ -1271,13 +1266,20 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 						mPrefs.putInt(UserID, 17);	// Default
 						
 						// Change color of GLN field to denote success
-						mTextFieldGLN.setBorder(new LineBorder(color_ok, 5, false));
-						mTextFieldGLN.setBackground(color_ok);							
+						mTextFieldGLN.setBorder(new LineBorder(color_white, 1, false));
+						mTextFieldGLN.setBackground(color_white);	
+						
 						// If necessary change labels
-						if (m_user.is_human) {
+						if (m_user.is_human  || !m_user.title.isEmpty()) {
+							mShippingAddress.setNameLabels("Funkt.", "Abt.", "Firma");
+							mBillingAddress.setNameLabels("Funkt.", "Abt.", "Firma");
+							mOfficeAddress.setNameLabels("Funkt.", "Abt.", "Firma");							
 							System.out.println("Person: " + m_user.gln_code + " - " + m_user.category + ", " 
 									+ m_user.title + ", " + m_user.first_name + ", " + m_user.last_name);
 						} else {
+							mShippingAddress.setNameLabels("Einheit", "Abt.", "Firma");
+							mBillingAddress.setNameLabels("Einheit", "Abt.", "Firma");
+							mOfficeAddress.setNameLabels("Einheit", "Abt.", "Firma");	
 							System.out.println("Company: " + m_user.gln_code + " - " + m_user.category + ", " 
 									+ m_user.name1 + ", " + m_user.name2 + ", " + m_user.name3);
 						}									
@@ -1323,6 +1325,9 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 					mShippingAddress.clearData();
 					mBillingAddress.clearData();
 					mOfficeAddress.clearData();
+					
+					mTextFieldGLN.setBorder(new LineBorder(color_red, 1, false));
+					mTextFieldGLN.setBackground(color_red);
 				}
 			}
 			@Override 
@@ -1424,7 +1429,8 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		jPanel.add(mOfficeAddress, gbc);
 
 		// -----------------------------
-		JLabel jlabelFootnote = new JLabel("*" + m_rb.getString("medreg"));
+		JLabel jlabelFootnote = new JLabel("*" + m_rb.getString("medreg") + " | "
+				+ "**" + m_rb.getString("pflicht"));
 		jlabelFootnote.setFont(new Font("Dialog", Font.ITALIC, 11));
 		jlabelFootnote.setHorizontalAlignment(JLabel.LEFT);
 		gbc = getGbc(0,6, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
@@ -1598,6 +1604,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			Crypto crypto = new Crypto();
 			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
 			m_user_map = (HashMap<String, User>)FileOps.deserialize(plain_msg);
+			System.out.println("Loading gln_codes.ser from app data folder...");
 		}		
 	}
 }
