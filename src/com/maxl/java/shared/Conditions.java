@@ -6,6 +6,7 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.joda.time.DateTime;
@@ -95,7 +96,14 @@ public class Conditions implements java.io.Serializable {
 		else
 			return pharmacy_promo.get(category);
 	}
-
+	
+	public Set<Character> getCategoriesPharmacy(boolean promo) {
+		if (promo==false)
+			return pharmacy.keySet();
+		else 
+			return pharmacy_promo.keySet();
+	}
+	
 	public void addDiscountDrugstore(char category, int units, float discount, boolean promo) {
 		TreeMap<Integer, Float> reb = null;
 		if (promo==false) {

@@ -407,7 +407,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 				public void keyTyped(KeyEvent keyEvent) { }
 			});
 			
-			JLabel jlabelEmail = new JLabel("Email**");
+			JLabel jlabelEmail = new JLabel("Email");
 			jlabelEmail.setHorizontalAlignment(JLabel.LEFT);
 			jlabelEmail.setBorder(new EmptyBorder(0,pad_left,0,0));		
 			gbc = getGbc(2,4, 0.1,1.0, GridBagConstraints.HORIZONTAL);
@@ -502,8 +502,13 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 				aTextFieldEmail.setBackground(color_white);  
 				return true;
 			} else {
-				aTextFieldEmail.setBorder(new LineBorder(color_red, border, false));
-				aTextFieldEmail.setBackground(color_red); 
+				if (m_address_type.equals("S")) {
+					aTextFieldEmail.setBorder(new LineBorder(color_red, border, false));
+					aTextFieldEmail.setBackground(color_red); 
+				} else {
+					aTextFieldEmail.setBorder(new LineBorder(color_yellow, border, false));
+					aTextFieldEmail.setBackground(color_yellow); 
+				}
 				return false;
 			}
 		}
@@ -576,6 +581,8 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		}
 		void storeDataToPreferences(boolean is_human) {
 			Address addr = new Address();
+			addr.idealeId = "";
+			addr.xprisId = "";
 			addr.title = aTextFieldTitle.getText();
 			addr.fname = aTextFieldFName.getText();
 			addr.lname = aTextFieldLName.getText();
@@ -644,6 +651,20 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 				validateFields();
 			}
 		}
+	}
+	
+	public void load_gln_codes() {
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\gln_codes.ser");
+		if (encrypted_msg==null) {
+			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "gln_codes.ser");
+			System.out.println("Loading gln_codes.ser from default folder...");
+		}
+		if (encrypted_msg!=null) {
+			Crypto crypto = new Crypto();
+			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
+			m_user_map = (HashMap<String, User>)FileOps.deserialize(plain_msg);
+			System.out.println("Loading gln_codes.ser from app data folder...");
+		}		
 	}
 	
 	public SettingsPage(JFrame frame, ResourceBundle rb) {
@@ -933,10 +954,10 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			logoImageStr = Constants.IMG_FOLDER + "empty_logo.png";
 		ImageIcon icon = getImageIconFromFile(logoImageStr);
 		mButtonLogo = new JButton(icon);
-		mButtonLogo.setPreferredSize(new Dimension(128, 128));
+		mButtonLogo.setPreferredSize(new Dimension(128,128));
 		mButtonLogo.setMargin(new Insets(10,10,10,10));
 		if (!logoFile.exists())
-			mButtonLogo.setBackground(color_red);
+			mButtonLogo.setBackground(color_yellow);
 		else
 			mButtonLogo.setBackground(color_white);
 		mButtonLogo.setBorder(new CompoundBorder(
@@ -1391,7 +1412,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		mButtonLogo.setPreferredSize(new Dimension(128, 128));
 		mButtonLogo.setMargin(new Insets(10,10,10,10));
 		if (!logoFile.exists())
-			mButtonLogo.setBackground(color_red);
+			mButtonLogo.setBackground(color_yellow);
 		else
 			mButtonLogo.setBackground(color_white);
 		mButtonLogo.setBorder(new CompoundBorder(
@@ -1429,8 +1450,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		jPanel.add(mOfficeAddress, gbc);
 
 		// -----------------------------
-		JLabel jlabelFootnote = new JLabel("*" + m_rb.getString("medreg") + " | "
-				+ "**" + m_rb.getString("pflicht"));
+		JLabel jlabelFootnote = new JLabel("*" + m_rb.getString("medreg"));
 		jlabelFootnote.setFont(new Font("Dialog", Font.ITALIC, 11));
 		jlabelFootnote.setHorizontalAlignment(JLabel.LEFT);
 		gbc = getGbc(0,6, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
@@ -1592,19 +1612,5 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 				System.out.println("SettingsPage - open command cancelled by the user...");
 			}
 		}
-	}
-	
-	private void load_gln_codes() {
-		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\gln_codes.ser");
-		if (encrypted_msg==null) {
-			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "gln_codes.ser");
-			System.out.println("Loading gln_codes.ser from default folder...");
-		}
-		if (encrypted_msg!=null) {
-			Crypto crypto = new Crypto();
-			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
-			m_user_map = (HashMap<String, User>)FileOps.deserialize(plain_msg);
-			System.out.println("Loading gln_codes.ser from app data folder...");
-		}		
 	}
 }

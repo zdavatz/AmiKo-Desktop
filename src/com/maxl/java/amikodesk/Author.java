@@ -35,6 +35,7 @@ public class Author {
 	private float vat25_CHF;
 	private float vat80_CHF;
 	private float shipping_CHF;
+	private float additional_discount;
 	private char shipping_type;
 	
 	public Author() {
@@ -160,6 +161,14 @@ public class Author {
 	
 	public float getSubtotal() {
 		return subtotal_CHF;
+	}
+	
+	public float getAdditionalDiscount() {
+		return additional_discount;
+	}
+	
+	public void setAdditionalDiscount(float add_discount) {
+		additional_discount = add_discount;
 	}
 	
 	public float getShippingCosts() {

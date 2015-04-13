@@ -279,20 +279,9 @@ public class Emailer {
 			m_is_sending = true;
 			new SendOrderDialog(list_of_authors, save_basket);		
 		}
-	}
+	}	
 	
-	public String orderFileName(String prefix) {
-		String gln_code = m_prefs.get("glncode", "7610000000000");
-		DateTime dT = new DateTime();
-		DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
-		return (prefix + "_" + gln_code + "_" + fmt.print(dT));			
-	}
-	
-	
-	public String generateAddressFile() {    	
-		DateTime dT = new DateTime();
-		DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
-		String time_stamp = fmt.print(dT);		
+	public String generateAddressFile(String time_stamp) {    	
 		String gln_code = m_prefs.get("glncode", "7610000000000");
 	
 		String addr_str = "";
@@ -426,7 +415,16 @@ public class Emailer {
 		@Override
 		protected Void doInBackground() throws Exception {		
 			String path = Utilities.appDataFolder() + "\\shop";
-			String name = orderFileName("B");		
+
+			String gln_code = m_prefs.get("glncode", "7610000000000");
+			DateTime dT = new DateTime();
+			DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
+
+			String time_stamp = fmt.print(dT);
+			String gln_time = gln_code + "_" + time_stamp;					
+			String order_filename = "B_" + gln_time;		
+			String address_filename = generateAddressFile(time_stamp);
+			
 			int num_authors = 0;
 			for (Author author : m_list_of_authors) {
 				if (mSbasket.getMedsForAuthor(author.getName())>0) {
@@ -440,19 +438,17 @@ public class Emailer {
 					for (Author author : m_list_of_authors) {
 						if (mSbasket.getMedsForAuthor(author.getName())>0 && !isCancelled()) {
 							String auth = author.getShortName();
-							String p = path + "\\" + auth + "_" + name;
+							String p = path + "\\" + auth + "_" + order_filename;
 							mSbasket.generatePdf(author, p + ".pdf", "specific");	
 							mSbasket.generateCsv(author, p + ".csv", "specific");
 							index++;
 							mDialog.setLabel("Sending " + author.getCompany() + " order...");
 							// Send email							
-							sendWithAttachment(author, name, p);
-							// Generate address file
-							String address_file = generateAddressFile();
+							sendWithAttachment(author, order_filename, p);
 							// If ibsa send FTP					
 							if (author.getS()!=null && !author.getS().isEmpty()) {
-								uploadToFTPServer(author, name, p + ".csv");
-								uploadToFTPServer(author, address_file, path + "\\" + address_file + ".csv");
+								uploadToFTPServer(author, order_filename, p + ".csv");
+								uploadToFTPServer(author, address_filename, path + "\\" + address_filename + ".csv");
 							}
 							setProgress((int)(100.0f*index/(float)num_authors));
 						}
@@ -473,9 +469,9 @@ public class Emailer {
 			path = desktop.getAbsolutePath();
 			if (mSbasket.getMedsWithNoAuthor()>0) {
 				if (Utilities.appLanguage().equals("de"))
-					mSbasket.generatePdf(null, path + "\\" + "amiko_" + name + ".pdf", "rest");	
+					mSbasket.generatePdf(null, path + "\\" + "amiko_" + order_filename + ".pdf", "rest");	
 				else if (Utilities.appLanguage().equals("fr"))
-					mSbasket.generatePdf(null, path + "\\" + "comed_" + name + ".pdf", "rest");	
+					mSbasket.generatePdf(null, path + "\\" + "comed_" + order_filename + ".pdf", "rest");	
 			}			
 			if (num_authors==0)
 				mDialog.setLabel(m_rb.getString("savedPdf"));

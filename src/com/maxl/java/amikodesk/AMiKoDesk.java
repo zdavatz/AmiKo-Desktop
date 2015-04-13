@@ -426,6 +426,11 @@ public class AMiKoDesk {
 		// Initialize update class
 		m_maindb_update = new UpdateDb(m_sqldb);
 
+		// Create shop folder in application data folder
+		File wdir = new File(m_application_data_folder + "\\shop");
+		if (!wdir.exists())
+			wdir.mkdirs();
+		
 		// Load interaction cart
 		m_interactions_cart = new InteractionsCart();
 
@@ -433,11 +438,6 @@ public class AMiKoDesk {
 		m_shopping_cart = new ShoppingCart();
 		loadAuthors();
 		m_emailer = new Emailer(m_rb);
-
-		// Create shop folder in application data folder
-		File wdir = new File(m_application_data_folder + "\\shop");
-		if (!wdir.exists())
-			wdir.mkdirs();
 
 		// Create comparison cart and load related files
 		m_comparison_cart = new ComparisonCart();
@@ -723,9 +723,9 @@ public class AMiKoDesk {
 					m_web_panel.updateInteractionsCart();
 				else if (m_curr_uistate.isShoppingMode()) // Display shopping cart
 					m_web_panel.updateListOfPackages();
-				else if (m_curr_uistate.isComparisonMode()) {
+				else if (m_curr_uistate.isComparisonMode())
 					m_web_panel.updateComparisonCart();
-				} else	// Display Fachinformation, default usage!
+				else	// Display Fachinformation, default usage!
 					m_web_panel.updateText();
 			}
 		}
@@ -1093,8 +1093,7 @@ public class AMiKoDesk {
 							});
 							m_web_panel.updateShoppingHtml();
 						} else if (msg.startsWith("change_shipping")) {
-							// Extract shipping type (known types: free
-							// delivery, A-Post, B-Post, Express delivery)
+							// Extract shipping type (known types: free delivery, A-Post, B-Post, Express delivery)
 							char shipping_type = msg.replace("change_shipping", "").charAt(0);
 							updateCheckoutTable(row_key, shipping_type);
 						} else if (msg.equals("check_out")) {
@@ -1420,6 +1419,7 @@ public class AMiKoDesk {
 			// Set right panel title
 			m_web_panel.setTitle(m_rb.getString("medbasket"));
 			// Display interactions in the web panel
+			System.out.println(med_index + " / " + med_id.size());
 			if (med_index >= 0 && med_index < med_id.size()) {
 				// Get full info on selected medication
 				Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
@@ -1431,7 +1431,6 @@ public class AMiKoDesk {
 					m_med_basket.put(title, m);
 				updateInteractionsHtml();
 			} else {			
-				m_med_basket.clear();
 				// Medikamentenkorb ist leer
 				updateInteractionsHtml();
 			}
@@ -2912,6 +2911,7 @@ public class AMiKoDesk {
 				// Refresh some stuff after update
 				loadAuthors();
 				m_emailer.loadMap();
+				settingsPage.load_gln_codes();
 				if (m_shopping_cart != null) {
 					m_shopping_cart.load_conditions();
 					m_shopping_cart.load_glns();

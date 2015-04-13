@@ -221,7 +221,8 @@ public class ShoppingCart implements java.io.Serializable {
 		TreeMap<Integer, Float> rebate_map = null;
 		String gln_code = m_prefs.get("glncode", "7610000000000");
 		if (m_map_ibsa_glns.containsKey(gln_code)) {
-			char user_class = m_map_ibsa_glns.get(gln_code).charAt(0);
+			// Extract user class (group in case of pharmacies)
+			char user_class = m_map_ibsa_glns.get(gln_code).charAt(0);			
 			// Is the user human or corporate?
 			String user_type = m_prefs.get("type", "arzt");
 			// Get rebate conditions
@@ -643,7 +644,7 @@ public class ShoppingCart implements java.io.Serializable {
 								+ "<td style=\"color:'#999999'\">" + muster + "</td>"
 								+ "<td onMouseOver=\"this.bgColor='#eeeed0'\" onMouseOut=\"this.bgColor='#f0f0f0'\">" 
 									+ "<a href=\"#\" class=\"tooltip\">" + article.getPackTitle() + assort_articles_str + "</a></td>"	
-								+ "<td>" + assortierbar + "</td>"	
+								+ "<td style=\"text-align:center;\">" + assortierbar + "</td>"	
 								+ "<td style=\"text-align:right;\">" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:50px; text-align:right;\"" +
 									" value=\"" + quantity + "\"" + " onkeydown=\"changeQty('Warenkorb',this)\" id=\"" + index + "\" tabindex=\"" + index + "\" />" + "</td>"
 								+ "<td style=\"text-align:right;\"></td>"					

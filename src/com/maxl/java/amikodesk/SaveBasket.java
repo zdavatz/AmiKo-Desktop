@@ -552,7 +552,8 @@ public class SaveBasket {
 										+ shipping_type + "|" 				// 12: Versandart
 										+ user_id + "|"						// 13: Bestellart 
 										+ skonto + "|" 						// 14: Skonto
-										+ cash_rebate + "\n"; 				// 15: Rabatt %
+										+ cash_rebate + "|"					// 15: Rabatt %
+										+ "0" + "\n"; 						// 16: Additional discount 0/1
 							}
 							// 2. Add draufgabe
 							if (article.getDraufgabe()>0) {
@@ -572,7 +573,8 @@ public class SaveBasket {
 										+ shipping_type + "|" 				// 12: Versandart
 										+ user_id + "|"						// 13: Bestellart
 										+ skonto + "|" 						// 14: Skonto
-										+ cash_rebate + "\n";				// 15: Rabatt %
+										+ cash_rebate + "|"					// 15: Rabatt %
+										+ "0" + "\n"; 						// 16: Additional discount 0/1
 							}
 						}
 					}

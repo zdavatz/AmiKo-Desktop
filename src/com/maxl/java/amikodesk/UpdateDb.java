@@ -129,7 +129,7 @@ public class UpdateDb {
 					drug_interactions_url, 
 					shop_files_url, 
 					rose_files_url,
-					amiko_report_plain, db_unzipped, 
+					db_unzipped, amiko_report_plain, 
 					drug_interactions_unzipped, 
 					shop_files_zipped, 
 					rose_files_zipped);
@@ -154,7 +154,7 @@ public class UpdateDb {
 	    		String drugInteractionsURL, 
 	    		String shopFilesURL, 
 	    		String roseFilesURL,
-	    		String amikoReport, String unzippedDB, 
+	    		String unzippedDB, String amikoReport, 
 	    		String drugInteractionsUnzipped, 
 	    		String shopFilesZipped, 
 	    		String roseFilesZipped) {
@@ -279,7 +279,7 @@ public class UpdateDb {
 			mRoseFiles = roseFiles;
 		}
 		
-		private File downloader(String what, String download_url, File file) throws Exception {
+		private File downloader(String what, String download_url, File file, boolean zipped) throws Exception {
 			byte buffer[] = new byte[4096];
 			int bytesRead = -1;
 			long totBytesRead = 0;
@@ -291,7 +291,9 @@ public class UpdateDb {
 			InputStream is = url.openStream();
 			// Retrieve file length from http header
 			int sizeDB_in_bytes = Integer.parseInt(url.openConnection().getHeaderField("Content-Length"));
-			File downloadedFile = new File(file.getAbsolutePath() + ".zip");
+			File downloadedFile = new File(file.getAbsolutePath());
+			if (zipped==true)
+				downloadedFile = new File(file.getAbsolutePath() + ".zip");			
 			OutputStream os = new FileOutputStream(downloadedFile);
 
 			try {
@@ -377,19 +379,19 @@ public class UpdateDb {
 			File downloadedFile = null;
 
 			if (m_full_update==true) {
-				downloadedFile = downloader("database", mDatabaseURL, mAmikoDatabase);			
+				downloadedFile = downloader("database", mDatabaseURL, mAmikoDatabase, true);			
 				unzipper(downloadedFile, mAmikoDatabase);
 				
-				downloadedFile = downloader("report", mReportURL, mAmikoReport);
+				downloadedFile = downloader("report", mReportURL, mAmikoReport, false);
 	
-				downloadedFile = downloader("drug interactions", mDrugInteractionsURL, mDrugInteractions);
+				downloadedFile = downloader("drug interactions", mDrugInteractionsURL, mDrugInteractions, true);
 				unzipper(downloadedFile, mDrugInteractions);
 				
-				downloadedFile = downloader("shopping files", mShopFilesURL, mShopFiles);
+				downloadedFile = downloader("shopping files", mShopFilesURL, mShopFiles, true);
 				unzipper(downloadedFile, mShopFiles);
 			}
 						
-			downloadedFile = downloader("rose files", mRoseFilesURL, mRoseFiles);
+			downloadedFile = downloader("rose files", mRoseFilesURL, mRoseFiles, true);
 			unzipper(downloadedFile, mRoseFiles);
 			
 			return null;
@@ -707,11 +709,9 @@ public class UpdateDb {
 	    		    icon = new ImageIcon(scaled_img);
 	    		    // Display friendly message
 	    		    if (m_app_lang.equals("de")) {
-	    		    	mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + m_sqldb.getNumRecords() + " Fachinfos " +
-	    		    			"erfolgreich geladen!");
+	    		    	mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + m_sqldb.getNumRecords() + " Fachinfos erfolgreich geladen!");
 	    		    } else if (m_app_lang.equals("fr")) {
-	    		    	mDialog.getLabel().setText("Nouvelle base de données avec " + m_sqldb.getNumRecords() + " notice infopro " +
-	    		    			"chargée avec succès!");
+	    		    	mDialog.getLabel().setText("Nouvelle base de données avec " + m_sqldb.getNumRecords() + " notice infopro chargée avec succès!");
 	    		    }
 	    		    // Notify to GUI, update database 		    
 	    		    notifyObserver(db_file);
