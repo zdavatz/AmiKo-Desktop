@@ -65,10 +65,12 @@ public class Article implements java.io.Serializable {
 		if (entry!=null) {
 			if (Utilities.appLanguage().equals("de")) {
 				ean_code = pharma_code = pack_title = pack_size 
-					= pack_unit = public_price = exfactory_price = additional_info = "k.A.";
+						= pack_unit = public_price = exfactory_price 
+						= additional_info = "k.A.";
 			} else if (Utilities.appLanguage().equals("fr")) {
 				ean_code = pharma_code = pack_title = pack_size 
-						= pack_unit = public_price = exfactory_price = additional_info = "n.s.";
+						= pack_unit = public_price = exfactory_price 
+						= additional_info = "n.s.";
 			}
 			if (author!=null && !author.isEmpty())
 				this.author = author;
@@ -242,14 +244,17 @@ public class Article implements java.io.Serializable {
 		
     public String getCategories() {
     	String cat = "";    	
-    	String[] c = additional_info.split(",");
-    	for (int i=0; i<c.length; ++i) {
-    		if (!c[i].isEmpty() && c[i].trim().matches("^[a-zA-Z]+$")) {
-    			cat += (c[i].trim() + ", ");
-    		}
+    	if (additional_info!=null) {
+	    	String[] c = additional_info.split(",");
+	    	for (int i=0; i<c.length; ++i) {
+	    		if (!c[i].isEmpty() && c[i].trim().matches("^[a-zA-Z]+$")) {
+	    			cat += (c[i].trim() + ", ");
+	    		}
+	    	}
+	    	if (cat.length()>2)
+	    		return cat.substring(0,cat.length()-2);
+	    	return "";
     	}
-    	if (cat.length()>2)
-    		return cat.substring(0,cat.length()-2);
     	return "";
     }
     
@@ -280,7 +285,9 @@ public class Article implements java.io.Serializable {
     }
     
 	public boolean isSpecial() {		
-		return (additional_info.contains("SL") || additional_info.contains("LS"));
+		if (additional_info!=null)
+			return (additional_info.contains("SL") || additional_info.contains("LS"));
+		return false;
 	}
 	
 	public float getVat() {

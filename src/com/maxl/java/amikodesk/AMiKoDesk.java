@@ -185,7 +185,7 @@ public class AMiKoDesk {
 	private static UIState m_curr_uistate = new UIState("aips");
 
 	private static ProgressIndicator m_progress_indicator = new ProgressIndicator(32);
-	private static IndexPanel m_section_titles = null;
+	private static MiddlePane m_middle_pane = null;
 	private static WebPanel2 m_web_panel = null;
 	private static String m_css_str = null;
 	private static String m_jscript_str = null;
@@ -393,6 +393,8 @@ public class AMiKoDesk {
 			new SplashWindow(Constants.APP_NAME, 5000);
 		} else if (Utilities.appCustomization().equals("zurrose")) {
 			new SplashWindow(Constants.APP_NAME, 3000);
+		} else if (Utilities.appCustomization().equals("ibsa")) {
+			new SplashWindow(Constants.APP_NAME, 3000);			
 		}
 		// Load javascript
 		String jscript_str = FileOps.readFromFile(Constants.JS_FOLDER + "main_callbacks.js");
@@ -748,12 +750,14 @@ public class AMiKoDesk {
 	 * @author Max
 	 * 
 	 */
-	static class IndexPanel extends JPanel implements ListSelectionListener {
+	static class MiddlePane extends JPanel implements ListSelectionListener {
 
 		private JList<String> list = null;
 		private JScrollPane jscroll = null;
+		
+		private boolean is_assort = false;
 
-		public IndexPanel(String[] sec_titles) {
+		public MiddlePane(String[] sec_titles) {
 			super(new BorderLayout());
 
 			list = new JList<String>(sec_titles);
@@ -774,16 +778,19 @@ public class AMiKoDesk {
 			add(listPanel, BorderLayout.CENTER);
 		}
 
-		public void updatePanel(String[] sec_titles) {
-			final String[] titles = sec_titles;
+		public void update(final String[] pane_entries) {
 			SwingUtilities.invokeLater(new Runnable() {
 				@Override
 				public void run() {
-					if (titles != null) {
+					if (pane_entries != null) {
 						list.removeAll();
-						list.setListData(titles);
+						list.setListData(pane_entries);
+						if (pane_entries[0].equals(m_rb.getString("assortart")) || pane_entries[0].equals(m_rb.getString("negassort")))
+							is_assort = true;
+						else
+							is_assort = false;
 						if (m_curr_uistate.isInteractionsMode())
-							m_section_str = Arrays.asList(titles);
+							m_section_str = Arrays.asList(pane_entries);
 					}
 				}
 			});
@@ -793,12 +800,11 @@ public class AMiKoDesk {
 			if (!e.getValueIsAdjusting()) {
 				int sel_index = list.getSelectedIndex();
 				if (sel_index >= 0) {
-					if (!m_curr_uistate.isComparisonMode()
-							&& !m_curr_uistate.isShoppingMode())
+					if (!m_curr_uistate.isComparisonMode() && !m_curr_uistate.isShoppingMode()) {
 						m_web_panel.moveToAnchor(m_section_str.get(sel_index));
-					else if (m_curr_uistate.isComparisonMode()) {
+					} else if (m_curr_uistate.isComparisonMode()) {
 						// Do nothing
-					} else {
+					} else if (m_curr_uistate.isShoppingMode()){
 						if (m_curr_uistate.isLoadCart()) {
 							File file = new File(m_application_data_folder + "\\shop\\");
 							if (file.exists() && file.isDirectory() && file.list().length > 0) {
@@ -815,16 +821,57 @@ public class AMiKoDesk {
 									m_web_panel.updateShoppingHtml();
 								}
 							}
-						} else {
-							if (sel_index < list_of_articles.size()) {
+						} else {							
+							if (list_of_articles.size()>0 && sel_index < list_of_articles.size()) {	
+								boolean updateBasket = false;
+								if (is_assort)
+									sel_index--;
 								Article article = list_of_articles.get(sel_index);
-								String ean_code = article.getEanCode();
-								if (ean_code != null) {
-									if (m_shopping_basket.containsKey(ean_code))
-										article.incrementQuantity();
-									m_shopping_basket.put(ean_code, article);
-									m_web_panel.updateShoppingHtml();
-								}
+								String ean_code = article.getEanCode();		
+	                            if (ean_code != null) {	                                	                            	
+									// If ean code is alread in shopping basket...                            	
+	                            	if (m_shopping_basket.containsKey(ean_code)) {
+	                            		article = m_shopping_basket.get(ean_code);
+	                            		article.incrementQuantity();
+	                                    updateBasket = true;
+	                            	} else {
+	                            		// If categegories exist, we can assume that the article is kosher
+	                            		if (!article.getCategories().isEmpty()) {
+	                            			updateBasket = true;
+	                            		} else {							
+	                            			// We have seleced an assorted article which has only a very basic amount of info
+											List<Medication> med_list = m_sqldb.searchEanCode(ean_code);
+											assert(med_list.size()==1);
+											// Assumption: one ean code corresponds to one med
+											Medication m = med_list.get(0);
+											// Get its packages
+											String[] packages = m.getPackages().split("\n");
+											if (packages!=null) {
+												// user/customer categories are defined in aips2sqlite:glncodes.java
+												String user_category = m_prefs.get("type", "arzt");
+												// Loop through all packages and find the right one, add it to the basket
+												for (int i=0; i<packages.length; ++i) {
+													if (!packages[i].isEmpty() && packages[i].contains(ean_code)) {
+														String[] entry = packages[i].split("\\|");
+														Article a = new Article(entry, m.getAuth());
+														if (a.isVisible(user_category) && a.hasPrice(user_category)) {
+															a.setQuantity(1);
+															article = a;
+															updateBasket = true;
+														}
+													}
+												}
+											}
+	                            		}
+	                            	}
+	                            	if (updateBasket==true) {
+                            			// We have selected a standard / non-assorted article
+										m_shopping_basket.put(ean_code, article);
+										// Update shopping basket
+										m_shopping_cart.setShoppingBasket(m_shopping_basket);
+										m_web_panel.updateShoppingHtml();
+	                            	}
+	                            }
 							}
 						}
 					}
@@ -940,7 +987,7 @@ public class AMiKoDesk {
 				public Object invoke(JWebBrowser webBrowser, Object... args) {
 					String msg = args[0].toString().trim();
 					String row_key = args[1].toString().trim();
-					// System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
+					System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
 					//
 					if (m_curr_uistate.isInteractionsMode()) {
 						if (msg.equals("delete_all"))
@@ -1010,6 +1057,28 @@ public class AMiKoDesk {
 								m_shopping_cart.setShoppingBasket(m_shopping_basket);
 								updateShoppingCart(row_key, article);
 							}
+						} else if (msg.startsWith("assort_list")) {
+							m_curr_uistate.setUseMode("shopping");
+							Map<String, String> assorted_articles = m_shopping_cart.getAssortedArticles(row_key);
+							list_of_articles.clear();
+							for (Map.Entry<String, String> entry : assorted_articles.entrySet()) {
+								Article article = new Article();
+								article.setPackTitle(entry.getValue());
+								article.setEanCode(entry.getKey());
+								article.setQuantity(1);
+								list_of_articles.add(article);
+							}
+							// Update mid pane entries
+							List<String> list_of_packages = new ArrayList<String>();
+							if (list_of_articles.size()>0) {
+								list_of_packages.add(m_rb.getString("assortart"));								
+								for (Article a : list_of_articles)
+									list_of_packages.add(a.getPackTitle());
+							} else {
+								list_of_packages.add(m_rb.getString("negassort"));
+							}
+							String[] packages = list_of_packages.toArray(new String[list_of_packages.size()]);
+							m_middle_pane.update(packages);
 						} else if (msg.equals("load_cart")) {
 							if (row_key.equals("0.0")) {
 								// List all old shopping carts in the central pane
@@ -1038,7 +1107,7 @@ public class AMiKoDesk {
 										Collections.reverse(list_of_carts);
 										m_curr_uistate.setUseMode("loadcart");
 										String[] file_str = list_of_carts.toArray(new String[list_of_carts.size()]);
-										m_section_titles.updatePanel(file_str);
+										m_middle_pane.update(file_str);
 									}
 								});
 								m_web_panel.updateShoppingHtml();
@@ -1137,16 +1206,14 @@ public class AMiKoDesk {
 							sd.ShoppingCartDialog(row_key, true, m_rb);
 						} else {
 							if (med_index >= 0) {
-								// user/customer categories are defined in
-								// aips2sqlite:glncodes.java
+								// user/customer categories are defined in aips2sqlite:glncodes.java
 								String user_category = m_prefs.get("type", "arzt");
 								// Get full info on selected medication
 								Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
 								// Get its packages
 								String[] packages = m.getPackages().split("\n");
 								if (packages != null) {
-									// Loop through all packages and find the
-									// right one, add it to the basket
+									// Loop through all packages and find the right one, add it to the basket
 									for (int i = 0; i < packages.length; ++i) {
 										if (!packages[i].isEmpty() && packages[i].contains(row_key)) {
 											String[] entry = packages[i].split("\\|");
@@ -1226,7 +1293,7 @@ public class AMiKoDesk {
 					}
 				}
 			}
-			m_section_titles.updatePanel(titles);
+			m_middle_pane.update(titles);
 		}
 
 		public void updateText() {
@@ -1382,8 +1449,7 @@ public class AMiKoDesk {
 			List<String> list_of_packages = new ArrayList<String>();
 			String[] packages = { m_rb.getString("packs") };
 			if (m_curr_uistate.isShoppingMode()) {
-				// user/customer categories are defined in
-				// aips2sqlite:glncodes.java
+				// user/customer categories are defined in aips2sqlite:glncodes.java
 				String user_category = m_prefs.get("type", "arzt");
 				if (med_index < med_id.size() && med_index >= 0) {
 					// Get full info on selected medication
@@ -1392,7 +1458,7 @@ public class AMiKoDesk {
 					// Get packages and author
 					packages = m.getPackages().split("\n");
 					if (packages != null) {
-						for (int i = 0; i < packages.length; ++i) {
+						for (int i=0; i<packages.length; ++i) {
 							if (!packages[i].isEmpty()) {
 								String[] entry = packages[i].split("\\|");
 								Article article = new Article(entry, m.getAuth());
@@ -1409,7 +1475,7 @@ public class AMiKoDesk {
 			if (list_of_packages.size() == 0)
 				list_of_packages.add(m_rb.getString("nopacks"));
 			packages = list_of_packages.toArray(new String[list_of_packages.size()]);
-			m_section_titles.updatePanel(packages);
+			m_middle_pane.update(packages);
 		}
 
 		/*---------------------------------------------------------------------------
@@ -1440,7 +1506,7 @@ public class AMiKoDesk {
 			// Retrieve main html
 			String html_str = m_interactions_cart.updateHtml(m_med_basket);
 			// Retrieve section titles
-			m_section_titles.updatePanel(m_interactions_cart.sectionTitles());
+			m_middle_pane.update(m_interactions_cart.sectionTitles());
 			// Update html
 			jWeb.setJavascriptEnabled(true);
 			jWeb.setHTMLContent(html_str);
@@ -1754,11 +1820,11 @@ public class AMiKoDesk {
 		gbc.insets = new Insets(2, 2, 2, 2);
 
 		// ---- Section titles ----
-		m_section_titles = null;
+		m_middle_pane = null;
 		if (Utilities.appLanguage().equals("de")) {
-			m_section_titles = new IndexPanel(SectionTitle_DE);
+			m_middle_pane = new MiddlePane(SectionTitle_DE);
 		} else if (Utilities.appLanguage().equals("fr")) {
-			m_section_titles = new IndexPanel(SectionTitle_FR);
+			m_middle_pane = new MiddlePane(SectionTitle_FR);
 		}
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
@@ -1767,8 +1833,8 @@ public class AMiKoDesk {
 		gbc.gridheight = 8;
 		gbc.weightx = gbc.weighty = 0.0;
 		// --> container.add(m_section_titles, gbc);
-		if (m_section_titles != null)
-			light_panel.add(m_section_titles, gbc);
+		if (m_middle_pane != null)
+			light_panel.add(m_middle_pane, gbc);
 
 		// ---- Fachinformation ----
 		m_web_panel = new WebPanel2();
@@ -1922,6 +1988,9 @@ public class AMiKoDesk {
 			jframe.setIconImage(img.getImage());
 		} else if (Utilities.appCustomization().equals("zurrose")) {
 			ImageIcon img = new ImageIcon(Constants.AMIKO_ICON);
+			jframe.setIconImage(img.getImage());
+		} else if (Utilities.appCustomization().equals("ibsa")) {
+			ImageIcon img = new ImageIcon(Constants.IBSA_ICON);
 			jframe.setIconImage(img.getImage());
 		}
 
@@ -2169,7 +2238,7 @@ public class AMiKoDesk {
 		contact_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				if (Utilities.appCustomization().equals("ywesee")) {
+				if (Utilities.appCustomization().equals("ywesee") || Utilities.appCustomization().equals("ibsa")) {
 					if (Desktop.isDesktopSupported()) {
 						try {
 							URI mail_to_uri = URI.create("mailto:zdavatz@ywesee.com?subject=AmiKo%20Desktop%20Feedback");
@@ -2245,7 +2314,7 @@ public class AMiKoDesk {
 		ywesee_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				if (Utilities.appCustomization().equals("ywesee")) {
+				if (Utilities.appCustomization().equals("ywesee") || Utilities.appCustomization().equals("ibsa")) {
 					if (Desktop.isDesktopSupported()) {
 						try {
 							Desktop.getDesktop().browse(
@@ -2444,14 +2513,14 @@ public class AMiKoDesk {
 		right_panel.setLayout(new GridBagLayout());
 
 		// ---- Section titles ----
-		m_section_titles = null;
+		m_middle_pane = null;
 		if (Utilities.appLanguage().equals("de")) {
-			m_section_titles = new IndexPanel(SectionTitle_DE);
+			m_middle_pane = new MiddlePane(SectionTitle_DE);
 		} else if (Utilities.appLanguage().equals("fr")) {
-			m_section_titles = new IndexPanel(SectionTitle_FR);
+			m_middle_pane = new MiddlePane(SectionTitle_FR);
 		}
-		m_section_titles.setMinimumSize(new Dimension(150, 150));
-		m_section_titles.setMaximumSize(new Dimension(320, 1000));
+		m_middle_pane.setMinimumSize(new Dimension(150, 150));
+		m_middle_pane.setMaximumSize(new Dimension(320, 1000));
 
 		// ---- Fachinformation ----
 		m_web_panel = new WebPanel2();
@@ -2461,7 +2530,7 @@ public class AMiKoDesk {
 		final int Divider_location = 150;
 		final int Divider_size = 10;
 		final JSplitPane split_pane_right = new JSplitPane(
-				JSplitPane.HORIZONTAL_SPLIT, m_section_titles, m_web_panel);
+				JSplitPane.HORIZONTAL_SPLIT, m_middle_pane, m_web_panel);
 		split_pane_right.setOneTouchExpandable(true);
 		split_pane_right.setDividerLocation(Divider_location);
 		split_pane_right.setDividerSize(Divider_size);
@@ -2522,7 +2591,7 @@ public class AMiKoDesk {
 					// Show middle pane
 					split_pane_right.setDividerSize(Divider_size);
 					split_pane_right.setDividerLocation(Divider_location);
-					m_section_titles.setVisible(true);
+					m_middle_pane.setVisible(true);
 					//
 					SwingUtilities.invokeLater(new Runnable() {
 						@Override
@@ -2554,7 +2623,7 @@ public class AMiKoDesk {
 					// Show middle pane
 					split_pane_right.setDividerSize(Divider_size);
 					split_pane_right.setDividerLocation(Divider_location);
-					m_section_titles.setVisible(true);				
+					m_middle_pane.setVisible(true);				
 					//
 					SwingUtilities.invokeLater(new Runnable() {
 						@Override
@@ -2597,7 +2666,7 @@ public class AMiKoDesk {
 					// Show middle pane
 					split_pane_right.setDividerSize(Divider_size);
 					split_pane_right.setDividerLocation(Divider_location);
-					m_section_titles.setVisible(true);				
+					m_middle_pane.setVisible(true);				
 					//
 					SwingUtilities.invokeLater(new Runnable() {
 						@Override
@@ -2628,7 +2697,7 @@ public class AMiKoDesk {
 						// Show middle pane
 						split_pane_right.setDividerSize(Divider_size);
 						split_pane_right.setDividerLocation(Divider_location);
-						m_section_titles.setVisible(true);
+						m_middle_pane.setVisible(true);
 						// Set right panel title
 						m_web_panel.setTitle(m_rb.getString("shoppingCart"));
 						// Switch to shopping cart
@@ -2642,7 +2711,7 @@ public class AMiKoDesk {
 						m_web_panel.updateListOfPackages();
 						if (m_first_pass == true) {
 							m_first_pass = false;
-							if (Utilities.appCustomization().equals("ywesee"))
+							if (Utilities.appCustomization().equals("ibsa"))
 								med_search = m_sqldb.searchAuth("ibsa");
 							else if (Utilities.appCustomization().equals("desitin"))
 								med_search = m_sqldb.searchAuth("desitin");
@@ -2664,7 +2733,7 @@ public class AMiKoDesk {
 				if (!m_curr_uistate.getUseMode().equals("comparison")) {
 					m_curr_uistate.setUseMode("comparison");
 					// Hide middle pane
-					m_section_titles.setVisible(false);
+					m_middle_pane.setVisible(false);
 					split_pane_right.setDividerLocation(0);							
 					split_pane_right.setDividerSize(0);
 					//

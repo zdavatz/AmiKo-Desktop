@@ -707,7 +707,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		}
 		
 		add(Box.createRigidArea(new Dimension(0, 10)));		
-		if (Utilities.appCustomization().equals("ywesee")) {	// IBSA
+		if (Utilities.appCustomization().equals("ibsa")) {	// IBSA
 			JPanel jplInnerPanel3 = shoppingBasketSettings2();
 			this.add(jplInnerPanel3);
 		} else {
@@ -723,7 +723,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		// Centers the dialog
 		this.setLocationRelativeTo(null);
 		// Set size
-		if (Utilities.appCustomization().equals("ywesee"))	// IBSA
+		if (Utilities.appCustomization().equals("ibsa"))	// IBSA
 			this.setSize(640, 800);		
 		else
 			this.setSize(512, 680);
@@ -732,7 +732,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		this.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(WindowEvent e) {
-				if (Utilities.appCustomization().equals("ywesee")) {	// IBSA
+				if (Utilities.appCustomization().equals("ibsa")) {	// IBSA
 					if (m_user!=null) {
 						// Store user info
 						mShippingAddress.storeDataToPreferences(m_user.is_human);

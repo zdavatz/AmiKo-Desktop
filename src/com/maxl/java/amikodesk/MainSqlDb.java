@@ -224,8 +224,9 @@ public class MainSqlDb {
 
 		try {
 			m_stat = m_conn.createStatement();
-			String query = "select " + SHORT_TABLE + " from " + DATABASE_TABLE
-					+ " where " + KEY_TITLE + " like " + "'" + title + "%'";
+			String query = "select " + SHORT_TABLE + " from " + DATABASE_TABLE + " where " 
+					+ KEY_TITLE + " like " + "'" + title + "%' or "
+					+ KEY_TITLE + " like " + "'%" + title + "%'";
 			m_rs = m_stat.executeQuery(query);
 			while (m_rs.next()) {
 				med_titles.add(cursorToShortMedi(m_rs));
@@ -326,6 +327,24 @@ public class MainSqlDb {
 		return med_regnr;
 	}
 
+	public List<Medication> searchEanCode(String eancode) {
+		List<Medication> med_eancode = new ArrayList<Medication>();
+
+		try {
+			m_stat = m_conn.createStatement();
+			String query = "select * from " + DATABASE_TABLE + " where " 
+					+ KEY_PACKAGES + " like " + "'%" + eancode + "%'";
+			m_rs = m_stat.executeQuery(query);
+			while (m_rs.next()) {
+				med_eancode.add(cursorToMedi(m_rs));
+			}
+		} catch (SQLException e) {
+			System.err.println(">> SqlDatabase: SQLException in searchRegNr!");
+		}
+
+		return med_eancode;
+	}
+	
 	public List<Medication> searchApplication(String application) {
 		List<Medication> med_application = new ArrayList<Medication>();
 

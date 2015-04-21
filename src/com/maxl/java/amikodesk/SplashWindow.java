@@ -75,6 +75,16 @@ public class SplashWindow extends JWindow {
             content.add(image, BorderLayout.CENTER);
             color = new Color(255,200,200,255);
             setBounds(x,y,width,height);
+		} else if (m_app_name.equals(Constants.AMIKO_IBSA_NAME)) {
+            JLabel image = new JLabel(new ImageIcon("./images/ibsa_logo_de.png"));
+            content.add(image, BorderLayout.CENTER);
+            color = new Color(255,255,255,100);
+            setBounds(x,y,width,height);
+		} else if (m_app_name.equals(Constants.COMED_IBSA_NAME)) {
+            JLabel image = new JLabel(new ImageIcon("./images/ibsa_logo_fr.png"));
+            content.add(image, BorderLayout.CENTER);
+            color = new Color(255,255,255,100);
+            setBounds(x,y,width,height);			
 		}
 
         content.setBackground(color);

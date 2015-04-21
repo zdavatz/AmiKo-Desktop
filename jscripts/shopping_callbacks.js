@@ -101,6 +101,20 @@ function onSelect(tableID,currentRow,index) {
 	}
 }
 
+function assortList(tableID,currentRow) {
+	if (tableID=="Warenkorb") {
+		var table = document.getElementById(tableID);
+		var rowCount = table.rows.length;
+		for (var i=0; i<rowCount; i++) {
+			var row = table.rows[i];
+			if (row==currentRow.parentNode) {
+				var eanCode = row.cells[0].innerText;
+				invokeJava("assort_list", eanCode);			
+			}
+		}
+	}
+}
+
 function changeMarge(tableID,currentRow) {
     try {
 		var key = window.event.keyCode;

@@ -249,6 +249,11 @@ public class ShoppingCart implements java.io.Serializable {
 		return rebate_map;
 	}
 
+	/**
+	 * Given an ean code returns list of assorted ean codes
+	 * @param ean_code
+	 * @return list of assorted ean codes
+	 */
 	public List<String> getAssortList(String ean_code) {		
 		if (m_map_ibsa_conditions.containsKey(ean_code)) {
 			List<String> assort_list = null;
@@ -282,6 +287,23 @@ public class ShoppingCart implements java.io.Serializable {
 			return assort_list;
 		}
 		return null;
+	}
+	
+	public Map<String, String> getAssortedArticles(String ean_code) {
+		Map<String, String> assortedArticles = new TreeMap<String, String>();		
+		List<String> assortList = getAssortList(ean_code);
+		// Loop through all ean codes
+		if (assortList!=null) {
+			for (String ass_ean : assortList) {
+				// Get name associated with it
+				Conditions c = m_map_ibsa_conditions.get(ass_ean);
+				if (c!=null) {
+					String name = c.name;
+					assortedArticles.put(ass_ean, name);
+				}
+			}
+		}
+		return assortedArticles;
 	}
 	
 	public int getDraufgabe(Article article) {
@@ -604,10 +626,10 @@ public class ShoppingCart implements java.io.Serializable {
 						basket_html_str += "<td>" + ean_code + "</td>"
 								+ "<td>" + category + "</td>"			
 								+ "<td style=\"color:'#999999'\">" + muster + "</td>"
-								+ "<td onMouseOver=\"this.bgColor='#eeeed0'\" onMouseOut=\"this.bgColor='#f0f0f0'\">" 
+								+ "<td onmouseover=\"this.bgColor='#eeeed0';\" onmouseout=\"this.bgColor='#f0f0f0';\" onclick=\"assortList('Warenkorb',this);\">" 
 									+ "<a href=\"#\" class=\"tooltip\">" + article.getPackTitle() + assort_articles_str + "</a></td>"	
 								+ "<td style=\"text-align:center;\">" + assortierbar + "</td>"	
-								+ "<td style=\"text-align:right;\">" + "<select id=\"selected" + index + "\" style=\"width:50px; direction:rtl; text-align:right;\" onchange=\"onSelect('Warenkorb',this," + index + ")\"" +
+								+ "<td style=\"text-align:right;\">" + "<select id=\"selected" + index + "\" style=\"width:56px; direction:rtl; text-align:right;\" onchange=\"onSelect('Warenkorb',this," + index + ")\"" +
 									" tabindex=\"" + index + "\">" + article.getDropDownStr()+ "</select></td>"
 								+ "<td style=\"text-align:right;\">" + bonus + "</td>"						
 								+ "<td style=\"text-align:right;\">" + tot_buying_price_CHF + "</td>"
@@ -642,10 +664,10 @@ public class ShoppingCart implements java.io.Serializable {
 						basket_html_str += "<td>" + ean_code + "</td>"
 								+ "<td>" + category + "</td>"		
 								+ "<td style=\"color:'#999999'\">" + muster + "</td>"
-								+ "<td onMouseOver=\"this.bgColor='#eeeed0'\" onMouseOut=\"this.bgColor='#f0f0f0'\">" 
+								+ "<td onmouseover=\"this.bgColor='#eeeed0';\" onmouseout=\"this.bgColor='#f0f0f0';\" onclick=\"assortList('Warenkorb',this);\">" 
 									+ "<a href=\"#\" class=\"tooltip\">" + article.getPackTitle() + assort_articles_str + "</a></td>"	
 								+ "<td style=\"text-align:center;\">" + assortierbar + "</td>"	
-								+ "<td style=\"text-align:right;\">" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:50px; text-align:right;\"" +
+								+ "<td style=\"text-align:right;\">" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:56px; text-align:right;\"" +
 									" value=\"" + quantity + "\"" + " onkeydown=\"changeQty('Warenkorb',this)\" id=\"" + index + "\" tabindex=\"" + index + "\" />" + "</td>"
 								+ "<td style=\"text-align:right;\"></td>"					
 								+ "<td style=\"text-align:right;\">" + tot_buying_price_CHF + "</td>"
@@ -680,7 +702,7 @@ public class ShoppingCart implements java.io.Serializable {
 							+ "<td>" + "" + "</td>"
 							+ assort_hover
 							+ "<td>" + "" + "</td>"															
-							+ "<td style=\"text-align:right;\">" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:50px; text-align:right;\"" +
+							+ "<td style=\"text-align:right;\">" + "<input type=\"number\" name=\"points\" maxlength=\"4\" min=\"1\" max=\"999\" style=\"width:56px; text-align:right;\"" +
 								" value=\"" + quantity + "\"" + " onkeydown=\"changeQty('Warenkorb',this)\" id=\"" + index + "\" tabindex=\"" + index + "\" />" + "</td>"
 							+ "<td style=\"text-align:right;\"></td>"						
 							+ "<td style=\"text-align:right;\">" + tot_buying_price_CHF + "</td>"

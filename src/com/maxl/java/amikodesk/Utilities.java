@@ -36,10 +36,12 @@ public class Utilities {
 		else if (Constants.DB_LANGUAGE.equals("FR"))
 			return "fr";
 		else if (Constants.APP_NAME.equals(Constants.AMIKO_NAME) || Constants.APP_NAME.equals(Constants.AMIKO_DESITIN_NAME) 
-				|| Constants.APP_NAME.equals(Constants.AMIKO_MEDDRUGS_NAME) || Constants.APP_NAME.equals(Constants.AMIKO_ZURROSE_NAME)) {
+				|| Constants.APP_NAME.equals(Constants.AMIKO_MEDDRUGS_NAME) || Constants.APP_NAME.equals(Constants.AMIKO_ZURROSE_NAME)
+				|| Constants.APP_NAME.equals(Constants.AMIKO_IBSA_NAME)) {
 			return "de";
 		} else if (Constants.APP_NAME.equals(Constants.COMED_NAME) || Constants.APP_NAME.equals(Constants.COMED_DESITIN_NAME) 
-				|| Constants.APP_NAME.equals(Constants.COMED_MEDDRUGS_NAME) || Constants.APP_NAME.equals(Constants.COMED_ZURROSE_NAME)) {
+				|| Constants.APP_NAME.equals(Constants.COMED_MEDDRUGS_NAME) || Constants.APP_NAME.equals(Constants.COMED_ZURROSE_NAME)
+				|| Constants.APP_NAME.equals(Constants.COMED_IBSA_NAME)) {
 			return "fr";
 		}
 		return "";
@@ -54,6 +56,8 @@ public class Utilities {
 			return "meddrugs";
 		} else if (Constants.APP_NAME.equals(Constants.AMIKO_ZURROSE_NAME) || Constants.APP_NAME.equals(Constants.COMED_ZURROSE_NAME)) {
 			return "zurrose";
+		} else if (Constants.APP_NAME.equals(Constants.AMIKO_IBSA_NAME) || Constants.APP_NAME.equals(Constants.COMED_IBSA_NAME)) {
+			return "ibsa";
 		}
 		return "";
 	}

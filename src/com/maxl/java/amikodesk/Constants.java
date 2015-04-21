@@ -52,6 +52,8 @@ public class Constants {
 	public static final String COMED_MEDDRUGS_NAME = "med-drugs-fr desktop";
 	public static final String AMIKO_ZURROSE_NAME = "AmiKo Desktop ZR";
 	public static final String COMED_ZURROSE_NAME = "CoMed Desktop ZR";
+	public static final String AMIKO_IBSA_NAME = "AmiKo Desktop Ibsa";
+	public static final String COMED_IBSA_NAME = "CoMed Desktop Ibsa";
 
 	// App icons
 	public static final String AMIKO_ICON = "./icons/amiko_icon.png";
@@ -60,9 +62,10 @@ public class Constants {
 	public static final String MEDDRUGS_ICON = "./icons/meddrugs_icon.png";
 	public static final String MEDDRUGS_LOGO = "./images/meddrugs_logo.png";
 	public static final String ZURROSE_ICON = "./icons/amiko_icon.png";
+	public static final String IBSA_ICON = AMIKO_ICON;
 	
 	// -->> Note: uncomment name of app to compile!
-	public static final String APP_NAME = AMIKO_NAME;
+	// public static final String APP_NAME = AMIKO_NAME;
 	// public static final String APP_NAME = COMED_NAME;
 	// public static final String APP_NAME = AMIKO_DESITIN_NAME;
 	// public static final String APP_NAME = COMED_DESITIN_NAME;
@@ -70,6 +73,8 @@ public class Constants {
 	// public static final String APP_NAME = COMED_MEDDRUGS_NAME;
 	// public static final String APP_NAME = AMIKO_ZURROSE_NAME;
 	// public static final String APP_NAME = COMED_ZURROSE_NAME;
-	public static final String APP_VERSION = "1.3.2 (32-bit)";	
-	public static final String GEN_DATE = "05.04.2015";	
+	public static final String APP_NAME = AMIKO_IBSA_NAME;
+	// public static final String APP_NAME = COMED_IBSA_NAME;
+	public static final String APP_VERSION = "1.3.4 (32-bit)";	
+	public static final String GEN_DATE = "13.04.2015";	
 }
