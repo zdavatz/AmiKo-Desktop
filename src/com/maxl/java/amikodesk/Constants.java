@@ -52,8 +52,8 @@ public class Constants {
 	public static final String COMED_MEDDRUGS_NAME = "med-drugs-fr desktop";
 	public static final String AMIKO_ZURROSE_NAME = "AmiKo Desktop ZR";
 	public static final String COMED_ZURROSE_NAME = "CoMed Desktop ZR";
-	public static final String AMIKO_IBSA_NAME = "AmiKo Desktop Ibsa";
-	public static final String COMED_IBSA_NAME = "CoMed Desktop Ibsa";
+	public static final String AMIKO_IBSA_NAME = "AmiKo Desktop IBSA";
+	public static final String COMED_IBSA_NAME = "CoMed Desktop IBSA";
 
 	// App icons
 	public static final String AMIKO_ICON = "./icons/amiko_icon.png";
