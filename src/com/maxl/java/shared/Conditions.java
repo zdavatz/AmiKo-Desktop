@@ -227,7 +227,7 @@ public class Conditions implements java.io.Serializable {
 			if (pharmacy_promo_days.containsKey(category)) {
 				for (int i=0; i<pharmacy_promo_days.get(category).size(); i+=2) {
 					List<Integer> d = pharmacy_promo_days.get(category);
-					if (day_of_year>=d.get(i) && day_of_year<d.get(i)) {
+					if (day_of_year>=d.get(i) && day_of_year<d.get(i+1)) {
 						return true;
 					}
 				}			
@@ -236,7 +236,7 @@ public class Conditions implements java.io.Serializable {
 			if (drugstore_promo_days.containsKey(category)) {
 				for (int i=0; i<drugstore_promo_days.get(category).size(); i+=2) {
 					List<Integer> d = drugstore_promo_days.get(category);
-					if (day_of_year>=d.get(i) && day_of_year<d.get(i)) {
+					if (day_of_year>=d.get(i) && day_of_year<d.get(i+1)) {
 						return true;
 					}
 				}						

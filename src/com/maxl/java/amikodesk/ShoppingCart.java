@@ -222,7 +222,9 @@ public class ShoppingCart implements java.io.Serializable {
 		String gln_code = m_prefs.get("glncode", "7610000000000");
 		if (m_map_ibsa_glns.containsKey(gln_code)) {
 			// Extract user class (group in case of pharmacies)
-			char user_class = m_map_ibsa_glns.get(gln_code).charAt(0);			
+			String uc[] = m_map_ibsa_glns.get(gln_code).split(";");
+			// This is the default class
+			char user_class = uc[0].charAt(0);			
 			// Is the user human or corporate?
 			String user_type = m_prefs.get("type", "arzt");
 			// Get rebate conditions
@@ -236,6 +238,12 @@ public class ShoppingCart implements java.io.Serializable {
 				} else if (user_type.equals("apotheke")) {
 					boolean is_promo_time = c.isPromoTime("pharmacy", user_class);
 					rebate_map = c.getDiscountPharmacy(user_class, is_promo_time);
+					if (rebate_map==null && uc.length>1) {	// Sanity check can't hurt...
+						// This is the fall back class
+						user_class = uc[1].charAt(0);	// Fallback!
+						is_promo_time = c.isPromoTime("pharmacy", user_class);
+						rebate_map = c.getDiscountPharmacy(user_class, is_promo_time);						
+					}
 				} else if (user_type.equals("drogerie")) {
 					boolean is_promo_time = c.isPromoTime("drugstore", user_class);
 					rebate_map = c.getDiscountDrugstore(user_class, is_promo_time);
@@ -260,7 +268,10 @@ public class ShoppingCart implements java.io.Serializable {
 			String gln_code = m_prefs.get("glncode", "7610000000000");
 
 			if (m_map_ibsa_glns.containsKey(gln_code)) {
-				char user_class = m_map_ibsa_glns.get(gln_code).charAt(0);
+				// Extract user class (group in case of pharmacies)
+				String uc[] = m_map_ibsa_glns.get(gln_code).split(";");
+				// This is the default class
+				char user_class = uc[0].charAt(0);	
 				// Is the user human or corporate?			
 				String user_type = m_prefs.get("type", "arzt");
 				// System.out.println("Category for GLN " + gln_code + ": " + user_class + "-" + user_type);
@@ -269,6 +280,9 @@ public class ShoppingCart implements java.io.Serializable {
 				if (user_type.equals("arzt")) {
 					assort_list = c.getAssort("doctor");
 				} else if (user_type.equals("apotheke")) {
+					// For pharmacies use fallback category...
+					if (uc.length==1)
+						user_class = uc[1].charAt(1);
 					boolean is_promo_time = c.isPromoTime("pharmacy", user_class);
 					if (!is_promo_time)
 						assort_list = c.getAssort("pharmacy");

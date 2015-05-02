@@ -44,7 +44,10 @@ public class MainSqlDb {
 	private static final String SHORT_TABLE = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", 
 			KEY_ROWID, KEY_TITLE, KEY_AUTH, KEY_ATCCODE, KEY_SUBSTANCES, KEY_REGNRS, 
 			KEY_ATCCLASS, KEY_THERAPY, KEY_APPLICATION, KEY_INDICATIONS,
-			KEY_CUSTOMER_ID, KEY_PACK_INFO, KEY_CONTENT);
+			KEY_CUSTOMER_ID, KEY_PACK_INFO, KEY_ADDINFO);
+	
+	private static final String PACKAGES_TABLE = String.format("%s,%s,%s,%s,%s", 
+			KEY_ROWID, KEY_TITLE, KEY_AUTH, KEY_REGNRS, KEY_PACKAGES);
 	
 	private Connection m_conn;
 	private Statement m_stat;
@@ -332,14 +335,14 @@ public class MainSqlDb {
 
 		try {
 			m_stat = m_conn.createStatement();
-			String query = "select * from " + DATABASE_TABLE + " where " 
+			String query = "select " + PACKAGES_TABLE + " from " + DATABASE_TABLE + " where " 
 					+ KEY_PACKAGES + " like " + "'%" + eancode + "%'";
 			m_rs = m_stat.executeQuery(query);
 			while (m_rs.next()) {
-				med_eancode.add(cursorToMedi(m_rs));
+				med_eancode.add(cursorToPackMedi(m_rs));
 			}
 		} catch (SQLException e) {
-			System.err.println(">> SqlDatabase: SQLException in searchRegNr!");
+			System.err.println(">> SqlDatabase: SQLException in searchEanCode!");
 		}
 
 		return med_eancode;
@@ -450,12 +453,27 @@ public class MainSqlDb {
 			medi.setIndications(result.getString(10)); // KEY_INDICATIONS
 			medi.setCustomerId(result.getInt(11)); // KEY_CUSTOMER_ID
 			medi.setPackInfo(result.getString(12)); // KEY_PACK_INFO
+			medi.setAddInfo(result.getString(13)); // KEY_ADD_INFO
 		} catch (SQLException e) {
 			System.err.println(">> SqlDatabase: SQLException in cursorToShortMedi");
 		}
 		return medi;
 	}
 
+	private Medication cursorToPackMedi(ResultSet result) {
+		Medication medi = new Medication();
+		try {
+			medi.setId(result.getLong(1));	// KEY_ROWID
+			medi.setTitle(result.getString(2)); // KEY_TITLE
+			medi.setAuth(result.getString(3)); // KEY_AUTH
+			medi.setRegnrs(result.getString(4)); // KEY_REGNRS
+			medi.setPackages(result.getString(5)); // KEY_PACKAGES
+		} catch (SQLException e) {
+			System.err.println(">> SqlDatabase: SQLException in cursorToPackMedi");
+		}
+		return medi;
+	}
+	
 	/**
 	 * Maps cursor to medication (long version, slow)
 	 * 
@@ -465,7 +483,7 @@ public class MainSqlDb {
 	private Medication cursorToMedi(ResultSet result) {
 		Medication medi = new Medication();
 		try {
-			medi.setId(result.getLong(1));
+			medi.setId(result.getLong(1)); // KEY_ROWID
 			medi.setTitle(result.getString(2)); // KEY_TITLE
 			medi.setAuth(result.getString(3)); // KEY_AUTH
 			medi.setAtcCode(result.getString(4)); // KEY_ATCCODE
@@ -481,7 +499,7 @@ public class MainSqlDb {
 			medi.setSectionIds(result.getString(14)); // KEY_SECTION_IDS
 			medi.setSectionTitles(result.getString(15)); // KEY_SECTION_TITLES
 			medi.setContent(result.getString(16)); // KEY_CONTENT
-													// KEY_STYLE...
+													// KEY_STYLE... (ignore)
 			medi.setPackages(result.getString(18)); // KEY_PACKAGES
 		} catch (SQLException e) {
 			System.err.println(">> SqlDatabase: SQLException in cursorToMedi");

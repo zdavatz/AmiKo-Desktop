@@ -143,7 +143,9 @@ import chrriis.dj.nativeswing.NSComponentOptions;
 import chrriis.dj.nativeswing.NativeSwing;
 import chrriis.dj.nativeswing.swtimpl.NativeInterface;
 import chrriis.dj.nativeswing.swtimpl.components.JWebBrowser;
+import chrriis.dj.nativeswing.swtimpl.components.WebBrowserAdapter;
 import chrriis.dj.nativeswing.swtimpl.components.WebBrowserFunction;
+import chrriis.dj.nativeswing.swtimpl.components.WebBrowserNavigationEvent;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -167,7 +169,7 @@ public class AMiKoDesk {
 
 	private static Long m_start_time = 0L;
 	private static List<String> med_content = new ArrayList<String>();
-	private static List<Long> med_id = new ArrayList<Long>();
+	private static List<ArrayList<Long>> med_id = new ArrayList<ArrayList<Long>>();		// Define a list of ids... used to group products!
 	private static List<Medication> med_search = new ArrayList<Medication>();
 	private static List<Article> rose_search = new ArrayList<Article>();
 	private static List<Medication> med_title = new ArrayList<Medication>();
@@ -183,7 +185,8 @@ public class AMiKoDesk {
 	private static int med_index = -1;
 	private static int prev_med_index = -1;
 	private static UIState m_curr_uistate = new UIState("aips");
-
+	private static String m_curr_regnr = "";
+	
 	private static ProgressIndicator m_progress_indicator = new ProgressIndicator(32);
 	private static MiddlePane m_middle_pane = null;
 	private static WebPanel2 m_web_panel = null;
@@ -447,6 +450,9 @@ public class AMiKoDesk {
 		// Preferences
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
 
+		// Set default query type
+		m_curr_uistate.setQueryType(m_query_type=0);
+		
 		// UIUtils.setPreferredLookAn dFeel();
 		NativeInterface.open();
 		NativeSwing.initialize();
@@ -822,24 +828,33 @@ public class AMiKoDesk {
 								}
 							}
 						} else {							
-							if (list_of_articles.size()>0 && sel_index < list_of_articles.size()) {	
+							if (list_of_articles.size()>0 && sel_index <= list_of_articles.size()) {	
 								boolean updateBasket = false;
-								if (is_assort)
-									sel_index--;
-								Article article = list_of_articles.get(sel_index);
-								String ean_code = article.getEanCode();		
-	                            if (ean_code != null) {	                                	                            	
-									// If ean code is alread in shopping basket...                            	
+								Article article = null;
+								if (is_assort) {
+									if (sel_index>0)
+										article = list_of_articles.get(sel_index-1);
+									else
+										return;
+								}
+								else
+									article = list_of_articles.get(sel_index);
+								//
+								String ean_code = article.getEanCode();
+								m_curr_regnr = ean_code;
+																
+	                            if (ean_code!=null) {	                                	                            		                            	                          	
+									// If ean code is already in shopping basket...      
 	                            	if (m_shopping_basket.containsKey(ean_code)) {
 	                            		article = m_shopping_basket.get(ean_code);
 	                            		article.incrementQuantity();
 	                                    updateBasket = true;
 	                            	} else {
-	                            		// If categegories exist, we can assume that the article is kosher
+	                            		// If categories exist, we can assume that the article is kosher
 	                            		if (!article.getCategories().isEmpty()) {
 	                            			updateBasket = true;
 	                            		} else {							
-	                            			// We have seleced an assorted article which has only a very basic amount of info
+	                            			// We have selected an assorted article which has only a very basic amount of info
 											List<Medication> med_list = m_sqldb.searchEanCode(ean_code);
 											assert(med_list.size()==1);
 											// Assumption: one ean code corresponds to one med
@@ -850,20 +865,27 @@ public class AMiKoDesk {
 												// user/customer categories are defined in aips2sqlite:glncodes.java
 												String user_category = m_prefs.get("type", "arzt");
 												// Loop through all packages and find the right one, add it to the basket
-												for (int i=0; i<packages.length; ++i) {
-													if (!packages[i].isEmpty() && packages[i].contains(ean_code)) {
-														String[] entry = packages[i].split("\\|");
+												for (String p : packages) {
+													if (!p.isEmpty() && p.contains(ean_code)) {
+														String[] entry = p.split("\\|");
 														Article a = new Article(entry, m.getAuth());
+														a.setRegnr(m.getRegnrs());
+														article = a;
 														if (a.isVisible(user_category) && a.hasPrice(user_category)) {
 															a.setQuantity(1);
-															article = a;
 															updateBasket = true;
+															break;	// Stop for loop to save time...
 														}
 													}
 												}
 											}
 	                            		}
 	                            	}
+
+	                            	
+	                            	// Remember regnr globally! Used when switching back to "Kompendium"
+									m_curr_regnr = article.getRegnr();	 
+									
 	                            	if (updateBasket==true) {
                             			// We have selected a standard / non-assorted article
 										m_shopping_basket.put(ean_code, article);
@@ -872,6 +894,7 @@ public class AMiKoDesk {
 										m_web_panel.updateShoppingHtml();
 	                            	}
 	                            }
+                            	System.out.println(m_curr_regnr);                            	
 							}
 						}
 					}
@@ -974,8 +997,7 @@ public class AMiKoDesk {
 					TitledBorder.DEFAULT_JUSTIFICATION,
 					TitledBorder.DEFAULT_POSITION, 
 					new Font("Dialog", Font.PLAIN, 14));
-			webBrowserPanel.setBorder(BorderFactory
-					.createTitledBorder(titledBorder));
+			webBrowserPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));
 			jWeb = new JWebBrowser(NSComponentOptions.destroyOnFinalization());
 
 			/**
@@ -1209,7 +1231,8 @@ public class AMiKoDesk {
 								// user/customer categories are defined in aips2sqlite:glncodes.java
 								String user_category = m_prefs.get("type", "arzt");
 								// Get full info on selected medication
-								Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
+								long row_id = med_id.get(med_index).get(0);
+								Medication m = m_sqldb.getMediWithId(row_id);
 								// Get its packages
 								String[] packages = m.getPackages().split("\n");
 								if (packages != null) {
@@ -1237,6 +1260,26 @@ public class AMiKoDesk {
 				}
 			});
 
+			jWeb.addWebBrowserListener(new WebBrowserAdapter() {
+				@Override
+				public void locationChanging(WebBrowserNavigationEvent event) {
+					final String newResourceLocation = event.getNewResourceLocation();
+					if (newResourceLocation.startsWith("https://github.com/") || 
+							newResourceLocation.startsWith("http://evidentia.ch")) {
+						// Launch default webbrowser
+						if (Desktop.isDesktopSupported()) {
+							Desktop desktop = Desktop.getDesktop();
+							if (desktop.isSupported(Desktop.Action.BROWSE)) {
+								try {
+									desktop.browse(new URI(event.getNewResourceLocation()));
+								} catch(Exception ex) {}
+							}
+						}
+						event.consume();
+					}
+				}
+			});
+			
 			/*
 			 * JWebBrowserWindow jWebWindow =
 			 * WebBrowserWindowFactory.create(jWeb);
@@ -1298,13 +1341,13 @@ public class AMiKoDesk {
 
 		public void updateText() {
 			// Set right panel title
-			m_web_panel.setTitle(m_rb.getString("fachinfo"));
-
+			m_web_panel.setTitle(m_rb.getString("fachinfo"));	
 			if (med_index >= 0 && med_index < med_id.size()) {
 				// Get full info on selected medication
-				Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
+				long row_id = med_id.get(med_index).get(0);
+				Medication m = m_sqldb.getMediWithId(row_id);
 				// Get section ids
-				if (m.getSectionIds() != null) {
+				if (m.getSectionIds()!=null) {
 					String[] sections = m.getSectionIds().split(",");
 					m_section_str = Arrays.asList(sections);
 					// Update section titles
@@ -1336,9 +1379,12 @@ public class AMiKoDesk {
 					}
 
 					jWeb.setVisible(true);
+				} else {
+					m_web_panel.emptyPage();
 				}
-			} else
-				return;
+			} else {
+				m_web_panel.noclickPage();
+			}
 		}
 		
 		/*---------------------------------------------------------------------------
@@ -1453,18 +1499,25 @@ public class AMiKoDesk {
 				String user_category = m_prefs.get("type", "arzt");
 				if (med_index < med_id.size() && med_index >= 0) {
 					// Get full info on selected medication
-					Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
-					list_of_articles.clear();
-					// Get packages and author
-					packages = m.getPackages().split("\n");
-					if (packages != null) {
-						for (int i=0; i<packages.length; ++i) {
-							if (!packages[i].isEmpty()) {
-								String[] entry = packages[i].split("\\|");
-								Article article = new Article(entry, m.getAuth());
-								if (article.isVisible(user_category) && article.hasPrice(user_category)) {
-									list_of_articles.add(article);
-									list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + "]");
+					list_of_articles.clear();					
+					// Loop through all indexes listed in med_id (typically there is only one entry)
+					for (Long row_id : med_id.get(med_index)) {
+						Medication m = m_sqldb.getMediWithId(row_id);
+						// Get packages and author
+						packages = m.getPackages().split("\n");
+						// Extract the information that is shown to the user
+						if (packages!=null) {
+							for (String p : packages) {
+								if (!p.isEmpty()) {
+									String[] entry = p.split("\\|");
+									Article article = new Article(entry, m.getAuth());
+									// Set regnr							
+									article.setRegnr(m.getRegnrs());
+									//
+									if (article.isVisible(user_category) && article.hasPrice(user_category)) {
+										list_of_articles.add(article);
+										list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + "]");
+									}
 								}
 							}
 						}
@@ -1488,7 +1541,8 @@ public class AMiKoDesk {
 			System.out.println(med_index + " / " + med_id.size());
 			if (med_index >= 0 && med_index < med_id.size()) {
 				// Get full info on selected medication
-				Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
+				long row_id = med_id.get(med_index).get(0);
+				Medication m = m_sqldb.getMediWithId(row_id);
 				// Add med to basket if not already in basket
 				String title = m.getTitle().trim();
 				if (title.length() > 30)
@@ -1573,10 +1627,17 @@ public class AMiKoDesk {
 		public void emptyPage() {
 			// Update html
 			jWeb.setJavascriptEnabled(true);
-			jWeb.setHTMLContent("");
+			jWeb.setHTMLContent("<html><body style=\"font-family:Verdana; font-size:0.9em;\">" + m_rb.getString("nofachinfo") + "</body></html>");
 			jWeb.setVisible(true);
 		}
 
+		public void noclickPage() {
+			// Update html
+			jWeb.setJavascriptEnabled(true);
+			jWeb.setHTMLContent("<html><body style=\"font-family:Verdana; font-size:0.9em;\">" + m_rb.getString("noclick") + "</body></html>");
+			jWeb.setVisible(true);
+		}
+		
 		public void dispose() {
 			// Dispose native peer
 			jWeb.disposeNativePeer();
@@ -2596,18 +2657,26 @@ public class AMiKoDesk {
 					SwingUtilities.invokeLater(new Runnable() {
 						@Override
 						public void run() {
-							m_start_time = System.currentTimeMillis();
+							m_start_time = System.currentTimeMillis();							
 							m_query_str = searchField.getText();
-							int num_hits = retrieveAipsSearchResults(false);
+							int num_hits = 0;
+							if (m_curr_uistate.getPrevUseMode().equals("shopping")) {							
+								med_search = m_sqldb.searchRegNr(m_curr_regnr);
+								sRegNr();
+								cardl.show(p_results, final_regnr);
+								num_hits = med_search.size();
+								if (num_hits>0)
+									med_index = 0;	// Choose first hit
+							}
+							else
+								num_hits = retrieveAipsSearchResults(true);
 							m_status_label.setText(med_search.size() + " Suchresultate in " 
 									+ (System.currentTimeMillis() - m_start_time) / 1000.0f + " Sek.");
-							//
 							if (med_index < 0 && prev_med_index >= 0)
 								med_index = prev_med_index;
 							m_web_panel.updateText();
-							if (num_hits == 0) {
+							if (num_hits==0)
 								m_web_panel.emptyPage();
-							}
 						}
 					});
 				}
@@ -2686,7 +2755,7 @@ public class AMiKoDesk {
 			@Override
 			public void actionPerformed(ActionEvent event) {
 				String email_adr = m_prefs.get("emailadresse", "");
-				if (email_adr!=null && email_adr.length()>2)	// Two chars is the minimum lenght for an email address
+				if (email_adr!=null && email_adr.length()>2)	// Two chars is the minimum length for an email address
 					m_preferences_ok = true;
 				if (m_preferences_ok) {
 					m_preferences_ok = false;	// Check always
@@ -2709,16 +2778,15 @@ public class AMiKoDesk {
 						}
 						// m_web_panel.updateShoppingHtml();
 						m_web_panel.updateListOfPackages();
-						if (m_first_pass == true) {
-							m_first_pass = false;
-							if (Utilities.appCustomization().equals("ibsa"))
-								med_search = m_sqldb.searchAuth("ibsa");
-							else if (Utilities.appCustomization().equals("desitin"))
-								med_search = m_sqldb.searchAuth("desitin");
-							sAuth();
-							cardl.show(p_results, final_author);
-						}
+						// return;
 					}
+					// If button is clicked again, then show only ibsa or desitin products
+					if (Utilities.appCustomization().equals("ibsa"))
+						med_search = m_sqldb.searchAuth("ibsa");
+					else if (Utilities.appCustomization().equals("desitin"))
+						med_search = m_sqldb.searchAuth("desitin");
+					sAuth();
+					cardl.show(p_results, final_author);
 				} else {
 					selectShoppingCartButton.setSelected(false);
 					settingsPage.display();
@@ -2745,7 +2813,8 @@ public class AMiKoDesk {
 							m_web_panel.setTitle(getTitle("priceComp"));	
 							if (med_index >= 0) {
 								if (med_id != null && med_index < med_id.size()) {
-									Medication m = m_sqldb.getMediWithId(med_id.get(med_index));
+									long row_id = med_id.get(med_index).get(0);
+									Medication m = m_sqldb.getMediWithId(row_id);
 									String atc_code = m.getAtcCode();
 									if (atc_code != null) {
 										String atc = atc_code.split(";")[0];
@@ -3200,7 +3269,8 @@ public class AMiKoDesk {
 				med_id.clear();
 				for (int i = 0; i < med_search.size(); ++i) {
 					Medication ms = med_search.get(i);
-					med_id.add(ms.getId());
+					ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+					med_id.add(al);
 				}
 			}
 			med_index = 0;
@@ -3224,7 +3294,8 @@ public class AMiKoDesk {
 					med_id.clear();
 					for (int i = 0; i < med_search.size(); ++i) {
 						Medication ms = med_search.get(i);
-						med_id.add(ms.getId());
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+						med_id.add(al);
 					}
 				}
 				med_index = 0;
@@ -3249,7 +3320,8 @@ public class AMiKoDesk {
 					med_id.clear();
 					for (int i = 0; i < med_search.size(); ++i) {
 						Medication ms = med_search.get(i);
-						med_id.add(ms.getId());
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+						med_id.add(al);
 					}
 				}
 				med_index = 0;
@@ -3260,44 +3332,95 @@ public class AMiKoDesk {
 		}
 	}
 
+	static Map<Product, ArrayList<Long>> pp_list_of_products() {
+		// Map title to id in the sqlite database
+		Map<Product, ArrayList<Long>> map_id = new TreeMap<Product, ArrayList<Long>>();
+		// Preprocessing: generate map of unique names to ids					
+		for (Medication ms : med_search) {
+			ArrayList<Long> list_of_ids = new ArrayList<Long>();						
+			// Use to group title if it exists
+			Product product = new Product();
+			product.title = ms.getAddInfo();
+			product.group_title = ms.getAddInfo();
+			product.author = ms.getAuth();
+			product.regnrs = ms.getRegnrs();
+			// If there is a group title, use it!
+			if (product.group_title!=null && !product.group_title.isEmpty()) {
+				if (map_id.containsKey(product))
+					list_of_ids = map_id.get(product);
+				list_of_ids.add(ms.getId());
+				map_id.put(product, list_of_ids);
+			} else {	
+				// No group title available...
+				list_of_ids.add(ms.getId());
+				product.title = ms.getTitle();						
+				map_id.put(product, list_of_ids);
+			}
+		}
+		return map_id;
+	}
+	
 	static void sTitle() {
-		List<String> m = new ArrayList<String>();
+		List<String> m = new ArrayList<String>();		
 		if (!m_curr_uistate.isComparisonMode()) {
 			med_id.clear();
 			Pattern p_red = Pattern.compile(".*O]");
-			Pattern p_green = Pattern.compile(".*G]");
-			if (med_search.size() < BigCellNumber
-					&& m_curr_uistate.isSearchMode()) {
-				for (int i = 0; i < med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
-					String pack_info_str = "";
-					Scanner pack_str_scanner = new Scanner(ms.getPackInfo());
-					while (pack_str_scanner.hasNextLine()) {
-						String pack_str_line = pack_str_scanner.nextLine();
-						Matcher m_red = p_red.matcher(pack_str_line);
-						Matcher m_green = p_green.matcher(pack_str_line);
-						if (m_red.find())
-							pack_info_str += "<font color=red>" + pack_str_line	+ "</font><br>";
-						else if (m_green.find())
-							pack_info_str += "<font color=green>" + pack_str_line + "</font><br>";
-						else
-							pack_info_str += "<font color=gray>" + pack_str_line + "</font><br>";
+			Pattern p_green = Pattern.compile(".*G]");		
+			
+			if (m_curr_uistate.isSearchMode()) {	// Kompendium and favorites
+				if (med_search.size() < BigCellNumber) {
+					for (Medication ms : med_search) {
+						String pack_info_str = "";
+						Scanner pack_str_scanner = new Scanner(ms.getPackInfo());
+						while (pack_str_scanner.hasNextLine()) {
+							String pack_str_line = pack_str_scanner.nextLine();
+							Matcher m_red = p_red.matcher(pack_str_line);
+							Matcher m_green = p_green.matcher(pack_str_line);
+							if (m_red.find())
+								pack_info_str += "<font color=red>" + pack_str_line	+ "</font><br>";
+							else if (m_green.find())
+								pack_info_str += "<font color=green>" + pack_str_line + "</font><br>";
+							else
+								pack_info_str += "<font color=gray>" + pack_str_line + "</font><br>";
+						}								
+						pack_str_scanner.close();					
+						m.add("<html><b>" + ms.getTitle() + "</b><br><font size=-1>" + pack_info_str + "</font></html>");
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+						med_id.add(al);
 					}
-					pack_str_scanner.close();
-					m.add("<html><b>" + ms.getTitle() + "</b><br><font size=-1>" + pack_info_str + "</font></html>");
-					med_id.add(ms.getId());
+				} else {
+					for (Medication ms : med_search) {				
+						m.add("<html><body style=\"width: 1024px;\"><b>" + ms.getTitle() + "</b></html>");
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+						med_id.add(al);
+					}
 				}
 			} else if (!m_curr_uistate.isSearchMode()) {
-				for (int i = 0; i < med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
-					m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b></html>");
-					med_id.add(ms.getId());
+				if (m_curr_uistate.isShoppingMode()) {	// Shopping
+					// Map title to id in the sqlite database
+					Map<Product, ArrayList<Long>> map_of_products = pp_list_of_products();
+					// Now loop again to compose the mid pane entries
+					for (Map.Entry<Product, ArrayList<Long>> entry : map_of_products.entrySet()) {
+						Product product = entry.getKey();
+						ArrayList<Long> al = entry.getValue();
+						if (product.group_title.isEmpty()) {
+							m.add("<html><body style=\"width: 1024px;\"><b>" + product.title + "</b></html>");
+						} else {
+							m.add("<html><body style=\"width: 1024px;\"><b>" + product.group_title + "</b></html>");
+						}
+						med_id.add(al);
+					}
+				} else {	// Interactions
+					for (Medication ms : med_search) {
+						m.add("<html><body style=\"width: 1024px;\"><b>" + ms.getTitle() + "</b></html>");
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+						med_id.add(al);
+					}
 				}
 			}
-		} else {
+		} else { 	// Comparison
 			list_of_articles.clear();
-			for (int i = 0; i < rose_search.size(); ++i) {
-				Article as = rose_search.get(i);
+			for (Article as : rose_search) {
 				list_of_articles.add(as);
 				m.add("<html><body style='width: 1024px;'><b>"+ as.getPackTitle() + "</b><br>"
 						+ "<font color=gray size=-1>Lager: " + as.getItemsOnStock() 
@@ -3309,26 +3432,44 @@ public class AMiKoDesk {
 
 	static void sAuth() {
 		List<String> m = new ArrayList<String>();
-		if (!m_curr_uistate.isComparisonMode()) {
+		if (!m_curr_uistate.isComparisonMode()) {	// Kompendium, favorites, interactions
 			med_id.clear();
-			if (med_search.size() < BigCellNumber) {
-				for (int i = 0; i < med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
-					m.add("<html><b>" + ms.getTitle() 
-							+ "</b><br><font color=gray size=-1>" + ms.getAuth() + "</font></html>");
-					med_id.add(ms.getId());
+			if (!m_curr_uistate.isShoppingMode()) {
+				if (med_search.size() < BigCellNumber) {
+					for (Medication ms : med_search) {
+						m.add("<html><b>" + ms.getTitle() + "</b><br>" 
+								+ "<font color=gray size=-1>" + ms.getAuth() + "</font></html>");
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+						med_id.add(al);
+					}
+				} else {
+					for (Medication ms : med_search) {
+						m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() + "</b><br>"
+								+ "<font color=gray size=-1>" + ms.getAuth() + "</font></html>");
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));					
+						med_id.add(al);
+					}
 				}
-			} else {
-				for (int i = 0; i < med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
-					m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle() 
-							+ "</b><br><font color=gray size=-1>" + ms.getAuth() + "</font></html>");
-					med_id.add(ms.getId());
+			} else {	// Shopping
+				// Map title to id in the sqlite database
+				Map<Product, ArrayList<Long>> map_id = pp_list_of_products();
+				// Now loop again to compose the mid pane entries
+				for (Map.Entry<Product, ArrayList<Long>> entry : map_id.entrySet()) {
+					Product product = entry.getKey();
+					ArrayList<Long> al = entry.getValue();
+					if (product.group_title.isEmpty()) {
+						m.add("<html><body style='width: 1024px;'><b>" + product.title + "</b><br>"
+								+ "<font color=gray size=-1>" + product.author + "</font></html>");
+					} else {
+						m.add("<html><body style='width: 1024px;'><b>" + product.group_title + "</b><br>"
+								+ "<font color=gray size=-1>" + product.author + "</font></html>");
+					}
+					med_id.add(al);
 				}
 			}
-		} else {
+		} else {	// Comparison
 			list_of_articles.clear();
-			for (int i = 0; i < rose_search.size(); ++i) {
+			for (int i=0; i<rose_search.size(); ++i) {
 				Article as = rose_search.get(i);
 				list_of_articles.add(as);
 				m.add("<html><body style='width: 1024px;'><b>" + as.getPackTitle()
@@ -3341,9 +3482,10 @@ public class AMiKoDesk {
 	static void sATC() {
 		List<String> m = new ArrayList<String>();
 		if (!m_curr_uistate.isComparisonMode()) {
+			// Kompendium, favorites, interactions and shopping
 			med_id.clear();
 			if (med_search.size() < BigCellNumber) {
-				for (int i = 0; i < med_search.size(); ++i) {
+				for (int i=0; i<med_search.size(); ++i) {
 					Medication ms = med_search.get(i);
 					if (ms.getAtcCode() != null) {
 						String[] m_code = ms.getAtcCode().split(";");
@@ -3372,12 +3514,12 @@ public class AMiKoDesk {
 										+ m_class[1] + "</font></html>");
 							}
 						}
-						med_id.add(ms.getId());
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+						med_id.add(al);
 					}
 				}
 			} else {
-				for (int i = 0; i < med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
+				for (Medication ms : med_search) {
 					if (ms.getAtcCode() != null) {
 						String[] m_code = ms.getAtcCode().split(";");
 						String atc_code_str = "";
@@ -3388,14 +3530,15 @@ public class AMiKoDesk {
 						}
 						m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle()
 								+ "</b><br><font color=gray size=-1>" + atc_code_str + " - " + atc_title_str + "</font></html>");
-						med_id.add(ms.getId());
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+						med_id.add(al);
 					}
 				}
 			}
 		} else {
+			// Comparison
 			list_of_articles.clear();
-			for (int i = 0; i < rose_search.size(); ++i) {
-				Article as = rose_search.get(i);
+			for (Article as : rose_search) {
 				list_of_articles.add(as);
 				m.add("<html><body style='width: 1024px;'><b>" + as.getPackTitle()
 						+ "</b><br><font color=gray size=-1>" + as.getAtcCode() + " - " + as.getAtcClass() + "</font></html>");
@@ -3407,26 +3550,27 @@ public class AMiKoDesk {
 	static void sRegNr() {
 		List<String> m = new ArrayList<String>();
 		if (!m_curr_uistate.isComparisonMode()) {
+			// Kompendium, favorites, interactions and shopping
 			med_id.clear();
 			if (med_search.size() < BigCellNumber) {
-				for (int i = 0; i < med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
-					m.add("<html><b>" + ms.getTitle()
-							+ "</b><br><font color=gray size=-1>" + ms.getRegnrs() + "</font></html>");
-					med_id.add(ms.getId());
+				for (Medication ms : med_search) {
+					m.add("<html><b>" + ms.getTitle() + "</b><br>" 
+							+ "<font color=gray size=-1>" + ms.getRegnrs() + "</font></html>");
+					ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+					med_id.add(al);
 				}
 			} else {
-				for (int i = 0; i < med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
+				for (Medication ms : med_search) {
 					m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle()
 							+ "</b><br><font color=gray size=-1>" + ms.getRegnrs() + "</font></html>");
-					med_id.add(ms.getId());
+					ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));					
+					med_id.add(al);
 				}
 			}
 		} else {
+			// Comparison
 			list_of_articles.clear();
-			for (int i = 0; i < rose_search.size(); ++i) {
-				Article as = rose_search.get(i);
+			for (Article as : rose_search) {
 				list_of_articles.add(as);
 				m.add("<html><body style='width: 1024px;'><b>" + as.getPackTitle()
 						+ "</b><br><font color=gray size=-1>" + as.getPharmaCode() + " (" + as.getEanCode() + ")</font></html>");
@@ -3438,33 +3582,34 @@ public class AMiKoDesk {
 	static void sTherapy() {
 		List<String> m = new ArrayList<String>();
 		if (!m_curr_uistate.isComparisonMode()) {
+			// Kompendium, favorites, interactions and shopping
 			med_id.clear();
 			if (med_search.size() < BigCellNumber) {
-				for (int i = 0; i < med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
+				for (Medication ms : med_search) {
 					if (ms.getApplication() != null) {
 						String application_str = ms.getApplication().replaceAll("\n", "<p>");
 						application_str = ms.getApplication().replaceAll(";", "<p>");
 						m.add("<html><b>" + ms.getTitle()
 								+ "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
-						med_id.add(ms.getId());
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));						
+						med_id.add(al);
 					}
 				}
 			} else {
-				for (int i = 0; i < med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
+				for (Medication ms : med_search) {
 					if (ms.getApplication() != null) {
 						String application_str = ms.getApplication().replaceAll(";", " / ");
 						m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle()
 								+ "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
-						med_id.add(ms.getId());
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));						
+						med_id.add(al);
 					}
 				}
 			}
 		} else {
+			// Comparison
 			list_of_articles.clear();
-			for (int i = 0; i < rose_search.size(); ++i) {
-				Article as = rose_search.get(i);
+			for (Article as : rose_search) {
 				list_of_articles.add(as);
 				m.add("<html><body style='width: 1024px;'><b>" + as.getPackTitle()
 						+ "</b><br><font color=gray size=-1>" + as.getTherapyCode() + " - " + as.getAtcClass() + "</font></html>");
@@ -3485,18 +3630,17 @@ public class AMiKoDesk {
 			for (int i = 0; i < med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
 				m.add("<html><b>" + ms.getSubstances()
-						+ "</b><br><font color=gray size=-1>" + ms.getTitle()
-						+ "</font></html>");
-				med_id.add(ms.getId());
+						+ "</b><br><font color=gray size=-1>" + ms.getTitle() + "</font></html>");
+				ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));				
+				med_id.add(al);
 			}
 		} else {
 			for (int i = 0; i < med_search.size(); ++i) {
 				Medication ms = med_search.get(i);
-				m.add("<html><body style='width: 1024px;'><b>"
-						+ ms.getSubstances()
-						+ "</b><br><font color=gray size=-1>" + ms.getTitle()
-						+ "</font></html>");
-				med_id.add(ms.getId());
+				m.add("<html><body style='width: 1024px;'><b>" + ms.getSubstances()
+						+ "</b><br><font color=gray size=-1>" + ms.getTitle() + "</font></html>");
+				ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));				
+				med_id.add(al);
 			}
 		}
 		m_list_ingredients.update(m);

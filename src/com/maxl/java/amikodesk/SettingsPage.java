@@ -677,16 +677,6 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		// Load gln codes file and create map
 		load_gln_codes();
 		
-		/* --- old code ---
-		String m_application_data_folder = Utilities.appDataFolder();
-		m_user_map = readFromCsvToMap(m_application_data_folder + "\\" + Constants.GLN_CODES_FILE);
-		// Read default file
-		if (m_user_map==null) {
-			m_user_map = readFromCsvToMap("./shop/" + Constants.GLN_CODES_FILE);
-			System.out.println("Loading gln codes from default folder...");
-		}
-		*/
-		
 		String gln_code_str = mPrefs.get(GLNCodeID, "7610000000000");
 		System.out.println("GLN code: " + gln_code_str);		
 		if (m_user_map!=null && m_user_map.containsKey(gln_code_str+"S")) {
