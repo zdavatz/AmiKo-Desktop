@@ -2025,7 +2025,10 @@ public class AMiKoDesk {
 
 	private static void createAndShowFullGUI() {
 		// Create and setup window
-		final JFrame jframe = new JFrame(Constants.APP_NAME);
+		String user_name = m_prefs.get("name", "");
+		if (!user_name.isEmpty())
+			user_name = " - " + user_name;		
+		final JFrame jframe = new JFrame(Constants.APP_NAME + user_name);
 		jframe.setName(Constants.APP_NAME + ".main");
 
 		int min_width = CML_OPT_WIDTH;
@@ -2190,10 +2193,18 @@ public class AMiKoDesk {
 
 		// ------ Setup settingspage ------
 		final SettingsPage settingsPage = new SettingsPage(jframe, m_rb);
+		// Retrieve gln codes for fast access
+		FastAccessData fad = settingsPage.get_gln_codes_csv();
 		// Attach observer to it
 		settingsPage.addObserver(new Observer() {
 			public void update(Observable o, Object arg) {
 				System.out.println(arg);
+				// Change title
+				String user_name = m_prefs.get("name", "");
+				if (!user_name.isEmpty())
+					user_name = " - " + user_name;		
+				jframe.setTitle(Constants.APP_NAME + user_name);
+				// Refresh shopping if user has changed...
 				if (m_shopping_cart != null) {
 					// Refresh some stuff
 					m_shopping_basket.clear();
@@ -3048,7 +3059,7 @@ public class AMiKoDesk {
 				m_mutex_update = false;
 				// Refresh some stuff after update
 				loadAuthors();
-				m_emailer.loadMap();
+				m_emailer.loadAccess();
 				settingsPage.load_gln_codes();
 				if (m_shopping_cart != null) {
 					m_shopping_cart.load_conditions();

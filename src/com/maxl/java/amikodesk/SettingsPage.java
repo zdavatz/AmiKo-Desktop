@@ -41,7 +41,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Observer;
 import java.util.ResourceBundle;
@@ -68,10 +70,6 @@ import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileFilter;
 
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
-
 import com.maxl.java.shared.User;
 
 public class SettingsPage extends JDialog implements java.io.Serializable {
@@ -82,6 +80,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 	private static String GLNCodeID = "glncode";
 	private static String HumanID = "ishuman";
 	private static String UserID = "user";
+	private static String NameID = "name";
 	private static String TypeID = "type"; 
 	private static String BestellAdresseID = "bestelladresse";
 	private static String LieferAdresseID = "lieferadresse";
@@ -116,11 +115,35 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 	
 	private static ResourceBundle m_rb;
 	
+	private Map<String, String> m_work_id;
+	
+	private String m_glncode = "";
+	private String m_email = "";
+	
 	private Observer m_observer;
 
 	static private int border = 1;
+
+	boolean validateCode() {
+		if (m_glncode.matches("[\\d]{7}")) {
+			if (m_work_id.containsKey(m_glncode)) {
+				String email = m_work_id.get(m_glncode).split(";")[0];
+				if (email.equals(m_email)) {
+					mTextFieldGLN.setBorder(new LineBorder(color_ok, 1, false));
+					mTextFieldGLN.setBackground(color_ok);
+					mPrefs.putInt(UserID, 18);	// Innendienst		
+					mPrefs.put(GLNCodeID, m_glncode);
+					mPrefs.put(EmailAdresseID, m_email);
+					mPrefs.put(TypeID, "ibsa-innendienst");
+					mPrefs.put(HumanID, "yes");
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 	
-	private class AddressPanel extends JPanel {
+	class AddressPanel extends JPanel {
 		
 		JTextField aTextFieldTitle = null;
 		JTextField aTextFieldFName = null;
@@ -426,9 +449,13 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 				@Override
 				public void keyReleased(KeyEvent keyEvent) {
 					String emailStr = aTextFieldEmail.getText();
+					m_email = emailStr;
+					if (validateCode())
+						return;
 					if (validateEmail(emailStr)) {
-						if (address_type.equals("S"))
+						if (address_type.equals("S")) {
 							mPrefs.put(EmailAdresseID, emailStr);	
+						}
 					}
 				}
 				@Override 
@@ -579,6 +606,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			// Validate
 			validateFields();
 		}
+		
 		void storeDataToPreferences(boolean is_human) {
 			Address addr = new Address();
 			addr.idealeId = "";
@@ -600,10 +628,18 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			if (m_address_type.equals("S")) {
 				mPrefs.putByteArray(LieferAdresseID, arr);
 				mPrefs.put(EmailAdresseID, addr.email);				
-			} else if (m_address_type.equals("B"))
+				if (is_human) {
+					if (m_user!=null)
+						mPrefs.put(NameID, m_user.title + " " + m_user.first_name + " " + m_user.last_name);
+					else
+						mPrefs.put(NameID, addr.fname + " " + addr.lname);
+				} else
+					mPrefs.put(NameID, m_user.name1 + " " + m_user.name2);
+			} else if (m_address_type.equals("B")) {
 				mPrefs.putByteArray(RechnungsAdresseID, arr);
-			else if (m_address_type.equals("O"))
+			} else if (m_address_type.equals("O")) {
 				mPrefs.putByteArray(BestellAdresseID, arr);
+			}
 		}
 		
 		void retrieveDataFromPreferences() {
@@ -667,12 +703,61 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		}		
 	}
 	
+	public FastAccessData get_gln_codes_csv() {
+		ArrayList<String> list1 = new ArrayList<String>();
+		ArrayList<String> list2 = new ArrayList<String>();
+		ArrayList<String> list3 = new ArrayList<String>();
+		ArrayList<String> list4 = new ArrayList<String>();
+		for (Map.Entry<String, User> entry : m_user_map.entrySet()) {
+			User u = entry.getValue();
+			list1.add(u.first_name);
+			list2.add(u.last_name);
+			list3.add(u.zip);
+			list4.add(u.city);
+		}
+		FastAccessData fad = new FastAccessData();
+		fad.addList(list1);
+		fad.addList(list2);
+		fad.addList(list3);
+		fad.addList(list4);	
+		
+		// Test fast access data structure
+		/*
+		List<String> result = fad.search("80");		
+		if (result!=null) {
+			for (String r : result) 
+				System.out.println(r);
+		}
+		*/
+		return fad;
+	}
+	
+	public void load_access() {
+		m_work_id = (new Crypto()).loadMap("access.ami.ser");					
+	}
+		
+	
+	public void addObserver(Observer observer) {
+		m_observer = observer;
+	}
+	
+	protected void notify(String str) {
+		m_observer.update(null, str);
+	}	
+	
+	protected void notify_me(String str) {
+		notify(str);
+	}
+	
 	public SettingsPage(JFrame frame, ResourceBundle rb) {
 		mFrame = frame;
 		m_rb = rb;
 		mFc = new JFileChooser();
 		// Defines a node in which the preferences can be stored
 		mPrefs = Preferences.userRoot().node(this.getClass().getName());
+		
+		// Load access
+		load_access();
 		
 		// Load gln codes file and create map
 		load_gln_codes();
@@ -728,6 +813,14 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 						mShippingAddress.storeDataToPreferences(m_user.is_human);
 						mBillingAddress.storeDataToPreferences(m_user.is_human);
 						mOfficeAddress.storeDataToPreferences(m_user.is_human);
+						// Update frame name
+						notify_me("user updated...");
+					} else {
+						// Innendienst Mitarbeiter
+						if (mPrefs.getInt(UserID, 0)==18) {
+							mShippingAddress.storeDataToPreferences(true);
+							notify_me("user updated...");
+						}
 					}
 				} else {
 					String address = mTextAreaBestell.getText();
@@ -748,15 +841,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		// Visualize
 		this.setVisible(true);
 	}
-	
-	public void addObserver(Observer observer) {
-		m_observer = observer;
-	}
-	
-	protected void notify(String str) {
-		m_observer.update(null, str);
-	}	
-	
+
 	protected JPanel globalAmiKoSettings() {
 		JPanel jPanel = new JPanel();
 		jPanel.setLayout(new GridLayout(1, 4));
@@ -1002,10 +1087,11 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 						String new_user_type = m_user.category.toLowerCase();
 						mPrefs.put(TypeID, new_user_type);
 						mPrefs.putInt(UserID, 17);	// Default
-						if (m_user.is_human)
+						if (m_user.is_human) {
 							System.out.println("Person: " + m_user.gln_code + " - " + m_user.category + ", " + m_user.first_name + ", " + m_user.last_name);
-						else
+						} else {
 							System.out.println("Company: " + m_user.gln_code + " - " + m_user.category + ", " + m_user.name1 + ", " + m_user.name2);
+						}
 						mTextFieldGLN.setBorder(new LineBorder(color_ok, 5, false));
 						mTextFieldGLN.setBackground(color_ok);
 						String address = "";
@@ -1219,6 +1305,8 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 
 	protected JPanel shoppingBasketSettings2() {
 		String GLNCodeStr = mPrefs.get(GLNCodeID, "7610000000000");
+		m_glncode = GLNCodeStr;
+		m_email = mPrefs.get(EmailAdresseID, "");
 		
 		final JCheckBox jcheckAddress1 = new JCheckBox("Rechnungsadresse = Lieferadresse");
 		final JCheckBox jcheckAddress2 = new JCheckBox("Bestelladresse = Lieferadresse");
@@ -1240,8 +1328,10 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		
 		mTextFieldGLN = new JTextField(GLNCodeStr);
 		if (!GLNCodeStr.matches("[\\d]{13}")) {
-			mTextFieldGLN.setBorder(new LineBorder(color_red, 1, false));
-			mTextFieldGLN.setBackground(color_red);
+			if (!validateCode()) {
+				mTextFieldGLN.setBorder(new LineBorder(color_red, 1, false));
+				mTextFieldGLN.setBackground(color_red);			
+			}
 		} else {
 			mTextFieldGLN.setBorder(new LineBorder(color_white, 1, false));
 			mTextFieldGLN.setBackground(color_white);
@@ -1333,10 +1423,16 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 						}
 					}
 				} else {
+					// Check only 7-digits codes
+					m_glncode = mGLNCodeStr;
+					if (validateCode()) {
+						return;
+					}
+					// Clear all data
 					mShippingAddress.clearData();
 					mBillingAddress.clearData();
-					mOfficeAddress.clearData();
-					
+					mOfficeAddress.clearData();	
+					// else...
 					mTextFieldGLN.setBorder(new LineBorder(color_red, 1, false));
 					mTextFieldGLN.setBackground(color_red);
 				}

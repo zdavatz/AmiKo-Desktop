@@ -86,7 +86,7 @@ public class Emailer {
 		m_map_of_attachments = new TreeMap<String, String>();
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
 		m_rb = rb;
-		loadMap();
+		loadAccess();
 	}
 	
 	public Emailer(String l, String p) {
@@ -118,21 +118,10 @@ public class Emailer {
 		return m_is_sending;
 	}
 	
-	public void loadMap() {
-		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\access.ami.ser");
-		if (encrypted_msg==null) {		
-			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "access.ami.ser");
-			System.out.println("Loading access.ami.ser from default folder...");
-		}
-		// Decrypt and deserialize
-		if (encrypted_msg!=null) {
-			Crypto crypto = new Crypto();
-			byte[] serialized_bytes = crypto.decrypt(encrypted_msg);
-			TreeMap<String, String> map = new TreeMap<String, String>();
-			map = (TreeMap<String, String>)(FileOps.deserialize(serialized_bytes));									
-			m_ep = ((String)map.get(m_el)).split(";")[0];
-			m_es = ((String)map.get(m_el)).split(";")[1];
-		}
+	public void loadAccess() {
+		Map<String, String> map = (new Crypto()).loadMap("access.ami.ser");					
+		m_ep = ((String)map.get(m_el)).split(";")[0];
+		m_es = ((String)map.get(m_el)).split(";")[1];
 	}
 	
 	public void setSubject(String subject) {
