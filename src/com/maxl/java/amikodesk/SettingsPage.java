@@ -43,7 +43,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Observer;
 import java.util.ResourceBundle;
@@ -79,7 +78,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 	private static String LogoImageID = "logo";
 	private static String GLNCodeID = "glncode";
 	private static String HumanID = "ishuman";
-	private static String UserID = "user";
+	private static String UserID = "user";	// Default: 17, Ibsa-Innendienst: 18
 	private static String NameID = "name";
 	private static String TypeID = "type"; 
 	private static String BestellAdresseID = "bestelladresse";
@@ -136,6 +135,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 					mPrefs.put(EmailAdresseID, m_email);
 					mPrefs.put(TypeID, "ibsa-innendienst");
 					mPrefs.put(HumanID, "yes");
+					m_user =  m_user_map.get("0S");	// is not a standard user...
 					return true;
 				}
 			}
@@ -624,17 +624,14 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			addr.email = aTextFieldEmail.getText();
 			addr.isHuman = is_human;
 			// Store addr to preferences
-			byte[] arr = FileOps.serialize(addr);
+			byte[] arr = FileOps.serialize(addr);			
 			if (m_address_type.equals("S")) {
 				mPrefs.putByteArray(LieferAdresseID, arr);
-				mPrefs.put(EmailAdresseID, addr.email);				
-				if (is_human) {
-					if (m_user!=null)
-						mPrefs.put(NameID, m_user.title + " " + m_user.first_name + " " + m_user.last_name);
-					else
-						mPrefs.put(NameID, addr.fname + " " + addr.lname);
-				} else
-					mPrefs.put(NameID, m_user.name1 + " " + m_user.name2);
+				mPrefs.put(EmailAdresseID, addr.email);							
+				if (is_human)
+					mPrefs.put(NameID, addr.title + " " + addr.fname + " " + addr.lname);
+				else
+					mPrefs.put(NameID, addr.name1 + " " + addr.name2);
 			} else if (m_address_type.equals("B")) {
 				mPrefs.putByteArray(RechnungsAdresseID, arr);
 			} else if (m_address_type.equals("O")) {
@@ -703,6 +700,18 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		}		
 	}
 	
+	public FastAccessData get_user_db() {
+		ArrayList<User> list_of_users = new ArrayList<User>();
+		for (Map.Entry<String, User> entry : m_user_map.entrySet()) {
+			User u = entry.getValue();
+			list_of_users.add(u);
+		}
+		FastAccessData fad = new FastAccessData();
+		fad.addUsers(list_of_users);
+		
+		return fad;
+	}
+	
 	public FastAccessData get_gln_codes_csv() {
 		ArrayList<String> list1 = new ArrayList<String>();
 		ArrayList<String> list2 = new ArrayList<String>();
@@ -721,14 +730,6 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		fad.addList(list3);
 		fad.addList(list4);	
 		
-		// Test fast access data structure
-		/*
-		List<String> result = fad.search("80");		
-		if (result!=null) {
-			for (String r : result) 
-				System.out.println(r);
-		}
-		*/
 		return fad;
 	}
 	

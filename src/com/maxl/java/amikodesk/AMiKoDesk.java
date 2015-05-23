@@ -149,6 +149,7 @@ import chrriis.dj.nativeswing.swtimpl.components.WebBrowserNavigationEvent;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.maxl.java.shared.User;
 
 public class AMiKoDesk {
 
@@ -172,6 +173,7 @@ public class AMiKoDesk {
 	private static List<ArrayList<Long>> med_id = new ArrayList<ArrayList<Long>>();		// Define a list of ids... used to group products!
 	private static List<Medication> med_search = new ArrayList<Medication>();
 	private static List<Article> rose_search = new ArrayList<Article>();
+	private static List<User> customer_search = new ArrayList<User>();
 	private static List<Medication> med_title = new ArrayList<Medication>();
 	private static List<Medication> list_of_favorites = new ArrayList<Medication>();
 	private static Map<String, Medication> m_med_basket = new TreeMap<String, Medication>();
@@ -179,6 +181,7 @@ public class AMiKoDesk {
 	private static Map<String, Article> m_comparison_basket = new LinkedHashMap<String, Article>();
 	private static List<Article> list_of_articles = new ArrayList<Article>();
 	private static List<String> list_of_carts = new ArrayList<String>();
+	private static List<User> list_of_gln_codes = new ArrayList<User>();
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
 	private static String m_query_str = null;
@@ -194,6 +197,7 @@ public class AMiKoDesk {
 	private static String m_jscript_str = null;
 	private static MainSqlDb m_sqldb = null;
 	private static RoseSqlDb m_rosedb = null;
+	private static FastAccessData m_customerdb = null;
 	private static UpdateDb m_maindb_update = null;
 	private static boolean m_full_db_update = true;
 	private static boolean m_mutex_update = false;
@@ -213,6 +217,7 @@ public class AMiKoDesk {
 	private static ListPanel m_list_atccodes = null;
 	private static ListPanel m_list_ingredients = null;
 	private static ListPanel m_list_therapies = null;
+	private static ListPanel m_list_customers = null;
 
 	// Preferences
 	private static Preferences m_prefs = null;
@@ -227,9 +232,8 @@ public class AMiKoDesk {
 
 	private static ResourceBundle m_rb = ResourceBundle.getBundle("amiko_de_CH", new Locale("de", "CH"));
 
-	// 0: Präparat, 1: Inhaber, 2: ATC Code, 3: Reg. Nr., 4: Wirkstoff, 5:
-	// Therapie
-	// -> {0, 1, 2, 3, 4, 5, 6};
+	// 0: Präparat, 1: Inhaber, 2: Wirkstoff/ATC, 3: Reg. Nr., 4: Therapie, 5: Customer
+	// -> {0, 1, 2, 3, 4, 5};
 	private static int m_query_type = 0;
 
 	// German section title abbreviations
@@ -354,7 +358,7 @@ public class AMiKoDesk {
 		return (!CML_OPT_TYPE.isEmpty() && (!CML_OPT_TITLE.isEmpty()
 				|| !CML_OPT_EANCODE.isEmpty() || !CML_OPT_REGNR.isEmpty() || CML_OPT_SERVER == true));
 	}
-
+	
 	public static void main(String[] args) {
 
 		// Initialize globales
@@ -451,7 +455,7 @@ public class AMiKoDesk {
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
 
 		// Set default query type
-		m_curr_uistate.setQueryType(m_query_type=0);
+		m_curr_uistate.setQueryType(m_query_type = 0);
 		
 		// UIUtils.setPreferredLookAn dFeel();
 		NativeInterface.open();
@@ -727,7 +731,9 @@ public class AMiKoDesk {
 				 * if (med_index<0 && prev_med_index>=0)
 				 * list.setSelectedIndex(prev_med_index);
 				 */
-				if (m_curr_uistate.isInteractionsMode()) // Display interaction cart
+				if (m_curr_uistate.isCustomerSearchMode()) {
+					m_web_panel.updateCustomerInfo();			
+				} else if (m_curr_uistate.isInteractionsMode()) // Display interaction cart
 					m_web_panel.updateInteractionsCart();
 				else if (m_curr_uistate.isShoppingMode()) // Display shopping cart
 					m_web_panel.updateListOfPackages();
@@ -805,21 +811,23 @@ public class AMiKoDesk {
 		public void valueChanged(ListSelectionEvent e) {
 			if (!e.getValueIsAdjusting()) {
 				int sel_index = list.getSelectedIndex();
-				if (sel_index >= 0) {
+				if (sel_index>=0) {
 					if (!m_curr_uistate.isComparisonMode() && !m_curr_uistate.isShoppingMode()) {
 						m_web_panel.moveToAnchor(m_section_str.get(sel_index));
 					} else if (m_curr_uistate.isComparisonMode()) {
 						// Do nothing
 					} else if (m_curr_uistate.isShoppingMode()){
 						if (m_curr_uistate.isLoadCart()) {
-							File file = new File(m_application_data_folder + "\\shop\\");
-							if (file.exists() && file.isDirectory() && file.list().length > 0) {
+							String cart_folder = "shop";
+							String cart_path = m_application_data_folder + "\\" + cart_folder + "\\";
+							File file = new File(cart_path);
+							if (file.exists() && file.isDirectory() && file.list().length>0) {
 								// Load and deserialize m_shopping_basket
-								String path = m_application_data_folder	+ "\\shop\\" + list_of_carts.get(sel_index) + ".ser";
+								String path = cart_path + list_of_carts.get(sel_index) + ".ser";
 								byte[] serialized_bytes = FileOps.readBytesFromFile(path);
-								if (serialized_bytes != null) {
+								if (serialized_bytes!=null) {
 									m_shopping_basket = (LinkedHashMap<String, Article>) FileOps.deserialize(serialized_bytes);
-									if (m_shopping_basket == null) {
+									if (m_shopping_basket==null) {
 										System.out.println("Shopping cart "	+ list_of_carts.get(sel_index) + ".ser is corrupted... deleting it!");
 										file.delete();
 										m_shopping_basket = new LinkedHashMap<String, Article>();
@@ -828,7 +836,7 @@ public class AMiKoDesk {
 								}
 							}
 						} else {							
-							if (list_of_articles.size()>0 && sel_index <= list_of_articles.size()) {	
+							if (list_of_articles.size()>0 && sel_index<=list_of_articles.size()) {	
 								boolean updateBasket = false;
 								Article article = null;
 								if (is_assort) {
@@ -1040,20 +1048,14 @@ public class AMiKoDesk {
 						if (msg.equals("delete_all")) {
 							m_shopping_basket.clear();
 							// Update shopping basket
-							m_shopping_cart.setShoppingBasket(m_shopping_basket);
-							int index = m_shopping_cart.getCartIndex();
-							if (index > 0)
-								saveShoppingCartWithIndex(index);
+							m_shopping_cart.saveWithIndex(m_shopping_basket);
 							m_web_panel.updateShoppingHtml();
 						} else if (msg.equals("delete_row")) {
 							Article article = m_shopping_basket.get(row_key);
 							article.setQuantity(1);
 							m_shopping_basket.remove(row_key);
 							// Update shopping basket
-							m_shopping_cart.setShoppingBasket(m_shopping_basket);
-							int index = m_shopping_cart.getCartIndex();
-							if (index > 0)
-								saveShoppingCartWithIndex(index);
+							m_shopping_cart.saveWithIndex(m_shopping_basket);
 							m_web_panel.updateShoppingHtml();
 						} else if (msg.startsWith("change_marge")) {
 							int marge = Integer.parseInt(row_key.trim());
@@ -1112,13 +1114,13 @@ public class AMiKoDesk {
 										File[] files = new File(m_application_data_folder + "\\shop").listFiles();
 										for (File file : files) {
 											if (Utilities.appLanguage().equals("de")) {
-												if (file.isFile() && file.getName().startsWith("warenkorb")
+												if (file.isFile() && file.getName().startsWith("WK")
 														&& file.getName().endsWith(".ser")) {
 													String f = file.getName();
 													list_of_carts.add(f.substring(0, f.lastIndexOf(".")));
 												}
 											} else if (Utilities.appLanguage().equals("fr")) {
-												if (file.isFile() && file.getName().startsWith("panier")
+												if (file.isFile() && file.getName().startsWith("PA")
 														&& file.getName().endsWith(".ser")) {
 													String f = file.getName();
 													list_of_carts.add(f.substring(0, f.lastIndexOf(".")));
@@ -1135,11 +1137,9 @@ public class AMiKoDesk {
 								m_web_panel.updateShoppingHtml();
 							} else {
 								// Save old cart with index = index
-								int index = m_shopping_cart.getCartIndex();
-								if (index > 0)
-									saveShoppingCartWithIndex(index);
+								m_shopping_cart.saveWithIndex(m_shopping_basket);
 								// Load new cart
-								index = (int) (Float.parseFloat(row_key));
+								int index = (int) (Float.parseFloat(row_key));
 								m_shopping_basket.clear();
 								// m_shopping_cart.setShoppingBasket(m_shopping_basket);
 								m_shopping_cart.setCartIndex(index);
@@ -1188,9 +1188,7 @@ public class AMiKoDesk {
 							char shipping_type = msg.replace("change_shipping", "").charAt(0);
 							updateCheckoutTable(row_key, shipping_type);
 						} else if (msg.equals("check_out")) {
-							int index = m_shopping_cart.getCartIndex();
-							if (index > 0)
-								saveShoppingCartWithIndex(index);
+							m_shopping_cart.saveWithIndex(m_shopping_basket);
 							m_shopping_cart.setAgbsAccepted(false);
 							m_web_panel.showCheckoutHtml();
 						} else if (msg.equals("agbs_accepted")) {
@@ -1201,7 +1199,7 @@ public class AMiKoDesk {
 							ad.AgbDialog();
 						} else if (msg.equals("send_order")) {
 							if (m_shopping_cart.getAgbsAccepted() && !m_emailer.isSending()) {
-								saveShoppingCart();
+								m_shopping_cart.save(m_shopping_basket);
 								SaveBasket sbasket = new SaveBasket(m_shopping_cart);
 								// Update authors list with subtotals, vats and
 								// shipping costs
@@ -1397,45 +1395,6 @@ public class AMiKoDesk {
 			return (gln_code + "_" + fmt.print(dT));
 		}
 
-		public void saveShoppingCart() {
-			DateTime dT = new DateTime();
-			DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
-			String dir_name = m_application_data_folder + "\\shop";
-			File wdir = new File(dir_name);
-			if (!wdir.exists())
-				wdir.mkdirs();
-			File file = null;
-			if (Utilities.appLanguage().equals("de"))
-				file = new File(dir_name + "\\warenkorb_" + fmt.print(dT) + ".ser");
-			else if (Utilities.appLanguage().equals("fr"))
-				file = new File(dir_name + "\\panier_" + fmt.print(dT) + ".ser");
-			if (file != null) {
-				String filename = file.getAbsolutePath();
-				// System.out.println("Saved shopping cart to " + filename);
-				byte[] serialized_bytes = FileOps.serialize(m_shopping_basket);
-				if (serialized_bytes != null) {
-					FileOps.writeBytesToFile(filename, serialized_bytes);
-				}
-			}
-		}
-
-		public void saveShoppingCartWithIndex(final int n) {
-			String dir_name = m_application_data_folder + "\\shop";
-			File wdir = new File(dir_name);
-			if (!wdir.exists())
-				wdir.mkdirs();
-			File file = new File(dir_name + "\\korb" + n + ".ser");
-			if (file != null) {
-				String filename = file.getAbsolutePath();
-				// System.out.println("Saved shopping cart " + n + " to " +
-				// filename);
-				byte[] serialized_bytes = FileOps.serialize(m_shopping_basket);
-				if (serialized_bytes != null) {
-					FileOps.writeBytesToFile(filename, serialized_bytes);
-				}
-			}
-		}
-
 		public void loadShoppingCartWithIndex(final int n) {
 			if (m_shopping_basket == null || m_shopping_basket.size() == 0)
 				m_shopping_basket = m_shopping_cart.loadShoppingCartWithIndex(n);
@@ -1530,7 +1489,7 @@ public class AMiKoDesk {
 			packages = list_of_packages.toArray(new String[list_of_packages.size()]);
 			m_middle_pane.update(packages);
 		}
-
+		
 		/*---------------------------------------------------------------------------
 		 * INTERACTIONS
 		 */
@@ -1538,7 +1497,6 @@ public class AMiKoDesk {
 			// Set right panel title
 			m_web_panel.setTitle(m_rb.getString("medbasket"));
 			// Display interactions in the web panel
-			System.out.println(med_index + " / " + med_id.size());
 			if (med_index >= 0 && med_index < med_id.size()) {
 				// Get full info on selected medication
 				long row_id = med_id.get(med_index).get(0);
@@ -1623,7 +1581,25 @@ public class AMiKoDesk {
 			jWeb.setHTMLContent(html_str);
 			jWeb.setVisible(true);
 		}
-
+		
+		/*--------------------------------------------------------------------------- 
+		 * CUSTOMER_INFO
+		 */
+		public void updateCustomerInfo() {
+			if (med_index>=0 && list_of_gln_codes.size()>0) {
+				// Get gln code
+				User customer = list_of_gln_codes.get(med_index);
+				if (!customer.first_name.isEmpty() && !customer.last_name.isEmpty())
+					m_web_panel.setTitle(m_rb.getString("shoppingCart") + " (" + customer.first_name + " " + customer.last_name + ")");
+				else if (!customer.name1.isEmpty() && !customer.name2.isEmpty())
+					m_web_panel.setTitle(m_rb.getString("shoppingCart") + " (" + customer.name1 + " " + customer.name2 + ")");					
+				// List shopping carts
+				String[] carts = {"Cart 1", "Cart 2"};
+				// ... and update the middler pane
+				m_middle_pane.update(carts);	
+			}
+		}
+		
 		public void emptyPage() {
 			// Update html
 			jWeb.setJavascriptEnabled(true);
@@ -1653,7 +1629,7 @@ public class AMiKoDesk {
 
 		public void print() {
 			jWeb.print(true);
-		}
+		}		
 	}
 
 	static class TextPanel extends JPanel {
@@ -2023,6 +1999,14 @@ public class AMiKoDesk {
 		button.setHorizontalAlignment(SwingConstants.LEFT);
 	}
 
+	private static boolean is_operator() {
+		// Change user id
+		int user_id = m_prefs.getInt("user", 17);
+		if (user_id==18)
+			return true;
+		return false;
+	}
+	
 	private static void createAndShowFullGUI() {
 		// Create and setup window
 		String user_name = m_prefs.get("name", "");
@@ -2194,27 +2178,7 @@ public class AMiKoDesk {
 		// ------ Setup settingspage ------
 		final SettingsPage settingsPage = new SettingsPage(jframe, m_rb);
 		// Retrieve gln codes for fast access
-		FastAccessData fad = settingsPage.get_gln_codes_csv();
-		// Attach observer to it
-		settingsPage.addObserver(new Observer() {
-			public void update(Observable o, Object arg) {
-				System.out.println(arg);
-				// Change title
-				String user_name = m_prefs.get("name", "");
-				if (!user_name.isEmpty())
-					user_name = " - " + user_name;		
-				jframe.setTitle(Constants.APP_NAME + user_name);
-				// Refresh shopping if user has changed...
-				if (m_shopping_cart != null) {
-					// Refresh some stuff
-					m_shopping_basket.clear();
-					int index = m_shopping_cart.getCartIndex();
-					if (index > 0)
-						m_web_panel.saveShoppingCartWithIndex(index);
-					m_web_panel.updateShoppingHtml();
-				}
-			}
-		});
+		m_customerdb = settingsPage.get_user_db();
 
 		jframe.addWindowListener(new WindowListener() {
 			// Use WindowAdapter!
@@ -2231,9 +2195,7 @@ public class AMiKoDesk {
 			@Override
 			public void windowClosing(WindowEvent e) {
 				// Save shopping cart
-				int index = m_shopping_cart.getCartIndex();
-				if (index > 0 && m_web_panel != null)
-					m_web_panel.saveShoppingCartWithIndex(index);
+				m_shopping_cart.saveWithIndex(m_shopping_basket);
 			}
 
 			@Override
@@ -2269,9 +2231,7 @@ public class AMiKoDesk {
 			public void actionPerformed(ActionEvent event) {
 				try {
 					// Save shopping cart
-					int index = m_shopping_cart.getCartIndex();
-					if (index > 0 && m_web_panel != null)
-						m_web_panel.saveShoppingCartWithIndex(index);
+					m_shopping_cart.saveWithIndex(m_shopping_basket);
 					// Save settings
 					WindowSaver.saveSettings();
 					m_web_panel.dispose();
@@ -2465,9 +2425,7 @@ public class AMiKoDesk {
 		gbc.insets = new Insets(2, 2, 2, 2);
 
 		// ---- Search field ----
-		final SearchField searchField = new SearchField("Suche Präparat");
-		if (Utilities.appLanguage().equals("fr"))
-			searchField.setText("Recherche Specialité");
+		final SearchField searchField = new SearchField(m_rb.getString("butSearch") + " " + m_rb.getString("butTitle"));
 		gbc.gridx = 0;
 		gbc.gridy = 0;
 		gbc.gridwidth = gbc.gridheight = 1;
@@ -2477,23 +2435,14 @@ public class AMiKoDesk {
 
 		// ---- Buttons ----
 		// Names
-		String l_title = "Präparat";
-		String l_author = "Inhaberin";
-		String l_atccode = "Wirkstoff / ATC Code";
-		String l_regnr = "Zulassungsnummer";
-		String l_ingredient = "Wirkstoff";
-		String l_therapy = "Therapie";
-		String l_search = "Suche";
-
-		if (Utilities.appLanguage().equals("fr")) {
-			l_title = "Spécialité";
-			l_author = "Titulaire";
-			l_atccode = "Principe Active / Code ATC";
-			l_regnr = "Nombre Enregistration";
-			l_ingredient = "Principe Active";
-			l_therapy = "Thérapie";
-			l_search = "Recherche";
-		}
+		String l_title = m_rb.getString("butTitle");
+		String l_author = m_rb.getString("butAuthor");
+		String l_atccode = m_rb.getString("butAtccode");
+		String l_regnr = m_rb.getString("butRegnr");
+		String l_ingredient = m_rb.getString("butIngred");
+		String l_therapy = m_rb.getString("butTherapy");
+		String l_search = m_rb.getString("butSearch");
+		String l_customer = m_rb.getString("butCustomer");
 
 		ButtonGroup bg = new ButtonGroup();
 
@@ -2547,6 +2496,21 @@ public class AMiKoDesk {
 		// --> container.add(but_therapy, gbc);
 		left_panel.add(but_therapy, gbc);
 
+		final JToggleButton but_customer = new JToggleButton(l_customer);
+		setupToggleButton(but_customer);
+		bg.add(but_customer);
+		gbc.gridx = 0;
+		gbc.gridy += 1;
+		gbc.gridwidth = gbc.gridheight = 1;
+		gbc.weightx = gbc.weighty = 0.0;
+		// --> container.add(but_customer, gbc);
+		left_panel.add(but_customer, gbc);
+		
+		// Configure according to user id
+		boolean but_customer_enabled = is_operator() && m_curr_uistate.isShoppingMode();
+		but_customer.setVisible(but_customer_enabled);
+		but_customer.setEnabled(but_customer_enabled);
+		
 		// ---- Card layout ----
 		final CardLayout cardl = new CardLayout();
 		cardl.setHgap(-4); // HACK to make things look better!!
@@ -2557,6 +2521,7 @@ public class AMiKoDesk {
 		m_list_atccodes = new ListPanel();
 		m_list_ingredients = new ListPanel();
 		m_list_therapies = new ListPanel();
+		m_list_customers = new ListPanel();
 		// Contraints
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
@@ -2572,6 +2537,7 @@ public class AMiKoDesk {
 		p_results.add(m_list_atccodes, l_atccode);
 		p_results.add(m_list_ingredients, l_ingredient);
 		p_results.add(m_list_therapies, l_therapy);
+		p_results.add(m_list_customers, l_customer);
 
 		// --> container.add(p_results, gbc);
 		left_panel.add(p_results, gbc);
@@ -2638,6 +2604,7 @@ public class AMiKoDesk {
 		final String final_atccode = l_atccode;
 		final String final_regnr = l_regnr;
 		final String final_therapy = l_therapy;
+		final String final_customer = l_customer;		
 		final String final_search = l_search;
 
 		// Internal class that implements switching between buttons
@@ -2660,6 +2627,9 @@ public class AMiKoDesk {
 				// Set state 'aips'
 				if (!m_curr_uistate.getUseMode().equals("aips")) {
 					m_curr_uistate.setUseMode("aips");
+					// Hide "Kunde" button
+					but_customer.setEnabled(false);
+					but_customer.setVisible(false);					
 					// Show middle pane
 					split_pane_right.setDividerSize(Divider_size);
 					split_pane_right.setDividerLocation(Divider_location);
@@ -2700,6 +2670,9 @@ public class AMiKoDesk {
 				// Set state 'favorites'
 				if (!m_curr_uistate.getUseMode().equals("favorites")) {
 					m_curr_uistate.setUseMode("favorites");
+					// Hide "Kunde" button
+					but_customer.setEnabled(false);
+					but_customer.setVisible(false);
 					// Show middle pane
 					split_pane_right.setDividerSize(Divider_size);
 					split_pane_right.setDividerLocation(Divider_location);
@@ -2743,6 +2716,9 @@ public class AMiKoDesk {
 				// Set state 'interactions'
 				if (!m_curr_uistate.getUseMode().equals("interactions")) {
 					m_curr_uistate.setUseMode("interactions");
+					// Hide "Kunde" button
+					but_customer.setEnabled(false);
+					but_customer.setVisible(false);
 					// Show middle pane
 					split_pane_right.setDividerSize(Divider_size);
 					split_pane_right.setDividerLocation(Divider_location);
@@ -2774,6 +2750,10 @@ public class AMiKoDesk {
 					// Set state 'shopping'
 					if (!m_curr_uistate.getUseMode().equals("shopping")) {
 						m_curr_uistate.setUseMode("shopping");
+						// Enable customer button
+						boolean but_customer_enabled = is_operator();
+						but_customer.setEnabled(but_customer_enabled);
+						but_customer.setVisible(but_customer_enabled);
 						// Show middle pane
 						split_pane_right.setDividerSize(Divider_size);
 						split_pane_right.setDividerLocation(Divider_location);
@@ -2811,6 +2791,9 @@ public class AMiKoDesk {
 				// Set state 'comparison'
 				if (!m_curr_uistate.getUseMode().equals("comparison")) {
 					m_curr_uistate.setUseMode("comparison");
+					// Hide "Kunde" button
+					but_customer.setEnabled(false);
+					but_customer.setVisible(false);
 					// Hide middle pane
 					m_middle_pane.setVisible(false);
 					split_pane_right.setDividerLocation(0);							
@@ -2910,12 +2893,18 @@ public class AMiKoDesk {
 								}
 								sTherapy();
 								cardl.show(p_results, final_therapy);
+							} else if (m_query_type == 5) {
+								customer_search = m_customerdb.searchUser(m_query_str);
+								sCustomer();
+								cardl.show(p_results, final_customer);
 							} else {
 								// do nothing
 							}
 							int num_hits = 0;									
 							if (m_curr_uistate.isComparisonMode())
 								num_hits = rose_search.size();
+							else if (m_query_type==5)
+								num_hits = customer_search.size();
 							else
 								num_hits = med_search.size();
 							m_status_label.setText(num_hits + " Suchresultate in " + (System.currentTimeMillis() - m_start_time) / 1000.0f + " Sek.");								
@@ -2982,7 +2971,14 @@ public class AMiKoDesk {
 				cardl.show(p_results, final_therapy);
 			}
 		});
-
+		but_customer.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent ae) {
+				searchField.setText(final_search + " " + final_customer);
+				m_curr_uistate.setQueryType(m_query_type = 5);
+			}
+		});
+		
 		// Display window
 		jframe.pack();
 		// jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -3049,6 +3045,29 @@ public class AMiKoDesk {
 		/**
 		 * Observers
 		 */
+		// Attach observer to 'settingspage'
+		settingsPage.addObserver(new Observer() {
+			public void update(Observable o, Object arg) {
+				System.out.println(arg);
+				// Change title
+				String user_name = m_prefs.get("name", "");
+				if (!user_name.isEmpty())
+					user_name = " - " + user_name;		
+				jframe.setTitle(Constants.APP_NAME + user_name);
+				// Change layout according to user id
+				boolean but_customer_enabled = is_operator() && m_curr_uistate.isShoppingMode();
+				but_customer.setVisible(but_customer_enabled);
+				but_customer.setEnabled(but_customer_enabled);
+				// Refresh shopping if user has changed...
+				if (m_shopping_cart != null) {
+					// Refresh some stuff
+					m_shopping_basket.clear();
+					m_shopping_cart.saveWithIndex(m_shopping_basket);
+					m_web_panel.updateShoppingHtml();
+				}
+			}
+		});
+		
 		// Attach observer to 'm_update'
 		m_maindb_update.addObserver(new Observer() {
 			@Override
@@ -3068,9 +3087,7 @@ public class AMiKoDesk {
 				// Empty shopping basket
 				if (m_curr_uistate.isShoppingMode()) {
 					m_shopping_basket.clear();
-					int index = m_shopping_cart.getCartIndex();
-					if (index > 0)
-						m_web_panel.saveShoppingCartWithIndex(index);
+					m_shopping_cart.saveWithIndex(m_shopping_basket);
 					m_web_panel.updateShoppingHtml();
 				}
 				if (m_curr_uistate.isComparisonMode())
@@ -3085,9 +3102,7 @@ public class AMiKoDesk {
 				System.out.println(arg);
 				// Empty shopping basket
 				m_shopping_basket.clear();
-				int index = m_shopping_cart.getCartIndex();
-				if (index > 0)
-					m_web_panel.saveShoppingCartWithIndex(index);
+				m_shopping_cart.saveWithIndex(m_shopping_basket);
 				m_web_panel.updateShoppingHtml();
 			}
 		});
@@ -3629,6 +3644,25 @@ public class AMiKoDesk {
 		m_list_therapies.update(m);
 	}
 
+	static void sCustomer() {
+		List<String> m = new ArrayList<String>();
+		list_of_gln_codes.clear();
+		for (User s : customer_search) {
+			if (!s.first_name.isEmpty() && !s.last_name.isEmpty()) {
+				m.add("<html><body style='width: 1024px;'><b>" + s.first_name + " " + s.last_name 
+						+ "</b><br><font color=gray size=-1>" + s.zip + " - " + s.city + "</font></html>");
+			} else if (!s.name1.isEmpty()) {
+				m.add("<html><body style='width: 1024px;'><b>" + s.name1 
+						+ "</b><br><font color=gray size=-1>" + s.zip + " - " + s.city + "</font></html>");				
+			} else if (!s.name2.isEmpty()) {
+				m.add("<html><body style='width: 1024px;'><b>" + s.name2 
+						+ "</b><br><font color=gray size=-1>" + s.zip + " - " + s.city + "</font></html>");				
+			}
+			list_of_gln_codes.add(s);
+		}
+		m_list_customers.update(m);
+	}
+	
 	/**
 	 * Nicely formats search for ingredient ("Wirkstoff")
 	 * 

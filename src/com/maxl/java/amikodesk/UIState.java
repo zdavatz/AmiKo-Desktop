@@ -46,17 +46,17 @@ public class UIState {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = true;
 			shopping_mode = false;
-			compare_mode = false;			
+			compare_mode = false;		
 		} else if (use_mode.equals("shopping") || use_mode.equals("loadcart")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = false;
 			shopping_mode = true;
-			compare_mode = false;			
+			compare_mode = false;				
 		} else if (use_mode.equals("comparison")) {
 			database_used = "aips";
 			seek_interactions = false;
 			shopping_mode = false;
-			compare_mode = true;			
+			compare_mode = true;				
 		} else {
 			database_used = "aips";
 			seek_interactions = false;
@@ -72,27 +72,27 @@ public class UIState {
 			database_used = "aips";
 			seek_interactions = false;
 			shopping_mode = false;
-			compare_mode = false;			
+			compare_mode = false;		
 		} else if (use_mode.equals("favorites")) {
 			database_used = "favorites";
 			seek_interactions = false;
 			shopping_mode = false;
-			compare_mode = false;			
+			compare_mode = false;				
 		} else if (use_mode.equals("interactions")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = true;
 			shopping_mode = false;
-			compare_mode = false;			
+			compare_mode = false;				
 		} else if (use_mode.equals("shopping") || use_mode.equals("loadcart")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = false;
 			shopping_mode = true;
-			compare_mode = false;			
+			compare_mode = false;				
 		} else if (use_mode.equals("comparison")) {
 			database_used = "aips";
 			seek_interactions = false;
 			shopping_mode = false;
-			compare_mode = true;			
+			compare_mode = true;				
 		} else {
 			database_used = "aips";
 			seek_interactions = false;
@@ -147,6 +147,10 @@ public class UIState {
 	
 	public int getQueryType() {
 		return query_type;
+	}
+	
+	boolean isCustomerSearchMode() {
+		return (query_type==5);
 	}
 	
 	public void setMedIndex(int index) {
