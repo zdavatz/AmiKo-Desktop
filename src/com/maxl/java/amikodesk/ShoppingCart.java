@@ -196,7 +196,7 @@ public class ShoppingCart implements java.io.Serializable {
 		}
 	}
 	
-	public Map<String, Article> loadShoppingCartWithIndex(final int n) {
+	public Map<String, Article> loadWithIndex(final int n) {
 		int index = n;
 		// If n<0 then load default cart
 		if (index<0)
@@ -222,6 +222,48 @@ public class ShoppingCart implements java.io.Serializable {
 			return m_shopping_basket;
 		}
 		return null;
+	}
+	
+	
+	public void save(Map<String, Article> basket) {
+		m_shopping_basket = basket;
+		DateTime dT = new DateTime();
+		DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
+		String path_name = m_application_data_folder + "\\shop";
+		File wdir = new File(path_name);
+		if (!wdir.exists())
+			wdir.mkdirs();
+		File file = null;
+		if (Utilities.appLanguage().equals("de"))
+			file = new File(path_name + "\\WK_" + fmt.print(dT) + ".ser");
+		else if (Utilities.appLanguage().equals("fr"))
+			file = new File(path_name + "\\PA_" + fmt.print(dT) + ".ser");
+		if (file != null) {
+			String filename = file.getAbsolutePath();
+			byte[] serialized_bytes = FileOps.serialize(m_shopping_basket);
+			if (serialized_bytes != null) {
+				FileOps.writeBytesToFile(filename, serialized_bytes);
+			}
+		}
+	}
+	
+	public void saveWithIndex(Map<String, Article> basket) {
+		m_shopping_basket = basket;
+		int index = getCartIndex();
+		if (index>0) {
+			String path_name = m_application_data_folder + "\\shop";
+			File wdir = new File(path_name);
+			if (!wdir.exists())
+				wdir.mkdirs();
+			File file = new File(path_name + "\\korb" + index + ".ser");
+			if (file != null) {
+				String filename = file.getAbsolutePath();
+				byte[] serialized_bytes = FileOps.serialize(m_shopping_basket);
+				if (serialized_bytes != null) {
+					FileOps.writeBytesToFile(filename, serialized_bytes);
+				}
+			}
+		}
 	}
 	
 	public TreeMap<Integer, Float> getRebateMap(String ean_code) {
@@ -1199,47 +1241,6 @@ public class ShoppingCart implements java.io.Serializable {
 				+ "document.getElementById('Checkout').rows.namedItem(\"GrandTotal\").cells[5].innerHTML=\"<b>" + Utilities.prettyFormat(grand_total_CHF) + "</b>\";";
 		
 		return js;
-	}
-	
-	public void save(Map<String, Article> basket) {
-		m_shopping_basket = basket;
-		DateTime dT = new DateTime();
-		DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
-		String path_name = m_application_data_folder + "\\shop";
-		File wdir = new File(path_name);
-		if (!wdir.exists())
-			wdir.mkdirs();
-		File file = null;
-		if (Utilities.appLanguage().equals("de"))
-			file = new File(path_name + "\\WK_" + fmt.print(dT) + ".ser");
-		else if (Utilities.appLanguage().equals("fr"))
-			file = new File(path_name + "\\PA_" + fmt.print(dT) + ".ser");
-		if (file != null) {
-			String filename = file.getAbsolutePath();
-			byte[] serialized_bytes = FileOps.serialize(m_shopping_basket);
-			if (serialized_bytes != null) {
-				FileOps.writeBytesToFile(filename, serialized_bytes);
-			}
-		}
-	}
-	
-	public void saveWithIndex(Map<String, Article> basket) {
-		m_shopping_basket = basket;
-		int index = getCartIndex();
-		if (index>0) {
-			String path_name = m_application_data_folder + "\\shop";
-			File wdir = new File(path_name);
-			if (!wdir.exists())
-				wdir.mkdirs();
-			File file = new File(path_name + "\\korb" + index + ".ser");
-			if (file != null) {
-				String filename = file.getAbsolutePath();
-				byte[] serialized_bytes = FileOps.serialize(m_shopping_basket);
-				if (serialized_bytes != null) {
-					FileOps.writeBytesToFile(filename, serialized_bytes);
-				}
-			}
-		}
 	}
 	
 	public String createHtml() {

@@ -1109,28 +1109,11 @@ public class AMiKoDesk {
 								SwingUtilities.invokeLater(new Runnable() {
 									@Override
 									public void run() {
-										// List of all files in directory
-										list_of_carts.clear();
-										File[] files = new File(m_application_data_folder + "\\shop").listFiles();
-										for (File file : files) {
-											if (Utilities.appLanguage().equals("de")) {
-												if (file.isFile() && file.getName().startsWith("WK")
-														&& file.getName().endsWith(".ser")) {
-													String f = file.getName();
-													list_of_carts.add(f.substring(0, f.lastIndexOf(".")));
-												}
-											} else if (Utilities.appLanguage().equals("fr")) {
-												if (file.isFile() && file.getName().startsWith("PA")
-														&& file.getName().endsWith(".ser")) {
-													String f = file.getName();
-													list_of_carts.add(f.substring(0, f.lastIndexOf(".")));
-												}
-											}
-										}
-										// Zeno-style sorting of the old shopping carts
-										Collections.reverse(list_of_carts);
 										m_curr_uistate.setUseMode("loadcart");
+										// List of all files in directory
+										list_of_carts = listCartsInFolder(m_application_data_folder + "\\shop");
 										String[] file_str = list_of_carts.toArray(new String[list_of_carts.size()]);
+										// Update middle pane
 										m_middle_pane.update(file_str);
 									}
 								});
@@ -1215,7 +1198,7 @@ public class AMiKoDesk {
 						m_shopping_basket = m_shopping_cart.getShoppingBasket();
 						// No cart, load default cart
 						if (m_shopping_basket == null) {
-							m_shopping_cart.loadShoppingCartWithIndex(-1);
+							m_shopping_cart.loadWithIndex(-1);
 							m_shopping_basket = m_shopping_cart.getShoppingBasket();
 						}
 						AmiKoDialogs sd = new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization());
@@ -1395,9 +1378,32 @@ public class AMiKoDesk {
 			return (gln_code + "_" + fmt.print(dT));
 		}
 
+		public List<String> listCartsInFolder(String folder) {
+			// List of all files in directory
+			List<String> l_carts = new ArrayList<String>();
+			l_carts.clear();	// Clear just to be on the safe side
+			File[] files = new File(folder).listFiles();
+			for (File file : files) {
+				if (Utilities.appLanguage().equals("de")) {
+					if (file.isFile() && file.getName().startsWith("WK") && file.getName().endsWith(".ser")) {
+						String f = file.getName();
+						l_carts.add(f.substring(0, f.lastIndexOf(".")));
+					}
+				} else if (Utilities.appLanguage().equals("fr")) {
+					if (file.isFile() && file.getName().startsWith("PA") && file.getName().endsWith(".ser")) {
+						String f = file.getName();
+						l_carts.add(f.substring(0, f.lastIndexOf(".")));
+					}
+				}
+			}
+			// Zeno-style sorting of the old shopping carts
+			Collections.reverse(l_carts);
+			return l_carts;
+		}
+		
 		public void loadShoppingCartWithIndex(final int n) {
-			if (m_shopping_basket == null || m_shopping_basket.size() == 0)
-				m_shopping_basket = m_shopping_cart.loadShoppingCartWithIndex(n);
+			if (m_shopping_basket==null || m_shopping_basket.size()==0)
+				m_shopping_basket = m_shopping_cart.loadWithIndex(n);
 			updateShoppingHtml();
 		}
 
