@@ -686,20 +686,6 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		}
 	}
 	
-	public void load_gln_codes() {
-		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\gln_codes.ser");
-		if (encrypted_msg==null) {
-			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "gln_codes.ser");
-			System.out.println("Loading gln_codes.ser from default folder...");
-		}
-		if (encrypted_msg!=null) {
-			Crypto crypto = new Crypto();
-			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
-			m_user_map = (HashMap<String, User>)FileOps.deserialize(plain_msg);
-			System.out.println("Loading gln_codes.ser from app data folder...");
-		}		
-	}
-	
 	public FastAccessData get_user_db() {
 		ArrayList<User> list_of_users = new ArrayList<User>();
 		for (Map.Entry<String, User> entry : m_user_map.entrySet()) {
@@ -750,18 +736,16 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		notify(str);
 	}
 	
-	public SettingsPage(JFrame frame, ResourceBundle rb) {
+	public SettingsPage(JFrame frame, ResourceBundle rb, HashMap<String, User> user_map) {
 		mFrame = frame;
 		m_rb = rb;
+		m_user_map = user_map;
 		mFc = new JFileChooser();
 		// Defines a node in which the preferences can be stored
 		mPrefs = Preferences.userRoot().node(this.getClass().getName());
 		
 		// Load access
 		load_access();
-		
-		// Load gln codes file and create map
-		load_gln_codes();
 		
 		String gln_code_str = mPrefs.get(GLNCodeID, "7610000000000");
 		System.out.println("GLN code: " + gln_code_str);		

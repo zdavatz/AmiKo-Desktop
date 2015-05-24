@@ -47,7 +47,7 @@ public class UIState {
 			seek_interactions = true;
 			shopping_mode = false;
 			compare_mode = false;		
-		} else if (use_mode.equals("shopping") || use_mode.equals("loadcart")) {
+		} else if (use_mode.equals("shopping") || use_mode.equals("loadcart") || use_mode.equals("assortlist")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = false;
 			shopping_mode = true;
@@ -83,7 +83,7 @@ public class UIState {
 			seek_interactions = true;
 			shopping_mode = false;
 			compare_mode = false;				
-		} else if (use_mode.equals("shopping") || use_mode.equals("loadcart")) {
+		} else if (use_mode.equals("shopping") || use_mode.equals("loadcart") || use_mode.equals("assortlist")) {
 			database_used = "aips";		// Default DB choice
 			seek_interactions = false;
 			shopping_mode = true;
@@ -127,6 +127,10 @@ public class UIState {
 	
 	public boolean isLoadCart() {
 		return use_mode.equals("loadcart");
+	}
+	
+	public boolean isAssortList() {
+		return use_mode.equals("assortlist");
 	}
 	
 	public boolean isComparisonMode() {

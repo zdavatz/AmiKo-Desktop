@@ -59,12 +59,16 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import com.maxl.java.shared.User;
+
 public class Emailer {
 
 	private static String BestellAdresseID = "bestelladresse";
 	private static String LieferAdresseID = "lieferadresse";
 	private static String RechnungsAdresseID = "rechnungsadresse";
 	
+	private User m_customer = null;
+	private String m_customer_gln_code = "";
 	private String m_subject;
 	private String m_from;
 	private String m_recipient;
@@ -122,6 +126,14 @@ public class Emailer {
 		Map<String, String> map = (new Crypto()).loadMap("access.ami.ser");					
 		m_ep = ((String)map.get(m_el)).split(";")[0];
 		m_es = ((String)map.get(m_el)).split(";")[1];
+	}
+	
+	public void setCustomer(User customer) {
+		m_customer = customer;
+	}
+	
+	public void setCustomerGlnCode(String gln_code) {
+		m_customer_gln_code = gln_code;
 	}
 	
 	public void setSubject(String subject) {
@@ -194,10 +206,20 @@ public class Emailer {
 	     }
 	}
 		
+	private String getGlnCode() {
+		String customer_gln_code = "";
+		if (m_customer!=null)
+			customer_gln_code = m_customer.gln_code;
+		String gln_code = customer_gln_code.isEmpty() ? m_prefs.get("glncode", "7610000000000") : customer_gln_code;
+
+		return gln_code;
+	}
+	
 	private void sendWithAttachment(Author author, String attachment_name, String attachment_path) {
-		String gln_code = m_prefs.get("glncode", "7610000000000");
+		String gln_code = getGlnCode();
+		
 		String email_address = m_prefs.get("emailadresse", m_el);
-			
+		
     	Address addr = new Address();
 		String address = "";    	
 		// Default entries... empty
@@ -271,29 +293,35 @@ public class Emailer {
 	}	
 	
 	public String generateAddressFile(String time_stamp) {    	
-		String gln_code = m_prefs.get("glncode", "7610000000000");
-	
+		String gln_code = getGlnCode();
+		
 		String addr_str = "";
 		Address addr = new Address();
+			
+		// Get UserID
+		int user_id = m_prefs.getInt("user", 0);
+		if (user_id==18) {
+			
+		} else {
+			// Default entries... empty
+			byte[] def = FileOps.serialize(addr);
+	
+			byte[] arr = m_prefs.getByteArray(LieferAdresseID, def);
+			if (arr!=null)
+				addr = (Address)FileOps.deserialize(arr);
+	 		addr_str = addr.getAsLongString(time_stamp, "S", gln_code) + "\n";
+			
+			arr = m_prefs.getByteArray(RechnungsAdresseID, def);
+			if (arr!=null)
+				addr = (Address)FileOps.deserialize(arr);
+	 		addr_str += addr.getAsLongString(time_stamp, "B", gln_code) + "\n";
+	
+			arr = m_prefs.getByteArray(BestellAdresseID, def);
+			if (arr!=null)
+				addr = (Address)FileOps.deserialize(arr);
+			addr_str += addr.getAsLongString(time_stamp, "O", gln_code) + "\n";
+		}
 		
-		// Default entries... empty
-		byte[] def = FileOps.serialize(addr);
-
-		byte[] arr = m_prefs.getByteArray(LieferAdresseID, def);
-		if (arr!=null)
-			addr = (Address)FileOps.deserialize(arr);
- 		addr_str = addr.getAsLongString(time_stamp, "S", gln_code) + "\n";
-		
-		arr = m_prefs.getByteArray(RechnungsAdresseID, def);
-		if (arr!=null)
-			addr = (Address)FileOps.deserialize(arr);
- 		addr_str += addr.getAsLongString(time_stamp, "B", gln_code) + "\n";
-
-		arr = m_prefs.getByteArray(BestellAdresseID, def);
-		if (arr!=null)
-			addr = (Address)FileOps.deserialize(arr);
-		addr_str += addr.getAsLongString(time_stamp, "O", gln_code) + "\n";
-
 		// Save to A_GLN_timestamp.csv
  		String filename = "A_" + gln_code + "_" + time_stamp;
  		try {
@@ -394,8 +422,8 @@ public class Emailer {
 		
 		public SendOrderWorker(SendOrderDialog dialog, List<Author> list_of_authors, SaveBasket sbasket) {
 			mDialog = dialog;
-			m_list_of_authors = list_of_authors;
 			mSbasket = sbasket;
+			m_list_of_authors = list_of_authors;
 		}
 		
 		/**
@@ -404,8 +432,7 @@ public class Emailer {
 		@Override
 		protected Void doInBackground() throws Exception {		
 			String path = Utilities.appDataFolder() + "\\shop";
-
-			String gln_code = m_prefs.get("glncode", "7610000000000");
+			String gln_code = getGlnCode();
 			DateTime dT = new DateTime();
 			DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
 

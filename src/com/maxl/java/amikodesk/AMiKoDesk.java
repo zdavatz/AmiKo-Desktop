@@ -182,9 +182,12 @@ public class AMiKoDesk {
 	private static List<Article> list_of_articles = new ArrayList<Article>();
 	private static List<String> list_of_carts = new ArrayList<String>();
 	private static List<User> list_of_gln_codes = new ArrayList<User>();
+	private static HashMap<String, User> m_user_map = null;
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
-	private static String m_query_str = null;
+	private static String m_query_str = "";
+	private static User m_customer = null;
+	private static String m_customer_gln_code = "";
 	private static int med_index = -1;
 	private static int prev_med_index = -1;
 	private static UIState m_curr_uistate = new UIState("aips");
@@ -234,8 +237,14 @@ public class AMiKoDesk {
 
 	// 0: Präparat, 1: Inhaber, 2: Wirkstoff/ATC, 3: Reg. Nr., 4: Therapie, 5: Customer
 	// -> {0, 1, 2, 3, 4, 5};
-	private static int m_query_type = 0;
-
+	private static final int NAME = 0;
+	private static final int OWNER = 1;
+	private static final int SUBSTANCE = 2;
+	private static final int REGISTER = 3;
+	private static final int THERAPY = 4;
+	private static final int CUSTOMER = 5;
+	private static int m_query_type = NAME;
+	
 	// German section title abbreviations
 	private static final String[] SectionTitle_DE = { "Zusammensetzung",
 			"Galenische Form", "Kontraindikationen", "Indikationen",
@@ -359,6 +368,27 @@ public class AMiKoDesk {
 				|| !CML_OPT_EANCODE.isEmpty() || !CML_OPT_REGNR.isEmpty() || CML_OPT_SERVER == true));
 	}
 	
+
+	private static HashMap<String, User> loadGlnCodes() {
+		HashMap<String, User> user_map = new HashMap<String, User>();
+		
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\gln_codes.ser");
+		if (encrypted_msg==null) {
+			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "gln_codes.ser");
+			System.out.println("Loading gln_codes.ser from default folder...");
+		}
+		
+		if (encrypted_msg!=null) {
+			Crypto crypto = new Crypto();
+			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
+			user_map = (HashMap<String, User>)FileOps.deserialize(plain_msg);
+			System.out.println("Loading gln_codes.ser from app data folder...");
+		}	
+		
+		return user_map;
+	}
+	
+	
 	public static void main(String[] args) {
 
 		// Initialize globales
@@ -431,7 +461,10 @@ public class AMiKoDesk {
 				m_rosedb.loadDB();
 			}
 		}
-
+	
+		// Load user map
+		m_user_map = loadGlnCodes();
+		
 		// Initialize update class
 		m_maindb_update = new UpdateDb(m_sqldb);
 
@@ -455,7 +488,7 @@ public class AMiKoDesk {
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
 
 		// Set default query type
-		m_curr_uistate.setQueryType(m_query_type = 0);
+		m_curr_uistate.setQueryType(m_query_type = NAME);
 		
 		// UIUtils.setPreferredLookAn dFeel();
 		NativeInterface.open();
@@ -731,9 +764,9 @@ public class AMiKoDesk {
 				 * if (med_index<0 && prev_med_index>=0)
 				 * list.setSelectedIndex(prev_med_index);
 				 */
-				if (m_curr_uistate.isCustomerSearchMode()) {
+				if (m_curr_uistate.isCustomerSearchMode())
 					m_web_panel.updateCustomerInfo();			
-				} else if (m_curr_uistate.isInteractionsMode()) // Display interaction cart
+				else if (m_curr_uistate.isInteractionsMode()) // Display interaction cart
 					m_web_panel.updateInteractionsCart();
 				else if (m_curr_uistate.isShoppingMode()) // Display shopping cart
 					m_web_panel.updateListOfPackages();
@@ -794,7 +827,7 @@ public class AMiKoDesk {
 			SwingUtilities.invokeLater(new Runnable() {
 				@Override
 				public void run() {
-					if (pane_entries != null) {
+					if (pane_entries!=null) {
 						list.removeAll();
 						list.setListData(pane_entries);
 						if (pane_entries[0].equals(m_rb.getString("assortart")) || pane_entries[0].equals(m_rb.getString("negassort")))
@@ -817,9 +850,10 @@ public class AMiKoDesk {
 					} else if (m_curr_uistate.isComparisonMode()) {
 						// Do nothing
 					} else if (m_curr_uistate.isShoppingMode()){
-						if (m_curr_uistate.isLoadCart()) {
-							String cart_folder = "shop";
-							String cart_path = m_application_data_folder + "\\" + cart_folder + "\\";
+						if ((m_curr_uistate.isLoadCart() || m_query_type==CUSTOMER) && !m_curr_uistate.isAssortList()) {
+							String cart_path = m_application_data_folder + "\\shop\\";
+							if (!m_customer_gln_code.isEmpty() && m_query_type==CUSTOMER)
+								cart_path += (m_customer_gln_code + "\\");										
 							File file = new File(cart_path);
 							if (file.exists() && file.isDirectory() && file.list().length>0) {
 								// Load and deserialize m_shopping_basket
@@ -901,8 +935,7 @@ public class AMiKoDesk {
 										m_shopping_cart.setShoppingBasket(m_shopping_basket);
 										m_web_panel.updateShoppingHtml();
 	                            	}
-	                            }
-                            	System.out.println(m_curr_regnr);                            	
+	                            }                        	
 							}
 						}
 					}
@@ -1082,7 +1115,7 @@ public class AMiKoDesk {
 								updateShoppingCart(row_key, article);
 							}
 						} else if (msg.startsWith("assort_list")) {
-							m_curr_uistate.setUseMode("shopping");
+							m_curr_uistate.setUseMode("assortlist");
 							Map<String, String> assorted_articles = m_shopping_cart.getAssortedArticles(row_key);
 							list_of_articles.clear();
 							for (Map.Entry<String, String> entry : assorted_articles.entrySet()) {
@@ -1111,7 +1144,10 @@ public class AMiKoDesk {
 									public void run() {
 										m_curr_uistate.setUseMode("loadcart");
 										// List of all files in directory
-										list_of_carts = listCartsInFolder(m_application_data_folder + "\\shop");
+										String cart_path = m_application_data_folder + "\\shop";
+										if (!m_customer_gln_code.isEmpty() && m_query_type==CUSTOMER)
+											cart_path += ("\\" + m_customer_gln_code);										
+										list_of_carts = listCartsInFolder(cart_path);
 										String[] file_str = list_of_carts.toArray(new String[list_of_carts.size()]);
 										// Update middle pane
 										m_middle_pane.update(file_str);
@@ -1188,6 +1224,8 @@ public class AMiKoDesk {
 								// shipping costs
 								list_of_authors = m_shopping_cart.updateAuthors(list_of_authors);
 								sbasket.setAuthorList(list_of_authors);
+								m_emailer.setCustomer(m_customer);
+								m_emailer.setCustomerGlnCode(m_customer_gln_code);
 								m_emailer.sendAllOrders(list_of_authors, sbasket);
 								m_web_panel.updateShoppingHtml();
 							}
@@ -1381,23 +1419,29 @@ public class AMiKoDesk {
 		public List<String> listCartsInFolder(String folder) {
 			// List of all files in directory
 			List<String> l_carts = new ArrayList<String>();
-			l_carts.clear();	// Clear just to be on the safe side
-			File[] files = new File(folder).listFiles();
-			for (File file : files) {
-				if (Utilities.appLanguage().equals("de")) {
-					if (file.isFile() && file.getName().startsWith("WK") && file.getName().endsWith(".ser")) {
-						String f = file.getName();
-						l_carts.add(f.substring(0, f.lastIndexOf(".")));
-					}
-				} else if (Utilities.appLanguage().equals("fr")) {
-					if (file.isFile() && file.getName().startsWith("PA") && file.getName().endsWith(".ser")) {
-						String f = file.getName();
-						l_carts.add(f.substring(0, f.lastIndexOf(".")));
+			l_carts.clear();	// Clear buffer, just to be on the safe side
+			File path = new File(folder);
+			if (path.exists()) {				
+				File[] files = path.listFiles();
+				for (File file : files) {
+					if (Utilities.appLanguage().equals("de")) {
+						if (file.isFile() && file.getName().startsWith("WK") && file.getName().endsWith(".ser")) {
+							String f = file.getName();
+							l_carts.add(f.substring(0, f.lastIndexOf(".")));
+						}
+					} else if (Utilities.appLanguage().equals("fr")) {
+						if (file.isFile() && file.getName().startsWith("PA") && file.getName().endsWith(".ser")) {
+							String f = file.getName();
+							l_carts.add(f.substring(0, f.lastIndexOf(".")));
+						}
 					}
 				}
+				// Zeno-style sorting of the old shopping carts
+				if (l_carts.size()>0)
+					Collections.reverse(l_carts);
 			}
-			// Zeno-style sorting of the old shopping carts
-			Collections.reverse(l_carts);
+			if (l_carts.size()==0)
+				l_carts.add(m_rb.getString("noOrders"));
 			return l_carts;
 		}
 		
@@ -1593,16 +1637,31 @@ public class AMiKoDesk {
 		 */
 		public void updateCustomerInfo() {
 			if (med_index>=0 && list_of_gln_codes.size()>0) {
-				// Get gln code
+				// Get customer info
 				User customer = list_of_gln_codes.get(med_index);
-				if (!customer.first_name.isEmpty() && !customer.last_name.isEmpty())
-					m_web_panel.setTitle(m_rb.getString("shoppingCart") + " (" + customer.first_name + " " + customer.last_name + ")");
-				else if (!customer.name1.isEmpty() && !customer.name2.isEmpty())
-					m_web_panel.setTitle(m_rb.getString("shoppingCart") + " (" + customer.name1 + " " + customer.name2 + ")");					
-				// List shopping carts
-				String[] carts = {"Cart 1", "Cart 2"};
-				// ... and update the middler pane
-				m_middle_pane.update(carts);	
+				if (!customer.first_name.isEmpty() && !customer.last_name.isEmpty()) {
+					m_web_panel.setTitle(m_rb.getString("shoppingCart") + " [" + customer.first_name + " " + customer.last_name 
+							+ ", " + customer.gln_code + "]");
+				} else if (!customer.name1.isEmpty() && !customer.name2.isEmpty()) {
+					m_web_panel.setTitle(m_rb.getString("shoppingCart") + " [" + customer.name1 + " " + customer.name2 
+							+ ", " + customer.gln_code + "]");
+				}
+				// Update customer gln code
+				m_customer = customer;
+				m_customer_gln_code = customer.gln_code;		
+				m_prefs.put("type", customer.category.toLowerCase());
+				// Update web panel
+				if (m_shopping_cart!=null) {
+					m_shopping_basket.clear();
+					m_shopping_cart.setCustomerGlnCode(m_customer_gln_code);
+					m_shopping_cart.saveWithIndex(m_shopping_basket);
+					m_web_panel.updateShoppingHtml();
+				}
+				// List shopping carts					
+				list_of_carts = listCartsInFolder(m_application_data_folder + "\\shop\\" + m_customer_gln_code);
+				String[] carts_str = list_of_carts.toArray(new String[list_of_carts.size()]);				
+				// ... and update the middle pane
+				m_middle_pane.update(carts_str);	
 			}
 		}
 		
@@ -2182,7 +2241,7 @@ public class AMiKoDesk {
 		toolBar.add(m_progress_indicator);
 
 		// ------ Setup settingspage ------
-		final SettingsPage settingsPage = new SettingsPage(jframe, m_rb);
+		final SettingsPage settingsPage = new SettingsPage(jframe, m_rb, m_user_map);
 		// Retrieve gln codes for fast access
 		m_customerdb = settingsPage.get_user_db();
 
@@ -2849,7 +2908,7 @@ public class AMiKoDesk {
 						m_query_str = searchField.getText();
 						// Queries for SQLite DB
 						if (!m_query_str.isEmpty()) {
-							if (m_query_type == 0) {
+							if (m_query_type == NAME) {
 								if (m_curr_uistate.isComparisonMode()) {
 									rose_search = m_rosedb.searchTitle(m_query_str);
 								} else {
@@ -2859,7 +2918,7 @@ public class AMiKoDesk {
 								}
 								sTitle();
 								cardl.show(p_results, final_title);
-							} else if (m_query_type == 1) {
+							} else if (m_query_type == OWNER) {
 								if (m_curr_uistate.isComparisonMode()) {
 									rose_search = m_rosedb.searchSupplier(m_query_str);
 								} else {
@@ -2869,7 +2928,7 @@ public class AMiKoDesk {
 								}
 								sAuth();
 								cardl.show(p_results, final_author);
-							} else if (m_query_type == 2) {
+							} else if (m_query_type == SUBSTANCE) {
 								if (m_curr_uistate.isComparisonMode()) {
 									rose_search = m_rosedb.searchATC(m_query_str);
 								} else {
@@ -2879,7 +2938,7 @@ public class AMiKoDesk {
 								}
 								sATC();
 								cardl.show(p_results, final_atccode);
-							} else if (m_query_type == 3) {
+							} else if (m_query_type == REGISTER) {
 								if (m_curr_uistate.isComparisonMode()) {
 									rose_search = m_rosedb.searchEan(m_query_str);
 								} else {
@@ -2889,7 +2948,7 @@ public class AMiKoDesk {
 								}
 								sRegNr();
 								cardl.show(p_results, final_regnr);
-							} else if (m_query_type == 4) {
+							} else if (m_query_type == THERAPY) {
 								if (m_curr_uistate.isComparisonMode()) {
 									rose_search = m_rosedb.searchTherapy(m_query_str);
 								} else {
@@ -2899,7 +2958,7 @@ public class AMiKoDesk {
 								}
 								sTherapy();
 								cardl.show(p_results, final_therapy);
-							} else if (m_query_type == 5) {
+							} else if (m_query_type == CUSTOMER) {
 								customer_search = m_customerdb.searchUser(m_query_str);
 								sCustomer();
 								cardl.show(p_results, final_customer);
@@ -3065,9 +3124,11 @@ public class AMiKoDesk {
 				but_customer.setVisible(but_customer_enabled);
 				but_customer.setEnabled(but_customer_enabled);
 				// Refresh shopping if user has changed...
-				if (m_shopping_cart != null) {
+				if (m_shopping_cart!=null) {
 					// Refresh some stuff
 					m_shopping_basket.clear();
+					m_customer = null;
+					m_customer_gln_code = "";					
 					m_shopping_cart.saveWithIndex(m_shopping_basket);
 					m_web_panel.updateShoppingHtml();
 				}
@@ -3084,8 +3145,8 @@ public class AMiKoDesk {
 				m_mutex_update = false;
 				// Refresh some stuff after update
 				loadAuthors();
+				loadGlnCodes();
 				m_emailer.loadAccess();
-				settingsPage.load_gln_codes();
 				if (m_shopping_cart != null) {
 					m_shopping_cart.load_conditions();
 					m_shopping_cart.load_glns();
@@ -3093,6 +3154,8 @@ public class AMiKoDesk {
 				// Empty shopping basket
 				if (m_curr_uistate.isShoppingMode()) {
 					m_shopping_basket.clear();
+					m_customer = null;
+					m_customer_gln_code = "";
 					m_shopping_cart.saveWithIndex(m_shopping_basket);
 					m_web_panel.updateShoppingHtml();
 				}
@@ -3297,7 +3360,7 @@ public class AMiKoDesk {
 			if (CML_OPT_TYPE.equals("full"))
 				but_title.doClick();
 			else if (CML_OPT_TYPE.equals("light")) {
-				m_query_type = 0;
+				m_query_type = CUSTOMER;
 				med_id.clear();
 				for (int i = 0; i < med_search.size(); ++i) {
 					Medication ms = med_search.get(i);
@@ -3322,7 +3385,7 @@ public class AMiKoDesk {
 				if (CML_OPT_TYPE.equals("full"))
 					but_regnr.doClick();
 				else if (CML_OPT_TYPE.equals("light")) {
-					m_query_type = 3;
+					m_query_type = REGISTER;
 					med_id.clear();
 					for (int i = 0; i < med_search.size(); ++i) {
 						Medication ms = med_search.get(i);
@@ -3348,7 +3411,7 @@ public class AMiKoDesk {
 				if (CML_OPT_TYPE.equals("full"))
 					but_regnr.doClick();
 				else if (CML_OPT_TYPE.equals("light")) {
-					m_query_type = 3;
+					m_query_type = REGISTER;
 					med_id.clear();
 					for (int i = 0; i < med_search.size(); ++i) {
 						Medication ms = med_search.get(i);

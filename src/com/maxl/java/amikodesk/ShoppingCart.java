@@ -76,6 +76,8 @@ public class ShoppingCart implements java.io.Serializable {
 	
 	private static Preferences m_prefs;
 	
+	private static String m_customer_gln_code = "";
+	
 	private static String m_application_data_folder;
 	
 	private static int m_margin_percent = 80;	// default
@@ -142,6 +144,10 @@ public class ShoppingCart implements java.io.Serializable {
 		return m_agbs_accepted;
 	}
 	
+	public void setCustomerGlnCode(String code) {
+		m_customer_gln_code = code;
+	}
+	
 	/**
 	 * Updates authors with costs and vats
 	 * @param authors_list
@@ -201,7 +207,10 @@ public class ShoppingCart implements java.io.Serializable {
 		// If n<0 then load default cart
 		if (index<0)
 			index = m_cart_index;
-		File file = new File(Utilities.appDataFolder() + "\\shop\\korb" + index + ".ser");
+		String subfolder = "";
+		if (!m_customer_gln_code.isEmpty())
+			subfolder = "\\" + m_customer_gln_code;
+		File file = new File(Utilities.appDataFolder() + "\\shop" + subfolder + "\\korb" + index + ".ser");
 		if (file.exists()) {
 			// Load and deserialize m_shopping_basket
 			String filename = file.getAbsolutePath();
@@ -229,15 +238,18 @@ public class ShoppingCart implements java.io.Serializable {
 		m_shopping_basket = basket;
 		DateTime dT = new DateTime();
 		DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
-		String path_name = m_application_data_folder + "\\shop";
+		String subfolder = "";
+		if (!m_customer_gln_code.isEmpty())
+			subfolder = "\\" + m_customer_gln_code;
+		String path_name = m_application_data_folder + "\\shop" + subfolder;
 		File wdir = new File(path_name);
 		if (!wdir.exists())
 			wdir.mkdirs();
 		File file = null;
 		if (Utilities.appLanguage().equals("de"))
-			file = new File(path_name + "\\WK_" + fmt.print(dT) + ".ser");
+			file = new File(path_name + "\\WK" + fmt.print(dT) + ".ser");
 		else if (Utilities.appLanguage().equals("fr"))
-			file = new File(path_name + "\\PA_" + fmt.print(dT) + ".ser");
+			file = new File(path_name + "\\PA" + fmt.print(dT) + ".ser");
 		if (file != null) {
 			String filename = file.getAbsolutePath();
 			byte[] serialized_bytes = FileOps.serialize(m_shopping_basket);
@@ -251,7 +263,10 @@ public class ShoppingCart implements java.io.Serializable {
 		m_shopping_basket = basket;
 		int index = getCartIndex();
 		if (index>0) {
-			String path_name = m_application_data_folder + "\\shop";
+			String subfolder = "";
+			if (!m_customer_gln_code.isEmpty())
+				subfolder = "\\" + m_customer_gln_code;			
+			String path_name = m_application_data_folder + "\\shop" + subfolder;
 			File wdir = new File(path_name);
 			if (!wdir.exists())
 				wdir.mkdirs();
@@ -268,7 +283,8 @@ public class ShoppingCart implements java.io.Serializable {
 	
 	public TreeMap<Integer, Float> getRebateMap(String ean_code) {
 		TreeMap<Integer, Float> rebate_map = null;
-		String gln_code = m_prefs.get("glncode", "7610000000000");
+		String gln_code = m_customer_gln_code.isEmpty() ? m_prefs.get("glncode", "7610000000000") : m_customer_gln_code;
+
 		if (m_map_ibsa_glns.containsKey(gln_code)) {
 			// Extract user class (group in case of pharmacies)
 			String uc[] = m_map_ibsa_glns.get(gln_code).split(";");
@@ -276,6 +292,7 @@ public class ShoppingCart implements java.io.Serializable {
 			char user_class = uc[0].charAt(0);			
 			// Is the user human or corporate?
 			String user_type = m_prefs.get("type", "arzt");
+			// System.out.println("Category for GLN " + gln_code + ": " + user_class + "-" + user_type);
 			// Get rebate conditions
 			Conditions c = m_map_ibsa_conditions.get(ean_code);
 			// Extract rebate conditions for particular doctor/pharmacy	
@@ -314,7 +331,7 @@ public class ShoppingCart implements java.io.Serializable {
 	public List<String> getAssortList(String ean_code) {		
 		if (m_map_ibsa_conditions.containsKey(ean_code)) {
 			List<String> assort_list = null;
-			String gln_code = m_prefs.get("glncode", "7610000000000");
+			String gln_code = m_customer_gln_code.isEmpty() ? m_prefs.get("glncode", "7610000000000") : m_customer_gln_code;
 
 			if (m_map_ibsa_glns.containsKey(gln_code)) {
 				// Extract user class (group in case of pharmacies)
