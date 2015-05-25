@@ -176,22 +176,22 @@ public class AMiKoDesk {
 	private static List<User> customer_search = new ArrayList<User>();
 	private static List<Medication> med_title = new ArrayList<Medication>();
 	private static List<Medication> list_of_favorites = new ArrayList<Medication>();
-	private static Map<String, Medication> m_med_basket = new TreeMap<String, Medication>();
-	private static Map<String, Article> m_shopping_basket = new LinkedHashMap<String, Article>();
-	private static Map<String, Article> m_comparison_basket = new LinkedHashMap<String, Article>();
 	private static List<Article> list_of_articles = new ArrayList<Article>();
 	private static List<String> list_of_carts = new ArrayList<String>();
 	private static List<User> list_of_gln_codes = new ArrayList<User>();
+	private static Map<String, Medication> m_med_basket = new TreeMap<String, Medication>();
+	private static Map<String, Article> m_shopping_basket = new LinkedHashMap<String, Article>();
+	private static Map<String, Article> m_comparison_basket = new LinkedHashMap<String, Article>();
 	private static HashMap<String, User> m_user_map = null;
+	private static HashMap<String, Address> m_address_map = null;
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
 	private static String m_query_str = "";
-	private static User m_customer = null;
 	private static String m_customer_gln_code = "";
-	private static int med_index = -1;
-	private static int prev_med_index = -1;
 	private static UIState m_curr_uistate = new UIState("aips");
 	private static String m_curr_regnr = "";
+	private static int med_index = -1;
+	private static int prev_med_index = -1;
 	
 	private static ProgressIndicator m_progress_indicator = new ProgressIndicator(32);
 	private static MiddlePane m_middle_pane = null;
@@ -368,8 +368,11 @@ public class AMiKoDesk {
 				|| !CML_OPT_EANCODE.isEmpty() || !CML_OPT_REGNR.isEmpty() || CML_OPT_SERVER == true));
 	}
 	
-
-	private static HashMap<String, User> loadGlnCodes() {
+	/**
+	 * Load gln to user map
+	 * @return HashMap
+	 */
+	static HashMap<String, User> loadGlnCodes() {
 		HashMap<String, User> user_map = new HashMap<String, User>();
 		
 		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\gln_codes.ser");
@@ -387,7 +390,53 @@ public class AMiKoDesk {
 		
 		return user_map;
 	}
-	
+
+	/**
+	 * Fill list of authors / med owners
+	 */
+	static void loadAuthors() {
+		try {
+			// Load encrypted files
+			byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\authors.ami.ser");
+			if (encrypted_msg == null) {
+				encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER	+ "authors.ami.ser");
+				System.out.println("Loading authors.ami.ser from default folder...");
+			}
+			// Decrypt and deserialize
+			if (encrypted_msg != null) {
+				Crypto crypto = new Crypto();
+				byte[] serialized_bytes = crypto.decrypt(encrypted_msg);
+				ObjectMapper mapper = new ObjectMapper();
+				TypeReference<HashMap<String, Object>> typeRef = new TypeReference<HashMap<String, Object>>() {};
+				Map<String, Object> authorData = mapper.readValue(serialized_bytes, typeRef);
+				@SuppressWarnings("unchecked")
+				ArrayList<HashMap<String, String>> authorList = (ArrayList<HashMap<String, String>>) authorData.get("authors");
+				list_of_authors.clear();
+				for (HashMap<String, String> al : authorList) {
+					Author auth = new Author();
+					auth.setName(al.get("name"));
+					auth.setCompany(al.get("company"));
+					auth.setEmail(al.get("email"));
+					auth.setEmailCC(al.get("emailcc"));
+					auth.setSalutation(al.get("salutation"));
+					if (al.get("server") != null) {
+						String s[] = al.get("server").split(";");
+						if (s.length == 4) {
+							auth.setS(s[0]);
+							auth.setL(s[1]);
+							auth.setP(s[2]);
+							auth.setO(s[3]);
+						}
+					}
+					list_of_authors.add(auth);
+				}
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 	
 	public static void main(String[] args) {
 
@@ -461,9 +510,6 @@ public class AMiKoDesk {
 				m_rosedb.loadDB();
 			}
 		}
-	
-		// Load user map
-		m_user_map = loadGlnCodes();
 		
 		// Initialize update class
 		m_maindb_update = new UpdateDb(m_sqldb);
@@ -475,7 +521,10 @@ public class AMiKoDesk {
 		
 		// Load interaction cart
 		m_interactions_cart = new InteractionsCart();
-
+		
+		// Load user map
+		m_user_map = loadGlnCodes();
+		
 		// Create shopping cart and load related files
 		m_shopping_cart = new ShoppingCart();
 		loadAuthors();
@@ -525,53 +574,6 @@ public class AMiKoDesk {
 		});
 
 		NativeInterface.runEventPump();
-	}
-
-	/**
-	 * Fill list of authors / med owners
-	 */
-	static void loadAuthors() {
-		try {
-			// Load encrypted files
-			byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\authors.ami.ser");
-			if (encrypted_msg == null) {
-				encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER	+ "authors.ami.ser");
-				System.out.println("Loading authors.ami.ser from default folder...");
-			}
-			// Decrypt and deserialize
-			if (encrypted_msg != null) {
-				Crypto crypto = new Crypto();
-				byte[] serialized_bytes = crypto.decrypt(encrypted_msg);
-				ObjectMapper mapper = new ObjectMapper();
-				TypeReference<HashMap<String, Object>> typeRef = new TypeReference<HashMap<String, Object>>() {};
-				Map<String, Object> authorData = mapper.readValue(serialized_bytes, typeRef);
-				@SuppressWarnings("unchecked")
-				ArrayList<HashMap<String, String>> authorList = (ArrayList<HashMap<String, String>>) authorData.get("authors");
-				list_of_authors.clear();
-				for (HashMap<String, String> al : authorList) {
-					Author auth = new Author();
-					auth.setName(al.get("name"));
-					auth.setCompany(al.get("company"));
-					auth.setEmail(al.get("email"));
-					auth.setEmailCC(al.get("emailcc"));
-					auth.setSalutation(al.get("salutation"));
-					if (al.get("server") != null) {
-						String s[] = al.get("server").split(";");
-						if (s.length == 4) {
-							auth.setS(s[0]);
-							auth.setL(s[1]);
-							auth.setP(s[2]);
-							auth.setO(s[3]);
-						}
-					}
-					list_of_authors.add(auth);
-				}
-			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	static class CheckListRenderer extends JCheckBox implements
@@ -772,8 +774,8 @@ public class AMiKoDesk {
 					m_web_panel.updateListOfPackages();
 				else if (m_curr_uistate.isComparisonMode())
 					m_web_panel.updateComparisonCart();
-				else	// Display Fachinformation, default usage!
-					m_web_panel.updateText();
+				else	
+					m_web_panel.updateText();	// Display Fachinformation, default usage!
 			}
 		}
 
@@ -1207,9 +1209,24 @@ public class AMiKoDesk {
 							char shipping_type = msg.replace("change_shipping", "").charAt(0);
 							updateCheckoutTable(row_key, shipping_type);
 						} else if (msg.equals("check_out")) {
+							// Get shipping and billing address (if they exist)			
+							if (m_user_map!=null) {
+								m_address_map = new HashMap<String, Address>();
+								if (m_user_map.containsKey(m_customer_gln_code+"S"))
+									m_address_map.put("S", new Address(m_user_map.get(m_customer_gln_code+"S")));
+								if (m_user_map.containsKey(m_customer_gln_code+"B"))
+									m_address_map.put("B", new Address(m_user_map.get(m_customer_gln_code+"B")));
+								if (m_user_map.containsKey(m_customer_gln_code+"O"))
+									m_address_map.put("O", new Address(m_user_map.get(m_customer_gln_code+"O")));	
+							}
+							// Save shopping basket
 							m_shopping_cart.saveWithIndex(m_shopping_basket);
+							// Set AGB checkbox
 							m_shopping_cart.setAgbsAccepted(false);
+							// Update...
 							m_web_panel.showCheckoutHtml();
+						} else if (msg.equals("change_address")) {
+							//
 						} else if (msg.equals("agbs_accepted")) {
 							boolean a = Boolean.valueOf(row_key);
 							m_shopping_cart.setAgbsAccepted(a);
@@ -1220,12 +1237,11 @@ public class AMiKoDesk {
 							if (m_shopping_cart.getAgbsAccepted() && !m_emailer.isSending()) {
 								m_shopping_cart.save(m_shopping_basket);
 								SaveBasket sbasket = new SaveBasket(m_shopping_cart);
-								// Update authors list with subtotals, vats and
-								// shipping costs
+								// Update authors list with subtotals, vats and shipping costs
 								list_of_authors = m_shopping_cart.updateAuthors(list_of_authors);
-								sbasket.setAuthorList(list_of_authors);
-								m_emailer.setCustomer(m_customer);
-								m_emailer.setCustomerGlnCode(m_customer_gln_code);
+								sbasket.setAuthorList(list_of_authors);							
+								// Information necessary only for user_id = 18
+								m_emailer.setCustomer(m_customer_gln_code, m_address_map);
 								m_emailer.sendAllOrders(list_of_authors, sbasket);
 								m_web_panel.updateShoppingHtml();
 							}
@@ -1478,7 +1494,7 @@ public class AMiKoDesk {
 
 		public void showCheckoutHtml() {
 			// Retrieve main html
-			String html_str = m_shopping_cart.checkoutHtml();
+			String html_str = m_shopping_cart.checkoutHtml(m_address_map);
 			// Update html
 			jWeb.setJavascriptEnabled(true);
 			jWeb.setHTMLContent(html_str);
@@ -1647,8 +1663,7 @@ public class AMiKoDesk {
 							+ ", " + customer.gln_code + "]");
 				}
 				// Update customer gln code
-				m_customer = customer;
-				m_customer_gln_code = customer.gln_code;		
+				m_customer_gln_code = customer.gln_code;				
 				m_prefs.put("type", customer.category.toLowerCase());
 				// Update web panel
 				if (m_shopping_cart!=null) {
@@ -1665,6 +1680,9 @@ public class AMiKoDesk {
 			}
 		}
 		
+		/**
+		 * 
+		 */
 		public void emptyPage() {
 			// Update html
 			jWeb.setJavascriptEnabled(true);
@@ -2675,8 +2693,8 @@ public class AMiKoDesk {
 		// Internal class that implements switching between buttons
 		final class Toggle {
 			public void toggleButton(JToggleButton jbn) {
-				for (int i = 0; i < list_of_buttons.length; ++i) {
-					if (jbn == list_of_buttons[i])
+				for (int i=0; i<list_of_buttons.length; ++i) {
+					if (jbn==list_of_buttons[i])
 						list_of_buttons[i].setSelected(true);
 					else
 						list_of_buttons[i].setSelected(false);
@@ -3115,9 +3133,12 @@ public class AMiKoDesk {
 			public void update(Observable o, Object arg) {
 				System.out.println(arg);
 				// Change title
-				String user_name = m_prefs.get("name", "");
+				String user_name = m_prefs.get("name", "");				
 				if (!user_name.isEmpty())
 					user_name = " - " + user_name;		
+				String email_addr = m_prefs.get("emailadresse", "");
+				if (!email_addr.isEmpty())
+					user_name += " / " + email_addr;
 				jframe.setTitle(Constants.APP_NAME + user_name);
 				// Change layout according to user id
 				boolean but_customer_enabled = is_operator() && m_curr_uistate.isShoppingMode();
@@ -3127,11 +3148,17 @@ public class AMiKoDesk {
 				if (m_shopping_cart!=null) {
 					// Refresh some stuff
 					m_shopping_basket.clear();
-					m_customer = null;
 					m_customer_gln_code = "";					
 					m_shopping_cart.saveWithIndex(m_shopping_basket);
 					m_web_panel.updateShoppingHtml();
 				}
+				// Go back to compendium search mode
+				new Toggle().toggleButton(selectAipsButton);
+				m_curr_uistate.setUseMode("aips");
+				med_search = m_sqldb.searchTitle("");
+				sTitle(); // Used instead of sTitle (which is slow)
+				cardl.show(p_results, final_title);				
+				m_web_panel.noclickPage();
 			}
 		});
 		
@@ -3144,8 +3171,8 @@ public class AMiKoDesk {
 				m_full_db_update = true;
 				m_mutex_update = false;
 				// Refresh some stuff after update
+				m_user_map = loadGlnCodes();				
 				loadAuthors();
-				loadGlnCodes();
 				m_emailer.loadAccess();
 				if (m_shopping_cart != null) {
 					m_shopping_cart.load_conditions();
@@ -3154,7 +3181,6 @@ public class AMiKoDesk {
 				// Empty shopping basket
 				if (m_curr_uistate.isShoppingMode()) {
 					m_shopping_basket.clear();
-					m_customer = null;
 					m_customer_gln_code = "";
 					m_shopping_cart.saveWithIndex(m_shopping_basket);
 					m_web_panel.updateShoppingHtml();

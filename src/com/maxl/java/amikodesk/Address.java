@@ -3,6 +3,9 @@ package com.maxl.java.amikodesk;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ResourceBundle;
+
+import com.maxl.java.shared.User;
 
 public class Address implements java.io.Serializable {
 
@@ -25,6 +28,23 @@ public class Address implements java.io.Serializable {
 	
 	public Address() {
 		// Struct
+	}
+	
+	public Address(User user) {
+		idealeId = "";
+		xprisId = "";
+		title = user.title;
+		fname = user.first_name;
+		lname = user.last_name;
+		name1 = user.name1;
+		name2 = user.name2;
+		name3 = user.name3;
+		street = user.street;
+		zip = user.zip;
+		city = user.city;
+		email = user.email;
+		phone = user.phone;
+		isHuman = user.is_human;
 	}
 	
 	// Ideale customer ID and Xpris customer ID are nil
@@ -64,6 +84,37 @@ public class Address implements java.io.Serializable {
     		else if (addr_type.equals("O"))
     			addr_str = "Keine Bestelladresse";    		
     	}
+		
+		return addr_str;
+	}
+	
+	public String getAsHtmlString(String addr_type, ResourceBundle rb) {
+		String addr_str = "<div id=\"shopping\">";
+		if (addr_type.equals("S"))
+			addr_str += "<p class=\"address\"><b>" + rb.getString("shipaddress") + "</b></p>"; 
+		else if (addr_type.equals("B") || addr_type.equals("BS"))
+			addr_str += "<p class=\"address\"><b>" + rb.getString("billaddress") + "</b></p>"; 
+		else if (addr_type.equals("O") || addr_type.equals("OS"))
+			addr_str += "<p class=\"address\"><b>" + rb.getString("ordaddress") + "</b></p>"; 
+		
+		if (addr_type.equals("BS") || addr_type.equals("OS")) {
+			for (int i=0; i<4; ++i)
+				addr_str += "<p class=\"address\">-</p>";
+			addr_str += "</div>";		
+			
+			return addr_str;
+		}
+		
+		addr_str += "<p class=\"address\">" + title + " " + fname + " " + lname + "</p>";
+		if (!name1.isEmpty())
+			addr_str += "<p class=\"address\">" + name1 + "</p>";
+		if (!name2.isEmpty())
+			addr_str += "<p class=\"address\">" + name2 + "</p>";
+		if (!name3.isEmpty())
+			addr_str += "<p class=\"address\">" + name3 + "</p>";		
+		addr_str += "<p class=\"address\">" + street + "</p>";
+		addr_str += "<p class=\"address\">" + zip + " " + city + "</p>";		
+		addr_str += "</div>";
 		
 		return addr_str;
 	}

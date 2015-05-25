@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Observer;
@@ -59,15 +60,13 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
-import com.maxl.java.shared.User;
-
 public class Emailer {
 
 	private static String BestellAdresseID = "bestelladresse";
 	private static String LieferAdresseID = "lieferadresse";
 	private static String RechnungsAdresseID = "rechnungsadresse";
-	
-	private User m_customer = null;
+
+	private HashMap<String, Address> m_address_map = null;	
 	private String m_customer_gln_code = "";
 	private String m_subject;
 	private String m_from;
@@ -128,12 +127,9 @@ public class Emailer {
 		m_es = ((String)map.get(m_el)).split(";")[1];
 	}
 	
-	public void setCustomer(User customer) {
-		m_customer = customer;
-	}
-	
-	public void setCustomerGlnCode(String gln_code) {
+	public void setCustomer(String gln_code, HashMap<String, Address> address_map) {
 		m_customer_gln_code = gln_code;
+		m_address_map = address_map;
 	}
 	
 	public void setSubject(String subject) {
@@ -207,12 +203,7 @@ public class Emailer {
 	}
 		
 	private String getGlnCode() {
-		String customer_gln_code = "";
-		if (m_customer!=null)
-			customer_gln_code = m_customer.gln_code;
-		String gln_code = customer_gln_code.isEmpty() ? m_prefs.get("glncode", "7610000000000") : customer_gln_code;
-
-		return gln_code;
+		return (m_customer_gln_code.isEmpty() ? m_prefs.get("glncode", "7610000000000") : m_customer_gln_code);
 	}
 	
 	private void sendWithAttachment(Author author, String attachment_name, String attachment_path) {
@@ -293,15 +284,29 @@ public class Emailer {
 	}	
 	
 	public String generateAddressFile(String time_stamp) {    	
-		String gln_code = getGlnCode();
-		
+		String path = Utilities.appDataFolder() + "\\shop";
+		String gln_code = getGlnCode();		
 		String addr_str = "";
 		Address addr = new Address();
 			
 		// Get UserID
 		int user_id = m_prefs.getInt("user", 0);
 		if (user_id==18) {
-			
+			if (m_address_map!=null) {
+				// Shipping address
+				addr_str = m_address_map.get("S").getAsLongString(time_stamp, "S", gln_code) + "\n";
+				// Billing address
+				if (m_address_map.containsKey("B"))
+					addr_str += m_address_map.get("B").getAsLongString(time_stamp, "B", gln_code) + "\n";			
+				else
+					addr_str += m_address_map.get("S").getAsLongString(time_stamp, "B", gln_code) + "\n";
+				// Ordering address
+				if (m_address_map.containsKey("O"))
+					addr_str += m_address_map.get("O").getAsLongString(time_stamp, "O", gln_code) + "\n";
+				else 
+					addr_str += m_address_map.get("S").getAsLongString(time_stamp, "O", gln_code) + "\n";	
+			}
+			path += "\\" + gln_code;
 		} else {
 			// Default entries... empty
 			byte[] def = FileOps.serialize(addr);
@@ -325,7 +330,7 @@ public class Emailer {
 		// Save to A_GLN_timestamp.csv
  		String filename = "A_" + gln_code + "_" + time_stamp;
  		try {
- 			FileOps.writeToFile(addr_str, Utilities.appDataFolder() + "\\shop", filename + ".csv", "UTF-8");
+ 			FileOps.writeToFile(addr_str, path, filename + ".csv", "UTF-8");
  			return filename;
  		}
  		catch (IOException e) {
@@ -437,9 +442,14 @@ public class Emailer {
 			DateTimeFormatter fmt = DateTimeFormat.forPattern("ddMMyyyy'T'HHmmss");
 
 			String time_stamp = fmt.print(dT);
+			String address_filename = generateAddressFile(time_stamp);	// A_			
 			String gln_time = gln_code + "_" + time_stamp;					
 			String order_filename = "B_" + gln_time;		
-			String address_filename = generateAddressFile(time_stamp);
+			
+			int user_id = m_prefs.getInt("user", 0);
+			if (user_id==18) {
+				path += "\\" + gln_code;
+			}
 			
 			int num_authors = 0;
 			for (Author author : m_list_of_authors) {
@@ -454,6 +464,7 @@ public class Emailer {
 					for (Author author : m_list_of_authors) {
 						if (mSbasket.getMedsForAuthor(author.getName())>0 && !isCancelled()) {
 							String auth = author.getShortName();
+							// Prefix the file saved to disk with the author's/owner's name
 							String p = path + "\\" + auth + "_" + order_filename;
 							mSbasket.generatePdf(author, p + ".pdf", "specific");	
 							mSbasket.generateCsv(author, p + ".csv", "specific");

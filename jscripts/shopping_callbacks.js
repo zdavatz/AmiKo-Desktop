@@ -143,3 +143,14 @@ function changeShipping(tableID,currentRow,index) {
 		}
 	}
 }
+
+function changeColor(tableRow, highLight) {
+	if (highLight)
+		tableRow.style.backgroundColor = '#dcfac9';
+	else
+		tableRow.style.backgroundColor = '#ffffff';
+}
+
+function changeAddress(tableRow, type) {
+	invokeJava("change_address", type);
+}

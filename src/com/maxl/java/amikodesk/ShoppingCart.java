@@ -24,6 +24,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -1019,7 +1020,7 @@ public class ShoppingCart implements java.io.Serializable {
 				author.contains("desitin"));
 	}
 	
-	public String checkoutHtml() {
+	public String checkoutHtml(HashMap<String, Address> address_map) {
 		String load_order_str = "";
 		String fast_order_str[] = {"", "", "", "", ""};		
 		String jscript_str = "<script language=\"javascript\">" + FileOps.readFromFile(Constants.JS_FOLDER + "shopping_callbacks.js") + "</script>";
@@ -1184,6 +1185,62 @@ public class ShoppingCart implements java.io.Serializable {
 				+ "<td style=\"text-align:right; padding-top:16px; padding-bottom:8px;\"><b>" + Utilities.prettyFormat(grand_total_CHF) + "</b></td>"
 				+ "</tr></table>";
 		
+		String address_text = "";
+		
+		if (address_map!=null) {			
+			address_text = "<table style=\"background-color:#ffffff;\" width=\"90%25\"><tr>";
+
+			Address shipping_addr = null;
+			Address billing_addr = null;
+			Address ordering_addr = null;
+			
+			int user_id = m_prefs.getInt("user", 0);
+			if (user_id==18) {			
+				shipping_addr = address_map.get("S");
+				billing_addr = address_map.get("B");
+				ordering_addr = address_map.get("O");						
+			} else {
+				// Default entries... empty
+				byte[] def = FileOps.serialize(new Address());
+				
+				byte[] arr = m_prefs.getByteArray("lieferadresse", def);
+				if (arr!=null)
+					shipping_addr = (Address)FileOps.deserialize(arr);
+				
+				arr = m_prefs.getByteArray("rechnungsadresse", def);
+				if (arr!=null)
+					billing_addr = (Address)FileOps.deserialize(arr);
+				
+				arr = m_prefs.getByteArray("bestelladresse", def);
+				if (arr!=null)
+					ordering_addr = (Address)FileOps.deserialize(arr);	
+			}
+			
+			String color_change_str = "width=\"30%25\" style=\"cursor:pointer; background-color:#ffffff; padding-left:8px; padding-top:16px;\" "
+						+ "onmouseover=\"changeColor(this,true);\" "
+						+ "onmouseout=\"changeColor(this,false);\" ";
+
+			if (shipping_addr!=null) {
+				address_text += "<td " + color_change_str + "onclick=\"changeAddress(this,'S');\" " 
+						+ shipping_addr.getAsHtmlString("S", m_rb) + "</td>";
+			}
+			if (billing_addr!=null && (!billing_addr.lname.isEmpty() || !billing_addr.name1.isEmpty())) {
+				address_text += "<td " + color_change_str + "onclick=\"changeAddress(this,'B');\" " 
+					+ billing_addr.getAsHtmlString("B", m_rb) + "</td>";				
+			} else {
+				address_text += "<td " + color_change_str + "onclick=\"changeAddress(this,'B');\" "
+					+ shipping_addr.getAsHtmlString("BS", m_rb) + "</td>";								
+			}
+			if (ordering_addr!=null && (!ordering_addr.lname.isEmpty() || !ordering_addr.name1.isEmpty())) {
+				address_text += "<td " + color_change_str + "onclick=\"changeAddress(this,'O');\" "
+					+ ordering_addr.getAsHtmlString("O", m_rb) + "</td>";
+			} else {
+				address_text += "<td " + color_change_str + "onclick=\"changeAddress(this,'O');\" "
+					+ shipping_addr.getAsHtmlString("OS", m_rb) + "</td>";				
+			}
+			address_text += "</tr></table>";
+		}
+		
 		String agb_str = "<input type=\"checkbox\" style=\"margin-right:10px;\" onclick=\"agbsAccepted(this)\">" + m_rb.getString("agbsMsg") + "</input>";
 		
 		String send_order_str = "<td style=\"text-align:center;\"><div class=\"right\" id=\"Send_order\">"
@@ -1196,8 +1253,10 @@ public class ShoppingCart implements java.io.Serializable {
 		
 		String html_str = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" />" + jscript_str + m_css_str + "</head>"
 				+ "<div id=\"buttons\">" + load_order_str + fast_order_str[0] + fast_order_str[1] + fast_order_str[2] + fast_order_str[3] + fast_order_str[4] + "</div>"
-				+ "<body><div id=\"shopping\">" + checkout_html_str
-				+ "<div><p>" + agb_str + " <a href=\"javascript:void(0)\" onClick=\"showAgbs();\" style=\"font-style:italic; color:'#0000bb'\">" + m_rb.getString("readAgbs") + "</a></p></div>"				
+				+ "<body><div id=\"shopping\">" + checkout_html_str + "</div>"
+				+ address_text
+				+ "<div id=\"shopping\" style=\"font-size:0.8em;\"><p>" + agb_str + " <a href=\"javascript:void(0)\" onClick=\"showAgbs();\" style=\"font-style:italic; color:'#0000bb'\">" + m_rb.getString("readAgbs") + "</a></p></div>"
+				+ "<div id=\"shopping\">"
 				+ "<form><table class=\"container\"><tr>" + send_order_str + "</tr>"
 				+ "<tr>" + send_order_text + "</tr></table></form>"
 				+ saving_to_desktop_text
