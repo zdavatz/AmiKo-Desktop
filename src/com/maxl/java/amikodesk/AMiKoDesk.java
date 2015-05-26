@@ -212,6 +212,7 @@ public class AMiKoDesk {
 	private static List<String> m_section_str = null;
 	private static String m_application_data_folder = null;
 	private static Emailer m_emailer;
+	private static SettingsPage m_settings_page = null;
 
 	// Panels
 	private static ListPanel m_list_titles = null;
@@ -1226,7 +1227,7 @@ public class AMiKoDesk {
 							// Update...
 							m_web_panel.showCheckoutHtml();
 						} else if (msg.equals("change_address")) {
-							//
+							m_settings_page.displayCustomerSettings(row_key, m_customer_gln_code, m_address_map);							
 						} else if (msg.equals("agbs_accepted")) {
 							boolean a = Boolean.valueOf(row_key);
 							m_shopping_cart.setAgbsAccepted(a);
@@ -2259,9 +2260,11 @@ public class AMiKoDesk {
 		toolBar.add(m_progress_indicator);
 
 		// ------ Setup settingspage ------
-		final SettingsPage settingsPage = new SettingsPage(jframe, m_rb, m_user_map);
+		m_settings_page = new SettingsPage(jframe, m_rb, m_user_map);
+		m_settings_page.initUserSettings();
+		m_settings_page.initCustomerSettings();
 		// Retrieve gln codes for fast access
-		m_customerdb = settingsPage.get_user_db();
+		m_customerdb = m_settings_page.getUserDb();
 
 		jframe.addWindowListener(new WindowListener() {
 			// Use WindowAdapter!
@@ -2306,7 +2309,7 @@ public class AMiKoDesk {
 		settings_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				settingsPage.display();
+				m_settings_page.displayUserSettings();
 			}
 		});
 		quit_item.addActionListener(new ActionListener() {
@@ -2863,7 +2866,7 @@ public class AMiKoDesk {
 					cardl.show(p_results, final_author);
 				} else {
 					selectShoppingCartButton.setSelected(false);
-					settingsPage.display();
+					m_settings_page.displayUserSettings();
 				}
 			}
 		});
@@ -3129,36 +3132,40 @@ public class AMiKoDesk {
 		 * Observers
 		 */
 		// Attach observer to 'settingspage'
-		settingsPage.addObserver(new Observer() {
+		m_settings_page.addObserver(new Observer() {
 			public void update(Observable o, Object arg) {
-				System.out.println(arg);
-				// Change title
-				String user_name = m_prefs.get("name", "");				
-				if (!user_name.isEmpty())
-					user_name = " - " + user_name;		
-				String email_addr = m_prefs.get("emailadresse", "");
-				if (!email_addr.isEmpty())
-					user_name += " / " + email_addr;
-				jframe.setTitle(Constants.APP_NAME + user_name);
-				// Change layout according to user id
-				boolean but_customer_enabled = is_operator() && m_curr_uistate.isShoppingMode();
-				but_customer.setVisible(but_customer_enabled);
-				but_customer.setEnabled(but_customer_enabled);
-				// Refresh shopping if user has changed...
-				if (m_shopping_cart!=null) {
-					// Refresh some stuff
-					m_shopping_basket.clear();
-					m_customer_gln_code = "";					
-					m_shopping_cart.saveWithIndex(m_shopping_basket);
-					m_web_panel.updateShoppingHtml();
+				if (arg instanceof String) {
+					System.out.println(arg);
+					// Change title
+					String user_name = m_prefs.get("name", "");				
+					if (!user_name.isEmpty())
+						user_name = " - " + user_name;		
+					String email_addr = m_prefs.get("emailadresse", "");
+					if (!email_addr.isEmpty())
+						user_name += " / " + email_addr;
+					jframe.setTitle(Constants.APP_NAME + user_name);
+					// Change layout according to user id
+					boolean but_customer_enabled = is_operator() && m_curr_uistate.isShoppingMode();
+					but_customer.setVisible(but_customer_enabled);
+					but_customer.setEnabled(but_customer_enabled);
+					// Refresh shopping if user has changed...
+					if (m_shopping_cart!=null) {
+						// Refresh some stuff
+						m_shopping_basket.clear();
+						m_customer_gln_code = "";					
+						m_shopping_cart.saveWithIndex(m_shopping_basket);
+						m_web_panel.updateShoppingHtml();
+					}
+					// Go back to compendium search mode
+					new Toggle().toggleButton(selectAipsButton);
+					m_curr_uistate.setUseMode("aips");
+					med_search = m_sqldb.searchTitle("");
+					sTitle(); // Used instead of sTitle (which is slow)
+					cardl.show(p_results, final_title);				
+					m_web_panel.noclickPage();
+				} else if (arg instanceof Address) {
+					System.out.println("Return address...");
 				}
-				// Go back to compendium search mode
-				new Toggle().toggleButton(selectAipsButton);
-				m_curr_uistate.setUseMode("aips");
-				med_search = m_sqldb.searchTitle("");
-				sTitle(); // Used instead of sTitle (which is slow)
-				cardl.show(p_results, final_title);				
-				m_web_panel.noclickPage();
 			}
 		});
 		

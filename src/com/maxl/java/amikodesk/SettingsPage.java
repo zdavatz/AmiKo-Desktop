@@ -20,6 +20,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package com.maxl.java.amikodesk;
 
 import java.awt.Color;
+import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -71,7 +72,7 @@ import javax.swing.filechooser.FileFilter;
 
 import com.maxl.java.shared.User;
 
-public class SettingsPage extends JDialog implements java.io.Serializable {
+public class SettingsPage implements java.io.Serializable {
 
 	private static String UpdateID = "update";
 	private static String ComparisonID = "update-comp";
@@ -92,6 +93,8 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 	
 	private JFrame mFrame = null;
 	private JFileChooser mFc = null;
+	
+	private JDialog mUserDialog = null;
 	private JButton mButtonLogo = null;
 	private Preferences mPrefs = null;
 	private JTextField mTextFieldGLN = null;	
@@ -99,11 +102,15 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 	private JTextArea mTextAreaLiefer = null;
 	private JTextArea mTextAreaRechnung = null;
 	private JTextField mTextFieldEmail = null;
-	private JTextField mTextFieldPhone = null;
-	
+	private JTextField mTextFieldPhone = null;	
 	private AddressPanel mShippingAddress = null;	// Lieferadresse
 	private AddressPanel mBillingAddress = null;	// Rechnungsadresse
 	private AddressPanel mOfficeAddress = null;		// Bestelladresse
+
+	private JDialog mCustomerDialog = null;
+	private JLabel mCustomerGlnCode = null;
+	private AddressPanel mCustomerAddress = null;
+
 	
 	// Colors
 	private static Color color_white = new Color(255,255,255);
@@ -686,7 +693,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		}
 	}
 	
-	public FastAccessData get_user_db() {
+	public FastAccessData getUserDb() {
 		ArrayList<User> list_of_users = new ArrayList<User>();
 		for (Map.Entry<String, User> entry : m_user_map.entrySet()) {
 			User u = entry.getValue();
@@ -698,7 +705,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		return fad;
 	}
 	
-	public FastAccessData get_gln_codes_csv() {
+	public FastAccessData getGlnCodesCsv() {
 		ArrayList<String> list1 = new ArrayList<String>();
 		ArrayList<String> list2 = new ArrayList<String>();
 		ArrayList<String> list3 = new ArrayList<String>();
@@ -719,10 +726,9 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		return fad;
 	}
 	
-	public void load_access() {
+	public void loadAccess() {
 		m_work_id = (new Crypto()).loadMap("access.ami.ser");					
-	}
-		
+	}		
 	
 	public void addObserver(Observer observer) {
 		m_observer = observer;
@@ -732,20 +738,31 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		m_observer.update(null, str);
 	}	
 	
-	protected void notify_me(String str) {
+	protected void notify(Address addr) {
+		m_observer.update(null, addr);
+	}
+	
+	protected void notifyMe(String str) {
 		notify(str);
+	}
+	
+	protected void notifyMeToo(Address addr) {
+		notify(addr);
 	}
 	
 	public SettingsPage(JFrame frame, ResourceBundle rb, HashMap<String, User> user_map) {
 		mFrame = frame;
 		m_rb = rb;
 		m_user_map = user_map;
+	}
+	
+	public void initUserSettings() {
 		mFc = new JFileChooser();
 		// Defines a node in which the preferences can be stored
 		mPrefs = Preferences.userRoot().node(this.getClass().getName());
 		
 		// Load access
-		load_access();
+		loadAccess();
 		
 		String gln_code_str = mPrefs.get(GLNCodeID, "7610000000000");
 		System.out.println("GLN code: " + gln_code_str);		
@@ -753,43 +770,45 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			m_user = m_user_map.get(gln_code_str+"S");
 		}
 		
-		// Layout stuff
-		this.setLayout(new BoxLayout(getContentPane(), BoxLayout.Y_AXIS));
+		mUserDialog = new JDialog();
 		
-		add(Box.createRigidArea(new Dimension(0, 10)));		
+		// Layout stuff
+		mUserDialog.setLayout(new BoxLayout(mUserDialog.getContentPane(), BoxLayout.Y_AXIS));
+		
+		mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
 		JPanel jplInnerPanel1 = globalAmiKoSettings();
-		this.add(jplInnerPanel1);
+		mUserDialog.add(jplInnerPanel1);
 		
 		if (Utilities.appCustomization().equals("zurrose")) {
-			add(Box.createRigidArea(new Dimension(0, 10)));		
+			mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
 			JPanel jplInnerPanel2 = comparisonSettings();
-			this.add(jplInnerPanel2);
+			mUserDialog.add(jplInnerPanel2);
 		}
 		
-		add(Box.createRigidArea(new Dimension(0, 10)));		
+		mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
 		if (Utilities.appCustomization().equals("ibsa")) {	// IBSA
 			JPanel jplInnerPanel3 = shoppingBasketSettings2();
-			this.add(jplInnerPanel3);
+			mUserDialog.add(jplInnerPanel3);
 		} else {
 			JPanel jplInnerPanel3 = shoppingBasketSettings();
-			this.add(jplInnerPanel3);
+			mUserDialog.add(jplInnerPanel3);
 		}
 		
-		add(Box.createRigidArea(new Dimension(0, 10)));
+		mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));
 		
-		this.setModalityType(ModalityType.APPLICATION_MODAL);
-		this.setTitle(m_rb.getString("settings"));		
-		this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+		mUserDialog.setModalityType(JDialog.ModalityType.APPLICATION_MODAL);
+		mUserDialog.setTitle(m_rb.getString("settings"));		
+		mUserDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 		// Centers the dialog
-		this.setLocationRelativeTo(null);
+		mUserDialog.setLocationRelativeTo(null);
 		// Set size
 		if (Utilities.appCustomization().equals("ibsa"))	// IBSA
-			this.setSize(640, 800);		
+			mUserDialog.setSize(640, 800);		
 		else
-			this.setSize(512, 680);
-		this.setResizable(false);
+			mUserDialog.setSize(512, 680);
+		mUserDialog.setResizable(false);
 		
-		this.addWindowListener(new WindowAdapter() {
+		mUserDialog.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(WindowEvent e) {
 				if (Utilities.appCustomization().equals("ibsa")) {	// IBSA
@@ -799,12 +818,12 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 						mBillingAddress.storeDataToPreferences(m_user.is_human);
 						mOfficeAddress.storeDataToPreferences(m_user.is_human);
 						// Update frame name
-						notify_me("user updated...");
+						notifyMe("user updated...");
 					} else {
 						// Innendienst Mitarbeiter
 						if (mPrefs.getInt(UserID, 0)==18) {
 							mShippingAddress.storeDataToPreferences(true);
-							notify_me("user updated...");
+							notifyMe("user updated...");
 						}
 					}
 				} else {
@@ -822,11 +841,83 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		});
 	}
 	
-	public void display() {
+	public void displayUserSettings() {
 		// Visualize
-		this.setVisible(true);
+		mUserDialog.setVisible(true);
 	}
 
+	public void initCustomerSettings() {
+		mCustomerDialog = new JDialog();
+		
+		// Layout stuff
+		mCustomerDialog.setLayout(new BoxLayout(mCustomerDialog.getContentPane(), BoxLayout.Y_AXIS));
+		
+		mCustomerDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
+		
+		JPanel jplInnerPanel = customerSettings();
+		mCustomerDialog.add(jplInnerPanel);
+		
+		mCustomerDialog.setModalityType(JDialog.ModalityType.APPLICATION_MODAL);
+		mCustomerDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+		// Centers dialog
+		mCustomerDialog.setLocationRelativeTo(null);
+		// Set size
+		mCustomerDialog.setSize(640, 320);		
+
+		mCustomerDialog.setResizable(false);
+		
+		mCustomerDialog.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosed(WindowEvent e) {
+				if (Utilities.appCustomization().equals("ibsa")) {	// IBSA
+					Address customerAddress = new Address();
+					customerAddress.title = mCustomerAddress.aTextFieldTitle.getText();
+					customerAddress.fname = mCustomerAddress.aTextFieldFName.getText();
+					customerAddress.lname = mCustomerAddress.aTextFieldLName.getText();
+					customerAddress.name1 = mCustomerAddress.aTextFieldName1.getText();
+					customerAddress.name2 = mCustomerAddress.aTextFieldName2.getText();
+					customerAddress.name3 = mCustomerAddress.aTextFieldName3.getText();
+					customerAddress.street = mCustomerAddress.aTextFieldAddress.getText();
+					customerAddress.zip = mCustomerAddress.aTextFieldZip.getText();
+					customerAddress.city = mCustomerAddress.aTextFieldCity.getText();
+					customerAddress.email = mCustomerAddress.aTextFieldEmail.getText();
+					customerAddress.phone = mCustomerAddress.aTextFieldPhone.getText();
+					notifyMeToo(customerAddress);
+				}
+			}
+		});
+	}
+	
+	public void displayCustomerSettings(String addr_type, String gln_code, HashMap<String, Address> address_map) {
+		if (address_map!=null) {
+			Address addr = new Address();
+			if (addr_type.equals("S")) {
+				mCustomerDialog.setTitle(m_rb.getString("shipaddress"));		
+				addr = address_map.get("S");
+			} else if (addr_type.equals("B")) {
+				mCustomerDialog.setTitle(m_rb.getString("billaddress"));		
+				addr = address_map.get("B");				
+			} else if (addr_type.equals("O")) {
+				mCustomerDialog.setTitle(m_rb.getString("ordaddress"));
+				addr = address_map.get("O");				
+			}
+			mCustomerGlnCode.setText(gln_code);
+			mCustomerAddress.aTextFieldTitle.setText(addr.title);
+			mCustomerAddress.aTextFieldFName.setText(addr.fname);
+			mCustomerAddress.aTextFieldLName.setText(addr.lname);
+			mCustomerAddress.aTextFieldName1.setText(addr.name1);
+			mCustomerAddress.aTextFieldName2.setText(addr.name2);
+			mCustomerAddress.aTextFieldName3.setText(addr.name3);
+			mCustomerAddress.aTextFieldAddress.setText(addr.street);
+			mCustomerAddress.aTextFieldZip.setText(addr.zip);
+			mCustomerAddress.aTextFieldCity.setText(addr.city);
+			mCustomerAddress.aTextFieldEmail.setText(addr.email);
+			mCustomerAddress.aTextFieldPhone.setText(addr.phone);		
+			// Visualize
+			mCustomerDialog.setVisible(true);
+		}
+	}
+	
 	protected JPanel globalAmiKoSettings() {
 		JPanel jPanel = new JPanel();
 		jPanel.setLayout(new GridLayout(1, 4));
@@ -974,7 +1065,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		return jPanel;
 	}
 	
-	private void delete_shopping_carts() {
+	private void deleteShoppingCarts() {
 		System.out.println("User type changed...");
 		for (int index=1; index<6; ++index) {
 			File file = new File(Utilities.appDataFolder() + "\\shop\\korb" + index + ".ser");
@@ -1112,7 +1203,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 						}						
 						// If old user and new user do not match, delete ALL shopping carts
 						if (!old_user_type.equals(new_user_type))
-							delete_shopping_carts();
+							deleteShoppingCarts();
 						return;
 					} else {
 						// Innendienst identification
@@ -1398,7 +1489,7 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 						
 						// If old user and new user do not match, delete ALL shopping carts
 						if (!old_user_type.equals(new_user_type))
-							delete_shopping_carts();
+							deleteShoppingCarts();
 						return;
 					} else {
 						// Innendienst identification
@@ -1440,8 +1531,8 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			public void itemStateChanged(ItemEvent e) {
 				if (jcheckAddress1.isSelected()) {
 					mBillingAddress.copyDataFromShippingPanel();
-					revalidate();
-					repaint();
+					mUserDialog.revalidate();
+					mUserDialog.repaint();
 				} else
 					mBillingAddress.clearData();
 			}
@@ -1459,8 +1550,8 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 			public void itemStateChanged(ItemEvent e) {
 				if (jcheckAddress2.isSelected()) {
 					mOfficeAddress.copyDataFromShippingPanel();
-					revalidate();
-					repaint();
+					mUserDialog.revalidate();
+					mUserDialog.repaint();
 				} else
 					mOfficeAddress.clearData();
 			}
@@ -1526,6 +1617,35 @@ public class SettingsPage extends JDialog implements java.io.Serializable {
 		jlabelFootnote.setHorizontalAlignment(JLabel.LEFT);
 		gbc = getGbc(0,6, 0.5,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(jlabelFootnote, gbc);
+		
+		return jPanel;
+	}
+	
+	protected JPanel customerSettings() {
+		JPanel jPanel = new JPanel();
+		jPanel.setLayout(new GridBagLayout());
+
+		GridBagConstraints gbc = new GridBagConstraints();		
+		
+		jPanel.setOpaque(false);
+		jPanel.setBorder(new CompoundBorder(
+				new TitledBorder(m_rb.getString("shoppingCart")), new EmptyBorder(5,5,5,5)));	
+		
+		// -----------------------------
+		JLabel jlabelGLN = new JLabel("GLN Code:");
+		jlabelGLN.setHorizontalAlignment(JLabel.LEFT);
+		gbc = getGbc(0,0, 0.1,1.0, GridBagConstraints.HORIZONTAL);		
+		jPanel.add(jlabelGLN, gbc);
+		
+		mCustomerGlnCode = new JLabel("761000000000");
+		gbc = getGbc(1,0 ,3.0,1.0, GridBagConstraints.HORIZONTAL);		
+		jPanel.add(mCustomerGlnCode, gbc);
+
+		// -----------------------------
+		gbc = getGbc(0,3, 1.0,1.0, GridBagConstraints.HORIZONTAL);		
+		gbc.gridwidth = 4;
+		mCustomerAddress = new AddressPanel("S");
+		jPanel.add(mCustomerAddress, gbc);
 		
 		return jPanel;
 	}
