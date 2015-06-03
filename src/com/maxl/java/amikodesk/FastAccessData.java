@@ -1,6 +1,8 @@
 package com.maxl.java.amikodesk;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -33,17 +35,18 @@ public class FastAccessData {
 			String s5 = u.zip.toLowerCase();
 			String s6 = u.city.toLowerCase();
 			String s7 = u.gln_code.toLowerCase();
+			String s8 = u.ideale_id.toLowerCase();
 			boolean found = true;
 			for (int i=0; i<keys.length; ++i) {
 				String k = keys[i].trim().toLowerCase();
-				if (s1.startsWith(k) || s2.startsWith(k) 
-						|| s3.startsWith(k) || s4.startsWith(k)
-						|| s5.startsWith(k) || s6.startsWith(k)
-						|| s7.startsWith(k)) {
-					found &= found;
-				} else {
+				if (!s2.isEmpty() || !s3.isEmpty()) {
+					if (s1.startsWith(k) || s2.startsWith(k) || s3.startsWith(k) || s4.startsWith(k)
+							|| s5.startsWith(k) || s6.startsWith(k) || s7.startsWith(k) || s8.startsWith(k)) {
+						found &= found;
+					} else
+						found = false;
+				} else
 					found = false;
-				}
 			}
 			if (found==true)
 				ret_list.add(u);

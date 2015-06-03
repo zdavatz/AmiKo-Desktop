@@ -62,6 +62,10 @@ public class Utilities {
 		return "";
 	}
 	
+	static public boolean showFullSettings() {
+		return (appCustomization().equals("ibsa") || appCustomization().equals("zurrose") || appCustomization().equals("ywesee"));
+	}
+	
 	static public String prettyFormat(float value) {
 		return String.format("%,.2f", value);
 	}

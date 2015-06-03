@@ -11,6 +11,7 @@ public class Address implements java.io.Serializable {
 
 	private static final long serialVersionUID = 1L;
 	
+	public String type = "";
 	public String idealeId = "";
 	public String xprisId = "";
 	public String title = "";
@@ -31,8 +32,9 @@ public class Address implements java.io.Serializable {
 	}
 	
 	public Address(User user) {
-		idealeId = "";
-		xprisId = "";
+		type = "";
+		idealeId = user.ideale_id;
+		xprisId = user.xpris_id;
 		title = user.title;
 		fname = user.first_name;
 		lname = user.last_name;
@@ -47,7 +49,6 @@ public class Address implements java.io.Serializable {
 		isHuman = user.is_human;
 	}
 	
-	// Ideale customer ID and Xpris customer ID are nil
 	public String getAsLongString(String time_stamp, String addr_type, String gln_code) {
 		String addr_str = time_stamp + "|" + addr_type + "|" + gln_code + "|" 
 				+ idealeId + "|" + xprisId + "|"
@@ -57,6 +58,10 @@ public class Address implements java.io.Serializable {
 				+ phone + "||" + email;	// No fax!
 		
 		return addr_str;
+	}
+
+	public String getNoAddressString(String time_stamp, String addr_type, String gln_code) {
+		return (time_stamp + "|" + addr_type + "|" + gln_code + "||||||||||||||");			
 	}
 	
 	public String getAsClassicString(String addr_type) {
@@ -88,32 +93,36 @@ public class Address implements java.io.Serializable {
 		return addr_str;
 	}
 	
+	private String addLine(String text) {
+		if (!text.trim().isEmpty())
+			return "<p class=\"address\">" + text + "</p>";
+		else
+			return "<p class=\"address\">-</p>";
+	}
+	
 	public String getAsHtmlString(String addr_type, ResourceBundle rb) {
-		String addr_str = "<div id=\"shopping\">";
+		String addr_str = "<div id=\"shopping\" style=\"vertical-align:top;\">";
+		
+		// Type of address
 		if (addr_type.equals("S"))
 			addr_str += "<p class=\"address\"><b>" + rb.getString("shipaddress") + "</b></p>"; 
-		else if (addr_type.equals("B") || addr_type.equals("BS"))
+		else if (addr_type.equals("B"))
 			addr_str += "<p class=\"address\"><b>" + rb.getString("billaddress") + "</b></p>"; 
-		else if (addr_type.equals("O") || addr_type.equals("OS"))
+		else if (addr_type.equals("O"))
 			addr_str += "<p class=\"address\"><b>" + rb.getString("ordaddress") + "</b></p>"; 
+				
+		// Title, first name and last name
+		addr_str += addLine(title + " " + fname + " " + lname);
+
+		// Not sooo important
+		addr_str += addLine(name1);
+		addr_str += addLine(name2);
+		addr_str += addLine(name3);
 		
-		if (addr_type.equals("BS") || addr_type.equals("OS")) {
-			for (int i=0; i<4; ++i)
-				addr_str += "<p class=\"address\">-</p>";
-			addr_str += "</div>";		
-			
-			return addr_str;
-		}
+		// Street, zip code and city
+		addr_str += addLine(street);
+		addr_str += addLine(zip + " " + city);
 		
-		addr_str += "<p class=\"address\">" + title + " " + fname + " " + lname + "</p>";
-		if (!name1.isEmpty())
-			addr_str += "<p class=\"address\">" + name1 + "</p>";
-		if (!name2.isEmpty())
-			addr_str += "<p class=\"address\">" + name2 + "</p>";
-		if (!name3.isEmpty())
-			addr_str += "<p class=\"address\">" + name3 + "</p>";		
-		addr_str += "<p class=\"address\">" + street + "</p>";
-		addr_str += "<p class=\"address\">" + zip + " " + city + "</p>";		
 		addr_str += "</div>";
 		
 		return addr_str;

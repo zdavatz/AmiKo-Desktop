@@ -386,14 +386,17 @@ public class UpdateDb {
 	
 				downloadedFile = downloader("drug interactions", mDrugInteractionsURL, mDrugInteractions, true);
 				unzipper(downloadedFile, mDrugInteractions);
-				
-				downloadedFile = downloader("shopping files", mShopFilesURL, mShopFiles, true);
-				unzipper(downloadedFile, mShopFiles);
+			
+				if (Utilities.appCustomization().equals("ibsa")) {
+					downloadedFile = downloader("shopping files", mShopFilesURL, mShopFiles, true);
+					unzipper(downloadedFile, mShopFiles);
+				}
 			}
 						
-			downloadedFile = downloader("rose files", mRoseFilesURL, mRoseFiles, true);
-			unzipper(downloadedFile, mRoseFiles);
-			
+			if (Utilities.appCustomization().equals("zurrose")) {
+				downloadedFile = downloader("rose files", mRoseFilesURL, mRoseFiles, true);
+				unzipper(downloadedFile, mRoseFiles);
+			}
 			return null;
 		}
 		

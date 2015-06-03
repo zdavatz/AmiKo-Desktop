@@ -171,8 +171,7 @@ public class RoseSqlDb {
 		
 		return list_of_articles;
 	}
-	
-	
+		
 	private Article cursorToArticle(ResultSet result) {
 		Article article = new Article();
 		try {

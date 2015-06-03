@@ -20,7 +20,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package com.maxl.java.amikodesk;
 
 import java.awt.Color;
-import java.awt.Dialog.ModalityType;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -110,7 +109,7 @@ public class SettingsPage implements java.io.Serializable {
 	private JDialog mCustomerDialog = null;
 	private JLabel mCustomerGlnCode = null;
 	private AddressPanel mCustomerAddress = null;
-
+	private String mAddrType = "";
 	
 	// Colors
 	private static Color color_white = new Color(255,255,255);
@@ -133,19 +132,47 @@ public class SettingsPage implements java.io.Serializable {
 	boolean validateCode() {
 		if (m_glncode.matches("[\\d]{7}")) {
 			if (m_work_id.containsKey(m_glncode)) {
-				String email = m_work_id.get(m_glncode).split(";")[0];
-				if (email.equals(m_email)) {
+				String[] value = m_work_id.get(m_glncode).split(";",-1);
+				String email = value[0].toLowerCase();
+				// System.out.println(email + " -> " + m_email + " -> " + m_work_id.get(m_glncode));
+				if (mShippingAddress!=null)
+					m_email = mShippingAddress.aTextFieldEmail.getText();
+				if (email.equals(m_email.toLowerCase())) {
 					mTextFieldGLN.setBorder(new LineBorder(color_ok, 1, false));
 					mTextFieldGLN.setBackground(color_ok);
-					mPrefs.putInt(UserID, 18);	// Innendienst		
+					if (mShippingAddress!=null && mShippingAddress.validateEmail(m_email)) {					
+						mShippingAddress.aTextFieldEmail.setBorder(new LineBorder(color_ok, 1, false));
+						mShippingAddress.aTextFieldEmail.setBackground(color_ok);	
+						String name = value[1];
+						if (name.contains(".")) {
+							// '.' means any character in regex
+							String[] n = name.split("\\.",-1);
+							mPrefs.put(NameID, n[0] + " " + n[1]);
+							mShippingAddress.aTextFieldFName.setText(n[0]);
+							mShippingAddress.aTextFieldLName.setText(n[1]);						
+						}
+						if (value.length>2) {
+							int id = Integer.valueOf(value[2]);
+							mPrefs.putInt(UserID, id);	// ibsa = 18, zurrose = 19
+						} else
+							mPrefs.putInt(UserID, 18);
+					}
 					mPrefs.put(GLNCodeID, m_glncode);
 					mPrefs.put(EmailAdresseID, m_email);
-					mPrefs.put(TypeID, "ibsa-innendienst");
+					if (Utilities.appCustomization().equals("ibsa"))
+						mPrefs.put(TypeID, "ibsa-innendienst");
+					else if (Utilities.appCustomization().equals("zurrose"))
+						mPrefs.put(TypeID, "zurrose-innendienst");						
 					mPrefs.put(HumanID, "yes");
-					m_user =  m_user_map.get("0S");	// is not a standard user...
+					if (m_user_map!=null)
+						m_user =  m_user_map.get("0S");	// is not a standard user...
 					return true;
 				}
 			}
+		} else {
+			m_email = "";
+			mPrefs.put(EmailAdresseID, m_email);
+			mPrefs.putInt(UserID, 17);
 		}
 		return false;
 	}
@@ -172,23 +199,17 @@ public class SettingsPage implements java.io.Serializable {
 		
 		private String m_address_type = "";
 		
-		public AddressPanel(final String address_type) {
+		public AddressPanel(final String address_type, String border_title) {
 
 			m_address_type = address_type;
 
-			String title = "";
-			if (address_type.equals("S"))
-				title = "Lieferadresse";
-			else if (address_type.equals("B"))
-				title = "Rechnungsadresse";
-			else if (address_type.equals("O"))
-				title = "Bestelladresse";
-			
 			setLayout(new GridBagLayout());
 			setOpaque(false);
-			setBorder(new CompoundBorder(
-					new TitledBorder(title),
-					new EmptyBorder(5, 5, 5, 5)));		
+			if (!border_title.isEmpty()) {
+				setBorder(new CompoundBorder(
+						new TitledBorder(border_title),
+						new EmptyBorder(5, 5, 5, 5)));		
+			}
 			GridBagConstraints gbc = new GridBagConstraints();		
 			gbc.insets = new Insets(5, 5, 5, 5);
 			
@@ -727,7 +748,7 @@ public class SettingsPage implements java.io.Serializable {
 	}
 	
 	public void loadAccess() {
-		m_work_id = (new Crypto()).loadMap("access.ami.ser");					
+		m_work_id = (new Crypto()).loadMap();			
 	}		
 	
 	public void addObserver(Observer observer) {
@@ -759,41 +780,39 @@ public class SettingsPage implements java.io.Serializable {
 	public void initUserSettings() {
 		mFc = new JFileChooser();
 		// Defines a node in which the preferences can be stored
-		mPrefs = Preferences.userRoot().node(this.getClass().getName());
+		mPrefs = Preferences.userRoot().node(this.getClass().getName());		
 		
-		// Load access
-		loadAccess();
-		
-		String gln_code_str = mPrefs.get(GLNCodeID, "7610000000000");
-		System.out.println("GLN code: " + gln_code_str);		
+		// Load access data
+		if (Utilities.showFullSettings())
+			loadAccess();
+		// Load user map
+		String gln_code_str = mPrefs.get(GLNCodeID, "7610000000000");		
 		if (m_user_map!=null && m_user_map.containsKey(gln_code_str+"S")) {
 			m_user = m_user_map.get(gln_code_str+"S");
 		}
 		
-		mUserDialog = new JDialog();
-		
 		// Layout stuff
-		mUserDialog.setLayout(new BoxLayout(mUserDialog.getContentPane(), BoxLayout.Y_AXIS));
-		
+		mUserDialog = new JDialog();
+		mUserDialog.setLayout(new BoxLayout(mUserDialog.getContentPane(), BoxLayout.Y_AXIS));		
 		mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
 		JPanel jplInnerPanel1 = globalAmiKoSettings();
 		mUserDialog.add(jplInnerPanel1);
-		
+
+		// Custom
 		if (Utilities.appCustomization().equals("zurrose")) {
 			mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
 			JPanel jplInnerPanel2 = comparisonSettings();
 			mUserDialog.add(jplInnerPanel2);
 		}
-		
+		// Custom
 		mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
-		if (Utilities.appCustomization().equals("ibsa")) {	// IBSA
+		if (Utilities.showFullSettings()) {
 			JPanel jplInnerPanel3 = shoppingBasketSettings2();
 			mUserDialog.add(jplInnerPanel3);
 		} else {
 			JPanel jplInnerPanel3 = shoppingBasketSettings();
 			mUserDialog.add(jplInnerPanel3);
-		}
-		
+		}		
 		mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));
 		
 		mUserDialog.setModalityType(JDialog.ModalityType.APPLICATION_MODAL);
@@ -802,7 +821,7 @@ public class SettingsPage implements java.io.Serializable {
 		// Centers the dialog
 		mUserDialog.setLocationRelativeTo(null);
 		// Set size
-		if (Utilities.appCustomization().equals("ibsa"))	// IBSA
+		if (Utilities.showFullSettings())
 			mUserDialog.setSize(640, 800);		
 		else
 			mUserDialog.setSize(512, 680);
@@ -811,7 +830,7 @@ public class SettingsPage implements java.io.Serializable {
 		mUserDialog.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(WindowEvent e) {
-				if (Utilities.appCustomization().equals("ibsa")) {	// IBSA
+				if (Utilities.showFullSettings()) {	
 					if (m_user!=null) {
 						// Store user info
 						mShippingAddress.storeDataToPreferences(m_user.is_human);
@@ -819,12 +838,13 @@ public class SettingsPage implements java.io.Serializable {
 						mOfficeAddress.storeDataToPreferences(m_user.is_human);
 						// Update frame name
 						notifyMe("user updated...");
-					} else {
+					} else if ((mPrefs.getInt(UserID, 0)==18 || mPrefs.getInt(UserID, 0)==19)) {
 						// Innendienst Mitarbeiter
-						if (mPrefs.getInt(UserID, 0)==18) {
-							mShippingAddress.storeDataToPreferences(true);
-							notifyMe("user updated...");
-						}
+						mShippingAddress.storeDataToPreferences(true);
+						notifyMe("user updated...");
+					} else {
+						// All other cases
+						notifyMe("user updated...");						
 					}
 				} else {
 					String address = mTextAreaBestell.getText();
@@ -847,50 +867,46 @@ public class SettingsPage implements java.io.Serializable {
 	}
 
 	public void initCustomerSettings() {
-		mCustomerDialog = new JDialog();
-		
+		mCustomerDialog = new JDialog();		
 		// Layout stuff
-		mCustomerDialog.setLayout(new BoxLayout(mCustomerDialog.getContentPane(), BoxLayout.Y_AXIS));
-		
-		mCustomerDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
-		
+		mCustomerDialog.setLayout(new BoxLayout(mCustomerDialog.getContentPane(), BoxLayout.Y_AXIS));		
+		mCustomerDialog.add(Box.createRigidArea(new Dimension(0, 10)));				
 		JPanel jplInnerPanel = customerSettings();
 		mCustomerDialog.add(jplInnerPanel);
-		
+		// Other settings
 		mCustomerDialog.setModalityType(JDialog.ModalityType.APPLICATION_MODAL);
 		mCustomerDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 		// Centers dialog
 		mCustomerDialog.setLocationRelativeTo(null);
 		// Set size
-		mCustomerDialog.setSize(640, 320);		
-
+		mCustomerDialog.setSize(640, 240);		
 		mCustomerDialog.setResizable(false);
-		
+		// Add window listener
 		mCustomerDialog.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosed(WindowEvent e) {
-				if (Utilities.appCustomization().equals("ibsa")) {	// IBSA
-					Address customerAddress = new Address();
-					customerAddress.title = mCustomerAddress.aTextFieldTitle.getText();
-					customerAddress.fname = mCustomerAddress.aTextFieldFName.getText();
-					customerAddress.lname = mCustomerAddress.aTextFieldLName.getText();
-					customerAddress.name1 = mCustomerAddress.aTextFieldName1.getText();
-					customerAddress.name2 = mCustomerAddress.aTextFieldName2.getText();
-					customerAddress.name3 = mCustomerAddress.aTextFieldName3.getText();
-					customerAddress.street = mCustomerAddress.aTextFieldAddress.getText();
-					customerAddress.zip = mCustomerAddress.aTextFieldZip.getText();
-					customerAddress.city = mCustomerAddress.aTextFieldCity.getText();
-					customerAddress.email = mCustomerAddress.aTextFieldEmail.getText();
-					customerAddress.phone = mCustomerAddress.aTextFieldPhone.getText();
-					notifyMeToo(customerAddress);
-				}
+				Address customerAddress = new Address();
+				customerAddress.type = mAddrType;
+				customerAddress.title = mCustomerAddress.aTextFieldTitle.getText();
+				customerAddress.fname = mCustomerAddress.aTextFieldFName.getText();
+				customerAddress.lname = mCustomerAddress.aTextFieldLName.getText();
+				customerAddress.name1 = mCustomerAddress.aTextFieldName1.getText();
+				customerAddress.name2 = mCustomerAddress.aTextFieldName2.getText();
+				customerAddress.name3 = mCustomerAddress.aTextFieldName3.getText();
+				customerAddress.street = mCustomerAddress.aTextFieldAddress.getText();
+				customerAddress.zip = mCustomerAddress.aTextFieldZip.getText();
+				customerAddress.city = mCustomerAddress.aTextFieldCity.getText();
+				customerAddress.email = mCustomerAddress.aTextFieldEmail.getText();
+				customerAddress.phone = mCustomerAddress.aTextFieldPhone.getText();
+				notifyMeToo(customerAddress);
 			}
 		});
 	}
 	
 	public void displayCustomerSettings(String addr_type, String gln_code, HashMap<String, Address> address_map) {
 		if (address_map!=null) {
-			Address addr = new Address();
+			Address addr = null;
+			mAddrType = addr_type;		
 			if (addr_type.equals("S")) {
 				mCustomerDialog.setTitle(m_rb.getString("shipaddress"));		
 				addr = address_map.get("S");
@@ -901,6 +917,10 @@ public class SettingsPage implements java.io.Serializable {
 				mCustomerDialog.setTitle(m_rb.getString("ordaddress"));
 				addr = address_map.get("O");				
 			}
+			
+			if (addr==null)
+				addr = new Address();
+			
 			mCustomerGlnCode.setText(gln_code);
 			mCustomerAddress.aTextFieldTitle.setText(addr.title);
 			mCustomerAddress.aTextFieldFName.setText(addr.fname);
@@ -1593,21 +1613,21 @@ public class SettingsPage implements java.io.Serializable {
 		// -----------------------------
 		gbc = getGbc(0,3, 1.0,1.0, GridBagConstraints.HORIZONTAL);		
 		gbc.gridwidth = 4;
-		mShippingAddress = new AddressPanel("S");
+		mShippingAddress = new AddressPanel("S", m_rb.getString("shipaddress"));
 		mShippingAddress.retrieveDataFromPreferences();
 		jPanel.add(mShippingAddress, gbc);
 
 		// -----------------------------
 		gbc = getGbc(0,4, 1.0,1.0, GridBagConstraints.HORIZONTAL);		
 		gbc.gridwidth = 4;		
-		mBillingAddress = new AddressPanel("B");
+		mBillingAddress = new AddressPanel("B", m_rb.getString("billaddress"));
 		mBillingAddress.retrieveDataFromPreferences();		
 		jPanel.add(mBillingAddress, gbc);
 
 		// -----------------------------
 		gbc = getGbc(0,5, 1.0,1.0, GridBagConstraints.HORIZONTAL);				
 		gbc.gridwidth = 4;		
-		mOfficeAddress = new AddressPanel("O");
+		mOfficeAddress = new AddressPanel("O", m_rb.getString("ordaddress"));
 		mOfficeAddress.retrieveDataFromPreferences();		
 		jPanel.add(mOfficeAddress, gbc);
 
@@ -1628,8 +1648,7 @@ public class SettingsPage implements java.io.Serializable {
 		GridBagConstraints gbc = new GridBagConstraints();		
 		
 		jPanel.setOpaque(false);
-		jPanel.setBorder(new CompoundBorder(
-				new TitledBorder(m_rb.getString("shoppingCart")), new EmptyBorder(5,5,5,5)));	
+		jPanel.setBorder(new EmptyBorder(5,5,5,5));	
 		
 		// -----------------------------
 		JLabel jlabelGLN = new JLabel("GLN Code:");
@@ -1638,13 +1657,13 @@ public class SettingsPage implements java.io.Serializable {
 		jPanel.add(jlabelGLN, gbc);
 		
 		mCustomerGlnCode = new JLabel("761000000000");
-		gbc = getGbc(1,0 ,3.0,1.0, GridBagConstraints.HORIZONTAL);		
+		gbc = getGbc(1,0, 3.0,1.0, GridBagConstraints.HORIZONTAL);		
 		jPanel.add(mCustomerGlnCode, gbc);
 
 		// -----------------------------
 		gbc = getGbc(0,3, 1.0,1.0, GridBagConstraints.HORIZONTAL);		
 		gbc.gridwidth = 4;
-		mCustomerAddress = new AddressPanel("S");
+		mCustomerAddress = new AddressPanel("S", "");
 		jPanel.add(mCustomerAddress, gbc);
 		
 		return jPanel;
@@ -1672,15 +1691,18 @@ public class SettingsPage implements java.io.Serializable {
 	 * @return
 	 */
 	private boolean validateEmail(String emailStr) {
-		if (emailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
-			mTextFieldEmail.setBorder(new LineBorder(color_ok, 5, false));
-			mTextFieldEmail.setBackground(color_ok);  
-			return true;
-		} else {
-			mTextFieldEmail.setBorder(new LineBorder(color_red, 5, false));
-			mTextFieldEmail.setBackground(color_red); 
-			return false;
+		if (mTextFieldEmail!=null) {
+			if (emailStr.matches("^[_\\w-\\+]+(\\.[_\\w-]+)*@[\\w-]+(\\.[\\w]+)*(\\.[A-Za-z]{2,})$")) {
+				mTextFieldEmail.setBorder(new LineBorder(color_ok, 5, false));
+				mTextFieldEmail.setBackground(color_ok);  
+				return true;
+			} else {
+				mTextFieldEmail.setBorder(new LineBorder(color_red, 5, false));
+				mTextFieldEmail.setBackground(color_red); 
+				return false;
+			}
 		}
+		return false;
 	}
 	
 	/**

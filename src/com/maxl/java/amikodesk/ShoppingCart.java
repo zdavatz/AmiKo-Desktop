@@ -94,11 +94,7 @@ public class ShoppingCart implements java.io.Serializable {
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
 		// Application data folder
 		m_application_data_folder = Utilities.appDataFolder();
-		// Conditions
-		load_conditions();
-		// Glns
-		load_glns();
-		// 
+		//
 		m_images_dir = System.getProperty("user.dir") + "/images/";	
 		// 
 		if (Utilities.appLanguage().equals("de"))
@@ -107,34 +103,13 @@ public class ShoppingCart implements java.io.Serializable {
 			m_rb = ResourceBundle.getBundle("amiko_fr_CH", new Locale("fr", "CH"));			
 	}
 	
+	public void setMaps(Map<String, String> glns, Map<String, Conditions> conditions) {
+		m_map_ibsa_glns = glns;
+		m_map_ibsa_conditions = conditions;
+	}
+	
 	public ResourceBundle getRB() {
 		return m_rb;
-	}
-	
-	public void load_conditions() {
-		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\ibsa_conditions.ser");
-		if (encrypted_msg==null) {
-			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "ibsa_conditions.ser");
-			System.out.println("Loading ibsa_conditions.ser from default folder...");
-		}
-		if (encrypted_msg!=null) {
-			Crypto crypto = new Crypto();
-			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
-			m_map_ibsa_conditions = (TreeMap<String, Conditions>)FileOps.deserialize(plain_msg);
-		}		
-	}
-	
-	public void load_glns() {
-		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\ibsa_glns.ser");
-		if (encrypted_msg==null) {
-			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"ibsa_glns.ser");
-			System.out.println("Loading ibsa_glns.ser from default folder...");
-		}
-		if (encrypted_msg!=null) {
-			Crypto crypto = new Crypto();
-			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
-			m_map_ibsa_glns = (TreeMap<String, String>)FileOps.deserialize(plain_msg);
-		}		
 	}
 	
 	public void setAgbsAccepted(boolean a) {
@@ -348,8 +323,8 @@ public class ShoppingCart implements java.io.Serializable {
 					assort_list = c.getAssort("doctor");
 				} else if (user_type.equals("apotheke")) {
 					// For pharmacies use fallback category...
-					if (uc.length==1)
-						user_class = uc[1].charAt(1);
+					if (uc.length>1)
+						user_class = uc[1].charAt(0);
 					boolean is_promo_time = c.isPromoTime("pharmacy", user_class);
 					if (!is_promo_time)
 						assort_list = c.getAssort("pharmacy");
@@ -1216,28 +1191,29 @@ public class ShoppingCart implements java.io.Serializable {
 					ordering_addr = (Address)FileOps.deserialize(arr);	
 			}
 			
+			if (shipping_addr==null)
+				shipping_addr = new Address();			
+			if (billing_addr==null)
+				billing_addr = new Address();
+			if (ordering_addr==null)
+				ordering_addr = new Address();
+			
 			String color_change_str = "width=\"30%25\" style=\"cursor:pointer; background-color:#ffffff; padding-left:8px; padding-top:16px;\" "
 						+ "onmouseover=\"changeColor(this,true);\" "
 						+ "onmouseout=\"changeColor(this,false);\" ";
 
 			if (shipping_addr!=null) {
 				address_text += "<td " + color_change_str + "onclick=\"changeAddress(this,'S');\" " 
-						+ shipping_addr.getAsHtmlString("S", m_rb) + "</td>";
+					+ shipping_addr.getAsHtmlString("S", m_rb) + "</td>";
 			}
-			if (billing_addr!=null && (!billing_addr.lname.isEmpty() || !billing_addr.name1.isEmpty())) {
+			if (billing_addr!=null) {
 				address_text += "<td " + color_change_str + "onclick=\"changeAddress(this,'B');\" " 
 					+ billing_addr.getAsHtmlString("B", m_rb) + "</td>";				
-			} else {
-				address_text += "<td " + color_change_str + "onclick=\"changeAddress(this,'B');\" "
-					+ shipping_addr.getAsHtmlString("BS", m_rb) + "</td>";								
-			}
-			if (ordering_addr!=null && (!ordering_addr.lname.isEmpty() || !ordering_addr.name1.isEmpty())) {
+			} 
+			if (ordering_addr!=null) {
 				address_text += "<td " + color_change_str + "onclick=\"changeAddress(this,'O');\" "
 					+ ordering_addr.getAsHtmlString("O", m_rb) + "</td>";
-			} else {
-				address_text += "<td " + color_change_str + "onclick=\"changeAddress(this,'O');\" "
-					+ shipping_addr.getAsHtmlString("OS", m_rb) + "</td>";				
-			}
+			} 
 			address_text += "</tr></table>";
 		}
 		

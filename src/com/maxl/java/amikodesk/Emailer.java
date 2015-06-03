@@ -122,7 +122,7 @@ public class Emailer {
 	}
 	
 	public void loadAccess() {
-		Map<String, String> map = (new Crypto()).loadMap("access.ami.ser");					
+		Map<String, String> map = (new Crypto()).loadMap();					
 		m_ep = ((String)map.get(m_el)).split(";")[0];
 		m_es = ((String)map.get(m_el)).split(";")[1];
 	}
@@ -294,17 +294,20 @@ public class Emailer {
 		if (user_id==18) {
 			if (m_address_map!=null) {
 				// Shipping address
-				addr_str = m_address_map.get("S").getAsLongString(time_stamp, "S", gln_code) + "\n";
+				if (m_address_map.containsKey("S"))
+					addr_str += m_address_map.get("S").getAsLongString(time_stamp, "S", gln_code) + "\n";
+				else
+					addr_str += addr.getNoAddressString(time_stamp, "S", gln_code);
 				// Billing address
 				if (m_address_map.containsKey("B"))
-					addr_str += m_address_map.get("B").getAsLongString(time_stamp, "B", gln_code) + "\n";			
+					addr_str += m_address_map.get("B").getAsLongString(time_stamp, "B", gln_code) + "\n";
 				else
-					addr_str += m_address_map.get("S").getAsLongString(time_stamp, "B", gln_code) + "\n";
+					addr_str += addr.getNoAddressString(time_stamp, "B", gln_code);				
 				// Ordering address
 				if (m_address_map.containsKey("O"))
 					addr_str += m_address_map.get("O").getAsLongString(time_stamp, "O", gln_code) + "\n";
-				else 
-					addr_str += m_address_map.get("S").getAsLongString(time_stamp, "O", gln_code) + "\n";	
+				else
+					addr_str += addr.getNoAddressString(time_stamp, "O", gln_code);				
 			}
 			path += "\\" + gln_code;
 		} else {
