@@ -1109,12 +1109,12 @@ public class ShoppingCart implements java.io.Serializable {
 					if (subtotal_CHF<=500.0f) {
 						versand_optionen = "<option value=\"B\">" + m_rb.getString("BPost") + ": +7.35 CHF</option>"
 								+ "<option value=\"A\">" + m_rb.getString("APost") + ": +7.95 CHF</option>"
-								+ "<option value=\"E\">" + m_rb.getString("express") + ": +62.95 CHF</option>";
+								+ "<option value=\"E\">" + m_rb.getString("express") + ": +17.90 CHF</option>";
 					} else {
 						shipping_CHF = 0.0f;
 						versand_optionen = "<option value=\"Z\">" + m_rb.getString("BPost") +": +0.00 CHF</option>"
 								+ "<option value=\"Z\">" + m_rb.getString("APost") + ": +0.00 CHF</option>"
-								+ "<option value=\"E\">" + m_rb.getString("express") + ": +62.95 CHF</option>";
+								+ "<option value=\"E\">" + m_rb.getString("express") + ": +17.90 CHF</option>";
 					}
 				} else {
 					shipping_CHF = 0.0f;
