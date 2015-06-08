@@ -1254,7 +1254,7 @@ public class ShoppingCart implements java.io.Serializable {
 			shipping_CHF = 7.95f;
 			break;
 		case 'E':
-			shipping_CHF = 62.95f;
+			shipping_CHF = 17.90f;
 			break;
 		}
 		// Update shipping costs
