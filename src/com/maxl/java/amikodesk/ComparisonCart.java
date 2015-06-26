@@ -65,9 +65,13 @@ public class ComparisonCart implements java.io.Serializable {
 			Crypto crypto = new Crypto();
 			byte[] serialized_bytes = crypto.decrypt(encrypted_msg);
 			TreeMap<String, String> map = new TreeMap<String, String>();
-			map = (TreeMap<String, String>)(FileOps.deserialize(serialized_bytes));									
-			m_ep = ((String)map.get(m_el)).split(";")[0];
-			m_es = ((String)map.get(m_el)).split(";")[1];
+			map = (TreeMap<String, String>)(FileOps.deserialize(serialized_bytes));					
+			if (map!=null && map.containsKey(m_el)) {
+				m_ep = ((String)map.get(m_el)).split(";")[0];
+				m_es = ((String)map.get(m_el)).split(";")[1];
+			} else {
+				System.out.println("ComparisonCart: No map or no key in map!");
+			}
 		}
 	}
 	

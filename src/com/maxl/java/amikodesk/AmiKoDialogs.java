@@ -71,6 +71,8 @@ public class AmiKoDialogs extends JDialog {
 			icon = new ImageIcon(Constants.MEDDRUGS_ICON);
 		} else if (mAppCustom.equals("zurrose")) {
 			icon = new ImageIcon(Constants.ZURROSE_ICON);
+		} else if (mAppCustom.equals("ibsa")) {
+			icon = new ImageIcon(Constants.IBSA_ICON);
 		}
 		Image img = icon.getImage();
 		Image scaled_img = img.getScaledInstance(64, 64, java.awt.Image.SCALE_SMOOTH);

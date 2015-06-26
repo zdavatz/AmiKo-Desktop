@@ -95,10 +95,9 @@ public class SplashWindow extends JWindow {
         setVisible(true);
         
         // Wait a little while, maybe while loading resources
-        try { 
-        	Thread.sleep(m_duration); 
-        } catch (Exception e) 
-        {
+        try {
+       		Thread.sleep(m_duration);
+        } catch (Exception e) {
         	// 
         }
         

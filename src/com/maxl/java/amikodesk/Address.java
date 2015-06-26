@@ -94,9 +94,11 @@ public class Address implements java.io.Serializable {
 	}
 	
 	private String addLine(String text) {
-		if (!text.trim().isEmpty())
+		if (!text.trim().isEmpty()) {
+			if (text.length()>40)
+				text = text.substring(0, 37) + "...";
 			return "<p class=\"address\">" + text + "</p>";
-		else
+		} else
 			return "<p class=\"address\">-</p>";
 	}
 	
@@ -109,8 +111,8 @@ public class Address implements java.io.Serializable {
 		else if (addr_type.equals("B"))
 			addr_str += "<p class=\"address\"><b>" + rb.getString("billaddress") + "</b></p>"; 
 		else if (addr_type.equals("O"))
-			addr_str += "<p class=\"address\"><b>" + rb.getString("ordaddress") + "</b></p>"; 
-				
+			addr_str += "<p class=\"address\"><b>" + rb.getString("ordaddress") + "</b></p>"; 		
+		
 		// Title, first name and last name
 		addr_str += addLine(title + " " + fname + " " + lname);
 

@@ -64,7 +64,7 @@ public class ShoppingCart implements java.io.Serializable {
 	private static ResourceBundle m_rb = ResourceBundle.getBundle("amiko_de_CH", new Locale("de", "CH"));
 	
 	private static Map<String, Article> m_shopping_basket = null;
-	private static Map<String, Conditions> m_map_ibsa_conditions = null;
+	private static TreeMap<String, Conditions> m_map_ibsa_conditions = null;
 	private static Map<String, String> m_map_ibsa_glns = null;
 	private static Map<String, Owner> m_map_owner_total = null;
 	
@@ -103,9 +103,24 @@ public class ShoppingCart implements java.io.Serializable {
 			m_rb = ResourceBundle.getBundle("amiko_fr_CH", new Locale("fr", "CH"));			
 	}
 	
-	public void setMaps(Map<String, String> glns, Map<String, Conditions> conditions) {
+	public void setMaps(Map<String, String> glns, TreeMap<String, Conditions> conditions) {
 		m_map_ibsa_glns = glns;
 		m_map_ibsa_conditions = conditions;
+		
+		/** Test
+		for (Map.Entry<String, Conditions> entry : m_map_ibsa_conditions.entrySet()) {
+			String gln = entry.getKey();
+			Conditions c = entry.getValue();
+			TreeMap<Integer, Float> reb = c.getDiscountDrugstore('B', false);
+			if (reb!=null) {
+				for (Map.Entry<Integer, Float> e2 : reb.entrySet()) {
+					System.out.println(gln + " / " + e2.getKey() + " -> " + e2.getValue());
+				}
+			} else {
+				// System.out.println(gln + " -> " + c.name);
+			}
+		}		
+		*/
 	}
 	
 	public ResourceBundle getRB() {
@@ -122,6 +137,10 @@ public class ShoppingCart implements java.io.Serializable {
 	
 	public void setCustomerGlnCode(String code) {
 		m_customer_gln_code = code;
+	}
+	
+	public String getCustomerGlnCode() {
+		return m_customer_gln_code;
 	}
 	
 	/**
@@ -268,7 +287,7 @@ public class ShoppingCart implements java.io.Serializable {
 			char user_class = uc[0].charAt(0);			
 			// Is the user human or corporate?
 			String user_type = m_prefs.get("type", "arzt");
-			// System.out.println("Category for GLN " + gln_code + ": " + user_class + "-" + user_type);
+			// System.out.println("Category for GLN " + gln_code + ": " + user_class + "-" + user_type + " / " + m_map_ibsa_glns.get(gln_code));
 			// Get rebate conditions
 			Conditions c = m_map_ibsa_conditions.get(ean_code);
 			// Extract rebate conditions for particular doctor/pharmacy	
@@ -296,6 +315,7 @@ public class ShoppingCart implements java.io.Serializable {
 				}
 			}
 		}
+		
 		return rebate_map;
 	}
 

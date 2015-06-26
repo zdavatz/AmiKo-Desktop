@@ -122,9 +122,11 @@ public class Emailer {
 	}
 	
 	public void loadAccess() {
-		Map<String, String> map = (new Crypto()).loadMap();					
-		m_ep = ((String)map.get(m_el)).split(";")[0];
-		m_es = ((String)map.get(m_el)).split(";")[1];
+		Map<String, String> map = (new Crypto()).loadMap();		
+		if (map!=null && map.containsKey(m_el)) {
+			m_ep = ((String)map.get(m_el)).split(";")[0];
+			m_es = ((String)map.get(m_el)).split(";")[1];
+		}
 	}
 	
 	public void setCustomer(String gln_code, HashMap<String, Address> address_map) {
@@ -295,19 +297,19 @@ public class Emailer {
 			if (m_address_map!=null) {
 				// Shipping address
 				if (m_address_map.containsKey("S"))
-					addr_str += m_address_map.get("S").getAsLongString(time_stamp, "S", gln_code) + "\n";
+					addr_str += m_address_map.get("S").getAsLongString(time_stamp, "S", gln_code) + System.getProperty("line.separator");
 				else
-					addr_str += addr.getNoAddressString(time_stamp, "S", gln_code);
+					addr_str += addr.getNoAddressString(time_stamp, "S", gln_code) + System.getProperty("line.separator");
 				// Billing address
 				if (m_address_map.containsKey("B"))
-					addr_str += m_address_map.get("B").getAsLongString(time_stamp, "B", gln_code) + "\n";
+					addr_str += m_address_map.get("B").getAsLongString(time_stamp, "B", gln_code) + System.getProperty("line.separator");
 				else
-					addr_str += addr.getNoAddressString(time_stamp, "B", gln_code);				
+					addr_str += addr.getNoAddressString(time_stamp, "B", gln_code) + System.getProperty("line.separator");				
 				// Ordering address
 				if (m_address_map.containsKey("O"))
-					addr_str += m_address_map.get("O").getAsLongString(time_stamp, "O", gln_code) + "\n";
+					addr_str += m_address_map.get("O").getAsLongString(time_stamp, "O", gln_code) + System.getProperty("line.separator");
 				else
-					addr_str += addr.getNoAddressString(time_stamp, "O", gln_code);				
+					addr_str += addr.getNoAddressString(time_stamp, "O", gln_code) + System.getProperty("line.separator");				
 			}
 			path += "\\" + gln_code;
 		} else {
@@ -317,17 +319,17 @@ public class Emailer {
 			byte[] arr = m_prefs.getByteArray(LieferAdresseID, def);
 			if (arr!=null)
 				addr = (Address)FileOps.deserialize(arr);
-	 		addr_str = addr.getAsLongString(time_stamp, "S", gln_code) + "\n";
+	 		addr_str = addr.getAsLongString(time_stamp, "S", gln_code) + System.getProperty("line.separator");
 			
 			arr = m_prefs.getByteArray(RechnungsAdresseID, def);
 			if (arr!=null)
 				addr = (Address)FileOps.deserialize(arr);
-	 		addr_str += addr.getAsLongString(time_stamp, "B", gln_code) + "\n";
+	 		addr_str += addr.getAsLongString(time_stamp, "B", gln_code) + System.getProperty("line.separator");
 	
 			arr = m_prefs.getByteArray(BestellAdresseID, def);
 			if (arr!=null)
 				addr = (Address)FileOps.deserialize(arr);
-			addr_str += addr.getAsLongString(time_stamp, "O", gln_code) + "\n";
+			addr_str += addr.getAsLongString(time_stamp, "O", gln_code) + System.getProperty("line.separator");
 		}
 		
 		// Save to A_GLN_timestamp.csv

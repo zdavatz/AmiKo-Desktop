@@ -71,6 +71,7 @@ public class SaveBasket {
 	
 	private static Map<String, Article> m_shopping_basket = null;
 	private static Map<String, Author> m_map_of_authors = null;
+	private static String m_customer_gln_code = "";	
 
 	private static Preferences m_prefs;
 	
@@ -78,10 +79,9 @@ public class SaveBasket {
 	
 	public SaveBasket(ShoppingCart shopping_cart) {
 		m_shopping_basket = shopping_cart.getShoppingBasket();
-
-		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
-		
-		m_rb = shopping_cart.getRB();
+		m_rb = shopping_cart.getRB();		
+		m_customer_gln_code = shopping_cart.getCustomerGlnCode();		
+		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());		
 	}
 	
 	/** Class to add a header and a footer. */
@@ -490,6 +490,11 @@ public class SaveBasket {
 		String gln_code = prefs.get("glncode", "7610000000000");	
 		String email_address = prefs.get("emailadresse", "");
 		int user_id = prefs.getInt("user", 17);
+		// Check if user is "ID-Mitarbeiter", if so change gln_code
+		if (user_id==18) {
+			if (!m_customer_gln_code.isEmpty())
+				gln_code = m_customer_gln_code;
+		}		
 		if (type.equals("specific")) {
 			// These are all authors which are specifically listed (e.g. ibsa, desitin)
 	        if (m_shopping_basket.size()>0) {
@@ -553,7 +558,7 @@ public class SaveBasket {
 										+ user_id + "|"						// 13: Bestellart 
 										+ skonto + "|" 						// 14: Skonto
 										+ cash_rebate + "|"					// 15: Rabatt %
-										+ "0" + "\n"; 						// 16: Additional discount 0/1
+										+ "0" + System.getProperty("line.separator"); 	// 16: Additional discount 0/1					
 							}
 							// 2. Add draufgabe
 							if (article.getDraufgabe()>0) {
@@ -574,7 +579,7 @@ public class SaveBasket {
 										+ user_id + "|"						// 13: Bestellart
 										+ skonto + "|" 						// 14: Skonto
 										+ cash_rebate + "|"					// 15: Rabatt %
-										+ "0" + "\n"; 						// 16: Additional discount 0/1
+										+ "0" + System.getProperty("line.separator"); 	// 16: Additional discount 0/1
 							}
 						}
 					}
@@ -620,7 +625,7 @@ public class SaveBasket {
 									+ article.getEanCode() + "|" 
 									+ article.getPackTitle() + "|" 
 									+ price_pruned + "|"
-									+ price_CHF + "\n"; 
+									+ price_CHF + System.getProperty("line.separator"); 
 						}
 					}
 				}

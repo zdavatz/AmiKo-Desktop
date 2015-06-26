@@ -20,6 +20,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 package com.maxl.java.amikodesk;
 
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -110,6 +112,8 @@ public class SettingsPage implements java.io.Serializable {
 	private JLabel mCustomerGlnCode = null;
 	private AddressPanel mCustomerAddress = null;
 	private String mAddrType = "";
+
+	private JPanel mComparisonPanel = null;
 	
 	// Colors
 	private static Color color_white = new Color(255,255,255);
@@ -131,7 +135,7 @@ public class SettingsPage implements java.io.Serializable {
 
 	boolean validateCode() {
 		if (m_glncode.matches("[\\d]{7}")) {
-			if (m_work_id.containsKey(m_glncode)) {
+			if (m_work_id!=null && m_work_id.containsKey(m_glncode)) {
 				String[] value = m_work_id.get(m_glncode).split(";",-1);
 				String email = value[0].toLowerCase();
 				// System.out.println(email + " -> " + m_email + " -> " + m_work_id.get(m_glncode));
@@ -151,6 +155,10 @@ public class SettingsPage implements java.io.Serializable {
 							mShippingAddress.aTextFieldFName.setText(n[0]);
 							mShippingAddress.aTextFieldLName.setText(n[1]);						
 						}
+						// Enable settings for comparison cart
+						if (Utilities.appCustomization().equals("zurrose"))
+							enableComponents(mComparisonPanel, true);
+						//
 						if (value.length>2) {
 							int id = Integer.valueOf(value[2]);
 							mPrefs.putInt(UserID, id);	// ibsa = 18, zurrose = 19
@@ -170,6 +178,10 @@ public class SettingsPage implements java.io.Serializable {
 				}
 			}
 		} else {
+			// Disable settings for comparison cart
+			if (Utilities.appCustomization().equals("zurrose"))
+				enableComponents(mComparisonPanel, false);
+			// Reset some of the important globals
 			m_email = "";
 			mPrefs.put(EmailAdresseID, m_email);
 			mPrefs.putInt(UserID, 17);
@@ -777,6 +789,21 @@ public class SettingsPage implements java.io.Serializable {
 		m_user_map = user_map;
 	}
 	
+	/**
+	 * Enables / disables container and all its sub-components
+	 * @param container
+	 * @param enable
+	 */
+	public void enableComponents(Container container, boolean enable) {
+		Component[] components = container.getComponents();
+        for (Component component : components) {
+            component.setEnabled(enable);
+            if (component instanceof Container) {
+                enableComponents((Container)component, enable);
+            }
+        }
+    }
+	
 	public void initUserSettings() {
 		mFc = new JFileChooser();
 		// Defines a node in which the preferences can be stored
@@ -801,8 +828,12 @@ public class SettingsPage implements java.io.Serializable {
 		// Custom
 		if (Utilities.appCustomization().equals("zurrose")) {
 			mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
-			JPanel jplInnerPanel2 = comparisonSettings();
-			mUserDialog.add(jplInnerPanel2);
+			mComparisonPanel = comparisonSettings();
+			mUserDialog.add(mComparisonPanel);
+			if (mPrefs.getInt(UserID, 0)==19)
+				enableComponents(mComparisonPanel, true);
+			else
+				enableComponents(mComparisonPanel, false);
 		}
 		// Custom
 		mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
@@ -822,7 +853,7 @@ public class SettingsPage implements java.io.Serializable {
 		mUserDialog.setLocationRelativeTo(null);
 		// Set size
 		if (Utilities.showFullSettings())
-			mUserDialog.setSize(640, 800);		
+			mUserDialog.setSize(640, 820);		
 		else
 			mUserDialog.setSize(512, 680);
 		mUserDialog.setResizable(false);
@@ -841,10 +872,10 @@ public class SettingsPage implements java.io.Serializable {
 					} else if ((mPrefs.getInt(UserID, 0)==18 || mPrefs.getInt(UserID, 0)==19)) {
 						// Innendienst Mitarbeiter
 						mShippingAddress.storeDataToPreferences(true);
-						notifyMe("user updated...");
+						notifyMe("user updated... " + mPrefs.getInt(UserID, 0));
 					} else {
 						// All other cases
-						notifyMe("user updated...");						
+						notifyMe("no user updated...");						
 					}
 				} else {
 					String address = mTextAreaBestell.getText();
@@ -1404,8 +1435,8 @@ public class SettingsPage implements java.io.Serializable {
 		m_glncode = GLNCodeStr;
 		m_email = mPrefs.get(EmailAdresseID, "");
 		
-		final JCheckBox jcheckAddress1 = new JCheckBox("Rechnungsadresse = Lieferadresse");
-		final JCheckBox jcheckAddress2 = new JCheckBox("Bestelladresse = Lieferadresse");
+		final JCheckBox jcheckAddress1 = new JCheckBox(m_rb.getString("billaddress") + " = " + m_rb.getString("shipaddress"));
+		final JCheckBox jcheckAddress2 = new JCheckBox(m_rb.getString("ordaddress") + " = " + m_rb.getString("shipaddress"));
 		
 		JPanel jPanel = new JPanel();
 		jPanel.setLayout(new GridBagLayout());

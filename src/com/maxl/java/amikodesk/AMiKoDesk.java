@@ -28,7 +28,9 @@ import java.awt.Container;
 import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FontFormatException;
 import java.awt.Graphics;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -61,6 +63,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -80,6 +83,7 @@ import java.util.regex.Pattern;
 
 import javax.swing.AbstractListModel;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
@@ -121,6 +125,8 @@ import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
+import javax.swing.plaf.FontUIResource;
+import javax.swing.text.JTextComponent;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -182,7 +188,7 @@ public class AMiKoDesk {
 	private static Map<String, Article> m_comparison_basket = new LinkedHashMap<String, Article>();
 	private static HashMap<String, User> m_user_map = null;
 	private static HashMap<String, Address> m_address_map = null;
-	private static Map<String, Conditions> m_map_ibsa_conditions = null;
+	private static TreeMap<String, Conditions> m_map_ibsa_conditions = null;
 	private static Map<String, String> m_map_ibsa_glns = null;
 	
 	private static HashSet<String> favorite_meds_set;
@@ -240,6 +246,8 @@ public class AMiKoDesk {
 
 	private static ResourceBundle m_rb = ResourceBundle.getBundle("amiko_de_CH", new Locale("de", "CH"));
 
+	private static Font m_custom_font = null;
+	
 	// 0: Präparat, 1: Inhaber, 2: Wirkstoff/ATC, 3: Reg. Nr., 4: Therapie, 5: Customer
 	// -> {0, 1, 2, 3, 4, 5};
 	private static final int NAME = 0;
@@ -370,6 +378,19 @@ public class AMiKoDesk {
 				|| !CML_OPT_EANCODE.isEmpty() || !CML_OPT_REGNR.isEmpty() || CML_OPT_SERVER == true));
 	}
 	
+	private static void setUIFont(FontUIResource f) {
+		Enumeration<Object> keys = UIManager.getDefaults().keys();
+	    while (keys.hasMoreElements()) {
+	    	Object key = keys.nextElement();
+	        Object value = UIManager.get(key);
+	        if (value instanceof FontUIResource) {
+	        	FontUIResource orig = (FontUIResource) value;
+	            Font font = new Font(f.getFontName(), orig.getStyle(), orig.getSize());
+	            UIManager.put(key, new FontUIResource(font));
+	        }
+	    }
+	}
+	
 	public static void main(String[] args) {
 
 		// Initialize globales
@@ -405,15 +426,21 @@ public class AMiKoDesk {
 		else if (Utilities.appLanguage().equals("fr"))
 			m_rb = ResourceBundle.getBundle("amiko_fr_CH", new Locale("fr", "CH"));
 
-		if (Utilities.appCustomization().equals("desitin")) {
-			new SplashWindow(Constants.APP_NAME, 5000);
-		} else if (Utilities.appCustomization().equals("meddrugs")) {
-			new SplashWindow(Constants.APP_NAME, 5000);
-		} else if (Utilities.appCustomization().equals("zurrose")) {
-			new SplashWindow(Constants.APP_NAME, 3000);
-		} else if (Utilities.appCustomization().equals("ibsa")) {
-			new SplashWindow(Constants.APP_NAME, 3000);			
-		}
+		new Thread() {
+			@Override
+			public void run() {
+				if (Utilities.appCustomization().equals("desitin")) {
+					new SplashWindow(Constants.APP_NAME, 5000);
+				} else if (Utilities.appCustomization().equals("meddrugs")) {
+					new SplashWindow(Constants.APP_NAME, 5000);
+				} else if (Utilities.appCustomization().equals("zurrose")) {
+					new SplashWindow(Constants.APP_NAME, 3000);
+				} else if (Utilities.appCustomization().equals("ibsa")) {
+					new SplashWindow(Constants.APP_NAME, 5000);			
+				}
+			}
+		}.start();
+		
 		// Load javascript
 		String jscript_str = FileOps.readFromFile(Constants.JS_FOLDER + "main_callbacks.js");
 		m_jscript_str = "<script language=\"javascript\">" + jscript_str + "</script>";
@@ -484,17 +511,42 @@ public class AMiKoDesk {
 		NativeSwing.initialize();
 
 		// Setup font size based on screen size
-		UIManager.getLookAndFeelDefaults().put("defaultFont", new Font("Dialog", Font.PLAIN, 14));
-		UIManager.put("Label.font", new Font("Dialog", Font.PLAIN, 12));
-		UIManager.put("CheckBox.font", new Font("Dialog", Font.PLAIN, 12));
-		UIManager.put("Button.font", new Font("Dialog", Font.BOLD, 14));
-		UIManager.put("ToggleButton.font", new Font("Dialog", Font.BOLD, 14));
+		if (!Utilities.appCustomization().equals("ibsa")) {
+			UIManager.getLookAndFeelDefaults().put("defaultFont", new Font("Dialog", Font.PLAIN, 14));	
+			UIManager.put("Label.font", new Font("Dialog", Font.PLAIN, 12));
+			UIManager.put("CheckBox.font", new Font("Dialog", Font.PLAIN, 12));
+			UIManager.put("Button.font", new Font("Dialog", Font.BOLD, 14));
+			UIManager.put("ToggleButton.font", new Font("Dialog", Font.BOLD, 14));
+			UIManager.put("Menu.font", new Font("Dialog", Font.PLAIN, 12));
+			UIManager.put("MenuBar.font", new Font("Dialog", Font.PLAIN, 12));
+			UIManager.put("MenuItem.font", new Font("Dialog", Font.PLAIN, 12));
+			UIManager.put("ToolBar.font", new Font("Dialog", Font.PLAIN, 12));				
+		} else {
+			try {				
+	            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+	            // Create the font to use. Specify the size!
+	            m_custom_font = Font.createFont(Font.TRUETYPE_FONT, new File("fonts\\AvenirLTPro-Light.ttf"));            
+	            // Register the font
+	            ge.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("fonts\\AvenirLTPro-Light.ttf")));
+				UIManager.getLookAndFeelDefaults().put("defaultFont", m_custom_font);
+				UIManager.put("Label.font", m_custom_font.deriveFont(Font.PLAIN, 12));
+				UIManager.put("CheckBox.font", m_custom_font.deriveFont(Font.PLAIN, 12));
+				UIManager.put("Button.font", m_custom_font.deriveFont(Font.BOLD, 14));
+				UIManager.put("ToggleButton.font", m_custom_font.deriveFont(Font.BOLD, 14));
+				UIManager.put("Menu.font", m_custom_font.deriveFont(Font.PLAIN, 12));
+				UIManager.put("MenuBar.font", m_custom_font.deriveFont(Font.PLAIN, 12));
+				UIManager.put("MenuItem.font",m_custom_font.deriveFont(Font.PLAIN, 12));
+				UIManager.put("ToolBar.font", m_custom_font.deriveFont(Font.PLAIN, 12));		
+	            // setUIFont(new FontUIResource(customFont));
+	        } catch (IOException e) {
+	            e.printStackTrace();
+	        } catch(FontFormatException e) {
+	            e.printStackTrace();
+	        }		
+		}
+		// Setup colors
 		UIManager.put("ToggleButton.select", m_selected_but_color);
-		UIManager.put("Menu.font", new Font("Dialog", Font.PLAIN, 12));
-		UIManager.put("MenuBar.font", new Font("Dialog", Font.PLAIN, 12));
-		UIManager.put("MenuItem.font", new Font("Dialog", Font.PLAIN, 12));
-		UIManager.put("ToolBar.font", new Font("Dialog", Font.PLAIN, 12));
-
+		
 		// Schedule a job for the event-dispatching thread:
 		// creating and showing this application's GUI
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
@@ -640,7 +692,10 @@ public class AMiKoDesk {
 			list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 			list.setSelectionBackground(m_list_selected_color);
 			list.setSelectionForeground(Color.BLACK);
-			list.setFont(new Font("Dialog", Font.PLAIN, 14));
+			if (!Utilities.appCustomization().equals("ibsa"))
+				list.setFont(new Font("Dialog", Font.PLAIN, 14));
+			else
+				list.setFont(m_custom_font.deriveFont(Font.PLAIN, 14));
 			list.addListSelectionListener(this);
 
 			// Implements "starring" mechanism (captures clicks)
@@ -667,10 +722,12 @@ public class AMiKoDesk {
 			list.addMouseListener(mouseListener);
 
 			JPanel listPanel = new JPanel(new BorderLayout());
+			Font title_font = new Font("Dialog", Font.PLAIN, 14);
+			if (Utilities.appCustomization().equals("ibsa"))
+				title_font = m_custom_font.deriveFont(Font.PLAIN, 14);
 			TitledBorder titledBorder = BorderFactory.createTitledBorder(null,
-					m_rb.getString("result"),
-					TitledBorder.DEFAULT_JUSTIFICATION,
-					TitledBorder.DEFAULT_POSITION, new Font("Dialog", Font.PLAIN, 14));
+					m_rb.getString("result"), TitledBorder.DEFAULT_JUSTIFICATION,
+					TitledBorder.DEFAULT_POSITION, title_font);
 			listPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));
 
 			// Add list to a scrolling panel
@@ -762,7 +819,10 @@ public class AMiKoDesk {
 			list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 			list.setSelectionBackground(Color.BLUE);
 			list.setSelectionForeground(Color.WHITE);
-			list.setFont(new Font("Dialog", Font.PLAIN, 13));
+			if (!Utilities.appCustomization().equals("ibsa"))
+				list.setFont(new Font("Dialog", Font.PLAIN, 13));
+			else
+				list.setFont(m_custom_font.deriveFont(Font.PLAIN, 13));
 			list.addListSelectionListener(this);
 
 			JPanel listPanel = new JPanel(new BorderLayout());
@@ -986,10 +1046,11 @@ public class AMiKoDesk {
 			// YET another mega-hack ;)
 			super(new BorderLayout());
 			webBrowserPanel = new JPanel(new BorderLayout());
+			Font title_font = new Font("Dialog", Font.PLAIN, 14);
+			if (Utilities.appCustomization().equals("ibsa"))
+				title_font = m_custom_font.deriveFont(Font.PLAIN, 14);
 			titledBorder = BorderFactory.createTitledBorder(null, m_rb.getString("fachinfo"), 
-					TitledBorder.DEFAULT_JUSTIFICATION,
-					TitledBorder.DEFAULT_POSITION, 
-					new Font("Dialog", Font.PLAIN, 14));
+					TitledBorder.DEFAULT_JUSTIFICATION,	TitledBorder.DEFAULT_POSITION, title_font);
 			webBrowserPanel.setBorder(BorderFactory.createTitledBorder(titledBorder));
 			jWeb = new JWebBrowser(NSComponentOptions.destroyOnFinalization());
 
@@ -1002,7 +1063,8 @@ public class AMiKoDesk {
 				public Object invoke(JWebBrowser webBrowser, Object... args) {
 					String msg = args[0].toString().trim();
 					String row_key = args[1].toString().trim();
-					System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
+					// Uncomment following line for debug purposes...
+					// System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
 					//
 					if (m_curr_uistate.isInteractionsMode()) {
 						if (msg.equals("delete_all"))
@@ -1781,7 +1843,10 @@ public class AMiKoDesk {
 		public SearchField(final String hint) {
 			super(hint);
 			super.addFocusListener(this);
-			this.setFont(new Font("Dialog", Font.PLAIN, 14));
+			if (!Utilities.appCustomization().equals("ibsa"))
+				this.setFont(new Font("Dialog", Font.PLAIN, 14));
+			else
+				this.setFont(m_custom_font.deriveFont(Font.PLAIN, 14));
 			this.hint = hint;
 			this.setBorder(BorderFactory.createSoftBevelBorder(SoftBevelBorder.LOWERED));
 			this.setBackground(m_search_field_bg);
@@ -1790,10 +1855,6 @@ public class AMiKoDesk {
 			this.icon = new ImageIcon(Constants.IMG_FOLDER + "mag_glass_16x16.png");
 			Border border = UIManager.getBorder("TextField.border");
 			insets = border.getBorderInsets(this);
-			/*
-			 * Border empty = new EmptyBorder(0, 0, 0, 0); insets =
-			 * empty.getBorderInsets(this);
-			 */
 			setBorder(border); // new CompoundBorder(border, empty));
 		}
 
@@ -1808,9 +1869,8 @@ public class AMiKoDesk {
 			if (icon != null) {
 				int iconWidth = icon.getIconWidth();
 				int iconHeight = icon.getIconHeight();
-				int x = insets.left + 3; // icon's x coordinate
-				textX = x + iconWidth + 2; // this is the x where text should
-											// start
+				int x = insets.left + 3; 	// Icon's x coordinate
+				textX = x + iconWidth + 2; 	// This is the x where text should start
 				int y = (this.getHeight() - iconHeight) / 2;
 				icon.paintIcon(this, g, x, y);
 			}
@@ -1820,7 +1880,7 @@ public class AMiKoDesk {
 		@Override
 		public void focusGained(FocusEvent e) {
 			super.setText(hint);
-			super.setCaretPosition(0);			
+			super.setCaretPosition(0);									
 		}
 
 		@Override
@@ -1833,16 +1893,19 @@ public class AMiKoDesk {
 		@Override
 		public String getText() {
 			String typed = super.getText();		
-			if (typed.endsWith(hint)) {
+			if (typed.endsWith(hint) && typed.length()>hint.length()) {
 				typed = typed.substring(0,1);
 				super.setText(typed);
+			} else if (typed.length()==0) {		
+				super.setText(hint);
+				super.setCaretPosition(0);						
 			}
 			return typed;
 			// return typed.equals(hint) ? "" : typed;
 		}
 
 		@Override
-		public void setText(final String t) {
+		public void setText(final String t) {	
 			super.setText(t);
 		}
 	}
@@ -2028,7 +2091,10 @@ public class AMiKoDesk {
 	}
 
 	private static void setupButton(JToggleButton button, String toolTipText, String rolloverImg, String selectedImg) {
-		button.setFont(new Font("Dialog", Font.PLAIN, 12));
+		if (!Utilities.appCustomization().equals("ibsa"))
+			button.setFont(new Font("Dialog", Font.PLAIN, 11));
+		else
+			button.setFont(m_custom_font.deriveFont(Font.PLAIN, 11));
 		button.setVerticalTextPosition(SwingConstants.BOTTOM);
 		button.setHorizontalTextPosition(SwingConstants.CENTER);
 		button.setText(toolTipText);
@@ -2038,10 +2104,10 @@ public class AMiKoDesk {
 		button.setToolTipText(toolTipText);
 
 		// Remove border
-		Border emptyBorder = BorderFactory.createEmptyBorder();
-		button.setBorder(emptyBorder);
+		button.setBorder(BorderFactory.createEmptyBorder());
+		button.setMargin(new Insets(0, 0, 0, 0));
 		// Set adequate size
-		button.setPreferredSize(new Dimension(32, 32));
+		// button.setPreferredSize(new Dimension(64, 32));
 	}
 
 	private static void setupToggleButton(JToggleButton button) {
@@ -2060,6 +2126,32 @@ public class AMiKoDesk {
 		return false;
 	}
 	
+	private static void startBrowser(String url) {
+		if (Desktop.isDesktopSupported()) {
+			try {
+				Desktop.getDesktop().browse(new URI(url));
+			} catch (IOException e) {
+				// TODO:
+			} catch (URISyntaxException r) {
+				// TODO:
+			}
+		}
+	}
+	
+	private static void startEmailClient(String email, String subject) {
+		if (Desktop.isDesktopSupported()) {
+			try {
+				URI mail_to_uri = URI.create("mailto:" + email + "?subject=" + subject);
+				Desktop.getDesktop().mail(mail_to_uri);
+			} catch (IOException e) {
+				// TODO:
+			}
+		} else {
+			AmiKoDialogs cd = new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization());
+			cd.ContactDialog();
+		}
+	}
+	
 	private static void createAndShowFullGUI() {
 		// Create and setup window
 		String user_name = m_prefs.get("name", "");
@@ -2068,7 +2160,10 @@ public class AMiKoDesk {
 		String email_addr = m_prefs.get("emailadresse", "");
 		if (!email_addr.isEmpty())
 			user_name += " / " + email_addr.trim();		
-		final JFrame jframe = new JFrame(Constants.APP_NAME + user_name);
+		m_customer_gln_code = m_prefs.get("glncode", "7601000000000");
+		final JFrame jframe = new JFrame(Constants.APP_NAME + user_name);		
+		if (Utilities.appCustomization().equals("ibsa"))
+			jframe.setFont(m_custom_font.deriveFont(Font.PLAIN, 12));
 		jframe.setName(Constants.APP_NAME + ".main");	
 
 		int min_width = CML_OPT_WIDTH;
@@ -2097,7 +2192,7 @@ public class AMiKoDesk {
 			ImageIcon img = new ImageIcon(Constants.IBSA_ICON);
 			jframe.setIconImage(img.getImage());
 		}
-
+		
 		// ------ Setup menubar ------
 		JMenuBar menu_bar = new JMenuBar();
 		// menu_bar.add(Box.createHorizontalGlue()); // --> aligns menu items to the right!
@@ -2212,6 +2307,7 @@ public class AMiKoDesk {
 
 		// Add to toolbar and set up
 		toolBar.setBackground(m_toolbar_bg);
+		//
 		toolBar.add(selectAipsButton);
 		toolBar.addSeparator();
 		toolBar.add(selectFavoritesButton);
@@ -2226,11 +2322,35 @@ public class AMiKoDesk {
 			toolBar.addSeparator();
 			toolBar.add(selectComparisonCartButton);
 		}
+		// Progress indicator (not working...)
+		toolBar.addSeparator();
+		toolBar.add(m_progress_indicator);
+		// Add image on the right
+		if (Utilities.appCustomization().equals("ibsa")) {
+			JLabel jImageLabel = new JLabel(new ImageIcon(Constants.IMG_FOLDER + "ibsa_image.png"));
+			toolBar.add(Box.createHorizontalGlue());
+			toolBar.add(jImageLabel);
+			jImageLabel.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseClicked(MouseEvent me)  
+				{  
+					if (Desktop.isDesktopSupported()) {
+						try {
+							URI mail_to_uri = URI.create("mailto:service@ibsa.ch?subject=AmiKo%20Desktop%20IBSA%20Feedback");
+							Desktop.getDesktop().mail(mail_to_uri);
+						} catch (IOException e) {
+							// TODO:
+						}
+					} else {
+						AmiKoDialogs cd = new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization());
+						cd.ContactDialog();
+					}
+				}
+			});
+		}
+		//
 		toolBar.setRollover(true);
 		toolBar.setFloatable(false);
-		// Progress indicator (not working...)
-		toolBar.addSeparator(new Dimension(32, 32));
-		toolBar.add(m_progress_indicator);
 
 		// ------ Setup settingspage ------
 		m_settings_page = new SettingsPage(jframe, m_rb, m_user_map);
@@ -2307,17 +2427,8 @@ public class AMiKoDesk {
 		subscribe_menu.addMenuListener(new MenuListener() {
 			@Override
 			public void menuSelected(MenuEvent event) {
-				if (Utilities.appCustomization().equals("ywesee")) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							Desktop.getDesktop().browse(new URI("https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=3UM84Z6WLFKZE"));
-						} catch (IOException e) {
-							// TODO:
-						} catch (URISyntaxException r) {
-							// TODO:
-						}
-					}
-				}
+				if (Utilities.appCustomization().equals("ywesee"))
+					startBrowser("https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=3UM84Z6WLFKZE");
 			}
 
 			@Override
@@ -2333,53 +2444,16 @@ public class AMiKoDesk {
 		contact_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				if (Utilities.appCustomization().equals("ywesee") || Utilities.appCustomization().equals("ibsa")) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							URI mail_to_uri = URI.create("mailto:zdavatz@ywesee.com?subject=AmiKo%20Desktop%20Feedback");
-							Desktop.getDesktop().mail(mail_to_uri);
-						} catch (IOException e) {
-							// TODO:
-						}
-					} else {
-						AmiKoDialogs cd = new AmiKoDialogs(Utilities
-								.appLanguage(), Utilities.appCustomization());
-						cd.ContactDialog();
-					}
+				if (Utilities.appCustomization().equals("ywesee")) {
+					startEmailClient("zdavatz@ywesee.com", "AmiKo%20Desktop%20Feedback");
 				} else if (Utilities.appCustomization().equals("desitin")) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							URI mail_to_uri = URI.create("mailto:info@desitin.ch?subject=AmiKo%20Desktop%20Desitin%20Feedback");
-							Desktop.getDesktop().mail(mail_to_uri);
-						} catch (IOException e) {
-							// TODO:
-						}
-					} else {
-						AmiKoDialogs cd = new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization());
-						cd.ContactDialog();
-					}
+					startEmailClient("info@desitin.ch", "AmiKo%20Desktop%20Desitin%20Feedback");
 				} else if (Utilities.appCustomization().equals("meddrugs")) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							URI mail_to_uri = URI.create("mailto:med-drugs@just-medical.com?subject=med-drugs%20desktop%20Feedback");
-							Desktop.getDesktop().mail(mail_to_uri);
-						} catch (IOException e) {
-							// TODO:
-						}
-					} else {
-						AmiKoDialogs cd = new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization());
-						cd.ContactDialog();
-					}
+					startEmailClient("med-drugs@just-medical.com", "med-drugs%20desktop%20Feedback");
 				} else if (Utilities.appCustomization().equals("zurrose")) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							Desktop.getDesktop().browse(new URI("www.zurrose.ch/amiko"));
-						} catch (IOException e) {
-							// TODO:
-						} catch (URISyntaxException r) {
-							// TODO:
-						}
-					}
+					startBrowser("www.zurrose.ch/amiko");
+				} else if (Utilities.appCustomization().equals("ibsa")) {
+					startEmailClient("service@ibsa.ch", "AmiKo%20Desktop%20IBSA%20Feedback");
 				}
 			}
 		});
@@ -2410,53 +2484,16 @@ public class AMiKoDesk {
 			@Override
 			public void actionPerformed(ActionEvent event) {
 				if (Utilities.appCustomization().equals("ywesee") || Utilities.appCustomization().equals("ibsa")) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							Desktop.getDesktop().browse(
-									new URI("http://www.ywesee.com/AmiKo/Desktop"));
-						} catch (IOException e) {
-							// TODO:
-						} catch (URISyntaxException r) {
-							// TODO:
-						}
-					}
+					startBrowser("http://www.ywesee.com/AmiKo/Desktop");
 				} else if (Utilities.appCustomization().equals("desitin")) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							Desktop.getDesktop().browse(
-									new URI("http://www.desitin.ch/produkte/arzneimittel-kompendium-apps/"));
-						} catch (IOException e) {
-							// TODO:
-						} catch (URISyntaxException r) {
-							// TODO:
-						}
-					}
+					startBrowser("http://www.desitin.ch/produkte/arzneimittel-kompendium-apps/");
 				} else if (Utilities.appCustomization().equals("meddrugs")) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							if (Utilities.appLanguage().equals("de"))
-								Desktop.getDesktop().browse(
-										new URI("http://www.med-drugs.ch"));
-							else if (Utilities.appLanguage().equals("fr"))
-								Desktop.getDesktop().browse(
-										new URI("http://www.med-drugs.ch/index.cfm?&newlang=fr"));
-						} catch (IOException e) {
-							// TODO:
-						} catch (URISyntaxException r) {
-							// TODO:
-						}
-					}
+					if (Utilities.appLanguage().equals("de"))
+						startBrowser("http://www.med-drugs.ch");
+					else if (Utilities.appLanguage().equals("fr"))
+						startBrowser("http://www.med-drugs.ch/index.cfm?&newlang=fr");
 				} else if (Utilities.appCustomization().equals("zurrose")) {
-					if (Desktop.isDesktopSupported()) {
-						try {
-							Desktop.getDesktop().browse(
-									new URI("www.zurrose.ch/amiko"));
-						} catch (IOException e) {
-							// TODO:
-						} catch (URISyntaxException r) {
-							// TODO:
-						}
-					}
+					startBrowser("www.zurrose.ch/amiko");
 				}
 			}
 		});
@@ -2468,7 +2505,7 @@ public class AMiKoDesk {
 				ad.AboutDialog();
 			}
 		});
-
+		
 		// Container
 		final Container container = jframe.getContentPane();
 		container.setBackground(Color.WHITE);
@@ -2874,8 +2911,8 @@ public class AMiKoDesk {
 							m_start_time = System.currentTimeMillis();
 							// Set right panel title
 							m_web_panel.setTitle(getTitle("priceComp"));	
-							if (med_index >= 0) {
-								if (med_id != null && med_index < med_id.size()) {
+							if (med_index>=0) {
+								if (med_id!=null && med_index<med_id.size()) {
 									long row_id = med_id.get(med_index).get(0);
 									Medication m = m_sqldb.getMediWithId(row_id);
 									String atc_code = m.getAtcCode();
@@ -2883,12 +2920,12 @@ public class AMiKoDesk {
 										String atc = atc_code.split(";")[0];
 										m_web_panel.fillComparisonBasket(atc);
 										m_web_panel.updateComparisonCartHtml();
-										// Update pane on the left
-										retrieveAipsSearchResults(false);
 									}
 								}
 							}
-
+							// Update pane on the left
+							retrieveAipsSearchResults(false);
+							
 							m_status_label.setText(rose_search.size() + " Suchresultate in "
 									+ (System.currentTimeMillis() - m_start_time) / 1000.0f + " Sek.");
 						}
@@ -3219,16 +3256,18 @@ public class AMiKoDesk {
 		}
 		
 		// Attach observer to "m_comparison_cart"
-		m_comparison_cart.addObserver(new Observer() {
-			@Override
-			public void update(Observable o, Object arg) {
-				System.out.println(arg);
-				m_web_panel.setTitle(getTitle("priceComp"));
-				m_comparison_cart.clearUploadList();
-				m_web_panel.updateComparisonCartHtml();			
-				new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization()).UploadDialog((String)arg);
-			}			
-		});	
+		if (m_comparison_cart!=null) {
+			m_comparison_cart.addObserver(new Observer() {
+				@Override
+				public void update(Observable o, Object arg) {
+					System.out.println(arg);
+					m_web_panel.setTitle(getTitle("priceComp"));
+					m_comparison_cart.clearUploadList();
+					m_web_panel.updateComparisonCartHtml();			
+					new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization()).UploadDialog((String)arg);
+				}			
+			});	
+		}
 		
 		// If command line options are provided start app with a particular title or eancode
 		if (commandLineOptionsProvided()) {
@@ -3309,7 +3348,10 @@ public class AMiKoDesk {
 		default:
 			break;
 		}
-		return med_search.size();
+		if (!simple)
+			return med_search.size();
+		else
+			return rose_search.size();
 	}
 
 	static void retrieveFavorites() {
@@ -3540,7 +3582,7 @@ public class AMiKoDesk {
 					for (Map.Entry<Product, ArrayList<Long>> entry : map_of_products.entrySet()) {
 						Product product = entry.getKey();
 						ArrayList<Long> al = entry.getValue();
-						if (product.group_title.isEmpty()) {
+						if (product.group_title==null || product.group_title.isEmpty()) {
 							m.add("<html><body style=\"width: 1024px;\"><b>" + product.title + "</b></html>");
 						} else {
 							m.add("<html><body style=\"width: 1024px;\"><b>" + product.group_title + "</b></html>");
@@ -3594,7 +3636,7 @@ public class AMiKoDesk {
 				for (Map.Entry<Product, ArrayList<Long>> entry : map_id.entrySet()) {
 					Product product = entry.getKey();
 					ArrayList<Long> al = entry.getValue();
-					if (product.group_title.isEmpty()) {
+					if (product.group_title==null || product.group_title.isEmpty()) {
 						m.add("<html><body style='width: 1024px;'><b>" + product.title + "</b><br>"
 								+ "<font color=gray size=-1>" + product.author + "</font></html>");
 					} else {
