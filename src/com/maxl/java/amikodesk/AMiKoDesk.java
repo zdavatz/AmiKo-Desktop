@@ -126,7 +126,6 @@ import javax.swing.event.MenuListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.plaf.FontUIResource;
-import javax.swing.text.JTextComponent;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -189,6 +188,7 @@ public class AMiKoDesk {
 	private static HashMap<String, User> m_user_map = null;
 	private static HashMap<String, Address> m_address_map = null;
 	private static TreeMap<String, Conditions> m_map_ibsa_conditions = null;
+	private static TreeMap<String, TreeMap<String, Float>> m_map_desitin_conditions = null;
 	private static Map<String, String> m_map_ibsa_glns = null;
 	
 	private static HashSet<String> favorite_meds_set;
@@ -391,6 +391,15 @@ public class AMiKoDesk {
 	    }
 	}
 	
+	private static char getUserClass() {
+		String uc[] = m_map_ibsa_glns.get(m_customer_gln_code).split(";");
+		char user_class = uc[0].charAt(0);
+		// Fallback!
+		if (uc.length>1) 
+			user_class = uc[1].charAt(0);
+		return user_class;
+	}
+	
 	public static void main(String[] args) {
 
 		// Initialize globales
@@ -481,28 +490,43 @@ public class AMiKoDesk {
 		// Load interaction cart
 		m_interactions_cart = new InteractionsCart();
 		
+		// Preferences
+		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
+		
+		// Get gln code
+		m_customer_gln_code = m_prefs.get("glncode", "7601000000000");
+
+		// Load all modules-related files
 		FileLoader file_loader = new FileLoader();
 		
-		// Load shop related files
+		// Load shop related files for ibsa
 		if (Utilities.appCustomization().equals("ibsa")) {
-			m_user_map = file_loader.loadGlnCodes();
+			m_user_map = file_loader.loadGlnCodes("gln_codes.ser");		// maps gln -> user address
 			m_list_of_authors = file_loader.loadAuthors();
-			m_map_ibsa_conditions = file_loader.loadIbsaConditions();
-			m_map_ibsa_glns = file_loader.loadIbsaGlns();
+			m_map_ibsa_conditions = file_loader.loadIbsaConditions();	// maps gln -> customer conditions
+			m_map_ibsa_glns = file_loader.loadIbsaGlns();				// maps gln -> customer category
 		
 			// Create shopping cart and load related files
-			m_shopping_cart = new ShoppingCart();
+			m_shopping_cart = new ShoppingIbsa();
 			m_shopping_cart.setMaps(m_map_ibsa_glns, m_map_ibsa_conditions);
 			m_emailer = new Emailer(m_rb);
 		}
-
+		// Load shop related files for desitin
+		if (Utilities.appCustomization().equals("desitin")) {
+			m_user_map = file_loader.loadGlnCodes("gln_codes_desitin.ser");	// maps gln -> user address
+			m_list_of_authors = file_loader.loadAuthors();					
+			m_map_desitin_conditions = file_loader.loadDesitinConditions();	// maps gln -> customer conditions
+			
+			// Create shopping cart and load pertinent files
+			m_shopping_cart = new ShoppingDesitin();
+			if (m_map_desitin_conditions.containsKey(m_customer_gln_code))
+				m_shopping_cart.setMap(m_map_desitin_conditions.get(m_customer_gln_code));
+			m_emailer = new Emailer(m_rb);
+		}				
 		// Create comparison cart and load related files
 		if (Utilities.appCustomization().equals("zurrose"))
 			m_comparison_cart = new ComparisonCart();
-		
-		// Preferences
-		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
-
+				
 		// Set default query type
 		m_curr_uistate.setQueryType(m_query_type = NAME);
 		
@@ -890,8 +914,7 @@ public class AMiKoDesk {
 										article = list_of_articles.get(sel_index-1);
 									else
 										return;
-								}
-								else
+								} else
 									article = list_of_articles.get(sel_index);
 								//
 								String ean_code = article.getEanCode();
@@ -1484,12 +1507,14 @@ public class AMiKoDesk {
 			// Update shopping cart for ean code
 			updateShoppingCartRow(ean_code, article);
 			// Update shopping cart table for assorted articles
-			List<String> ean_codes_assorts = m_shopping_cart.getAssortList(ean_code);
-			if (ean_codes_assorts != null) {
-				for (String ean : ean_codes_assorts) {
-					if (m_shopping_basket.containsKey(ean)) {
-						Article a = m_shopping_basket.get(ean);
-						updateShoppingCartRow(ean, a);
+			if (Utilities.appCustomization().equals("ibsa")) {
+				List<String> ean_codes_assorts = m_shopping_cart.getAssortList(ean_code);
+				if (ean_codes_assorts != null) {
+					for (String ean : ean_codes_assorts) {
+						if (m_shopping_basket.containsKey(ean)) {
+							Article a = m_shopping_basket.get(ean);
+							updateShoppingCartRow(ean, a);
+						}
 					}
 				}
 			}
@@ -1551,10 +1576,21 @@ public class AMiKoDesk {
 									Article article = new Article(entry, m.getAuth());
 									// Set regnr							
 									article.setRegnr(m.getRegnrs());
-									//
 									if (article.isVisible(user_category) && article.hasPrice(user_category)) {
 										list_of_articles.add(article);
-										list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + "]");
+										// Get user class
+										char user_class = ' ';
+										if (Utilities.appCustomization().equals("ibsa")) {
+	  										if (m_map_ibsa_glns.containsKey(m_customer_gln_code))
+												user_class = getUserClass();
+											// Check if article has free samples, use user class (A-,B-,C-Kunde)
+											if (article.hasFreeSamples(user_class + "-" + user_category))
+												list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + ", M]");
+											else 
+												list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + "]");
+										} else if (Utilities.appCustomization().equals("desitin")) {
+											list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + "]");
+										}
 									}
 								}
 							}
@@ -1673,11 +1709,7 @@ public class AMiKoDesk {
 				m_customer_gln_code = customer.gln_code;
 				// 
 				if (m_map_ibsa_glns.containsKey(m_customer_gln_code)) {
-					String uc[] = m_map_ibsa_glns.get(m_customer_gln_code).split(";");
-					char user_class = uc[0].charAt(0);
-					// Fallback!
-					if (uc.length>1) 
-						user_class = uc[1].charAt(0);
+					char user_class = getUserClass();
 					category = user_class + "-" + category;					
 				}
 				
@@ -2160,7 +2192,6 @@ public class AMiKoDesk {
 		String email_addr = m_prefs.get("emailadresse", "");
 		if (!email_addr.isEmpty())
 			user_name += " / " + email_addr.trim();		
-		m_customer_gln_code = m_prefs.get("glncode", "7601000000000");
 		final JFrame jframe = new JFrame(Constants.APP_NAME + user_name);		
 		if (Utilities.appCustomization().equals("ibsa"))
 			jframe.setFont(m_custom_font.deriveFont(Font.PLAIN, 12));
@@ -2314,7 +2345,7 @@ public class AMiKoDesk {
 		toolBar.addSeparator();
 		toolBar.add(selectInteractionsButton);
 		// Customizations
-		if (Utilities.appCustomization().equals("ibsa")) {		
+		if (Utilities.appCustomization().equals("ibsa") || Utilities.appCustomization().equals("desitin")) {		
 			toolBar.addSeparator();
 			toolBar.add(selectShoppingCartButton);
 		}
@@ -2500,8 +2531,7 @@ public class AMiKoDesk {
 		about_item.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				AmiKoDialogs ad = new AmiKoDialogs(Utilities.appLanguage(),
-						Utilities.appCustomization());
+				AmiKoDialogs ad = new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization());
 				ad.AboutDialog();
 			}
 		});
@@ -3220,13 +3250,21 @@ public class AMiKoDesk {
 				// Refresh some stuff after update
 				if (Utilities.appCustomization().equals("ibsa") || Utilities.appCustomization().equals("ywesee")) {
 					FileLoader file_loader = new FileLoader();
-					m_user_map = file_loader.loadGlnCodes();				
+					m_user_map = file_loader.loadGlnCodes("gln_codes.ser");				
 					m_list_of_authors = file_loader.loadAuthors();
 					m_emailer.loadAccess();
-					if (m_shopping_cart != null) {
-						file_loader.loadIbsaConditions();
-						file_loader.loadIbsaGlns();
+					if (m_shopping_cart!=null) {
+						m_map_ibsa_conditions = file_loader.loadIbsaConditions();
+						m_map_ibsa_glns = file_loader.loadIbsaGlns();
 						m_shopping_cart.setMaps(m_map_ibsa_glns, m_map_ibsa_conditions);
+					}
+				} else if (Utilities.appCustomization().equals("desitin")) {
+					FileLoader file_loader = new FileLoader();
+					m_user_map = file_loader.loadGlnCodes("gln_codes_desitin.ser");				
+					m_list_of_authors = file_loader.loadAuthors();
+					m_emailer.loadAccess();
+					if (m_shopping_cart!=null) {
+						m_map_desitin_conditions = file_loader.loadDesitinConditions();
 					}
 				}
 				// Empty shopping basket

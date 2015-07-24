@@ -128,8 +128,12 @@ public class InteractionsCart {
 									inter = inter.replaceAll(atc_code2, entry2.getKey());
 									interactions_html_str += (inter + "");
 									// Add title to section title list
-									if (!inter.isEmpty())
-										section_str.add("<html>" + entry1.getKey() + " &rarr; " + entry2.getKey() + "</html>");
+									if (!inter.isEmpty()) {
+										if (Utilities.appCustomization().equals("ibsa"))
+											section_str.add("<html>" + entry1.getKey() + " > " + entry2.getKey() + "</html>");
+										else
+											section_str.add("<html>" + entry1.getKey() + " &rarr; " + entry2.getKey() + "</html>");											
+									}
 								}
 							}
 						}

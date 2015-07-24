@@ -3,7 +3,7 @@
 
 #define MyAppFolder "09_amikodesk_ibsa_exe32"
 #define MyAppName "AmiKo Desktop IBSA"
-#define MyVersion "1.3.6"
+#define MyVersion "1.3.7"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "amikodeskibsa.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"
@@ -43,7 +43,7 @@ DefaultDirName={code:DefDirRoot}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 OutputDir={#MyWorkingDir}\output
 OutputBaseFilename=amikodeskibsa_setup_32bit
-SetupIconFile={#MyWorkingDir}\{#MyIconDir}
+SetupIconFile={#MyWorkingDir}\icons\ibsa_ico.ico
 Compression=lzma2/max
 SolidCompression=yes
 VersionInfoDescription={#MyAppName} Setup
@@ -63,10 +63,10 @@ Source: "{#MyWorkingDir}\exes\{#MyAppFolder}\*"; DestDir: "{app}"; Flags: ignore
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]      
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\{#MyIconDir}"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\icons\ibsa_ico.ico"
 Name: "{group}\{cm:ProgramOnTheWeb,{#MyAppName}}"; Filename: "{#MyAppURL}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\{#MyIconDir}"; Tasks: desktopicon
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExe}"; IconFileName: "{app}\icons\ibsa_ico.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExe}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent

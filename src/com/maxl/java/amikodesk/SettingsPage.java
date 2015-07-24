@@ -254,7 +254,7 @@ public class SettingsPage implements java.io.Serializable {
 				public void keyTyped(KeyEvent keyEvent) { }
 			});
 			
-			aLabelName1 = new JLabel("Firma");
+			aLabelName1 = new JLabel("Funkt.");
 			aLabelName1.setHorizontalAlignment(JLabel.LEFT);
 			aLabelName1.setBorder(new EmptyBorder(0,pad_left,0,0));	
 			gbc = getGbc(2,0, 0.1,1.0, GridBagConstraints.HORIZONTAL);
@@ -325,9 +325,9 @@ public class SettingsPage implements java.io.Serializable {
 				@Override 
 				public void keyTyped(KeyEvent keyEvent) { }
 			});
-			
+
 			// -----------------------------------------------------------		
-			aLabelName2 = new JLabel("Name 2");
+			aLabelName2 = new JLabel("Zusatz");
 			aLabelName2.setHorizontalAlignment(JLabel.LEFT);
 			gbc = getGbc(0,2, 0.1,1.0, GridBagConstraints.HORIZONTAL);
 			gbc.gridwidth = 1;
@@ -350,7 +350,7 @@ public class SettingsPage implements java.io.Serializable {
 				public void keyTyped(KeyEvent keyEvent) { }
 			});
 			
-			aLabelName3 = new JLabel("Name 3");
+			aLabelName3 = new JLabel("Firma");
 			aLabelName3.setHorizontalAlignment(JLabel.LEFT);
 			aLabelName3.setBorder(new EmptyBorder(0,pad_left,0,0));	
 			gbc = getGbc(2,2, 0.1,1.0, GridBagConstraints.HORIZONTAL);
@@ -1499,17 +1499,19 @@ public class SettingsPage implements java.io.Serializable {
 						
 						// If necessary change labels
 						if (m_user.is_human  || !m_user.title.isEmpty()) {
-							mShippingAddress.setNameLabels("Funkt.", "Abt.", "Firma");
-							mBillingAddress.setNameLabels("Funkt.", "Abt.", "Firma");
-							mOfficeAddress.setNameLabels("Funkt.", "Abt.", "Firma");							
+							mShippingAddress.setNameLabels("Funkt.", "Zusatz", "Firma");
+							mBillingAddress.setNameLabels("Funkt.", "Zusatz", "Firma");
+							mOfficeAddress.setNameLabels("Funkt.", "Zusatz", "Firma");							
 							System.out.println("Person: " + m_user.gln_code + " - " + m_user.category + ", " 
-									+ m_user.title + ", " + m_user.first_name + ", " + m_user.last_name);
+									+ m_user.title + ", " + m_user.first_name + ", " + m_user.last_name + ", " 
+									+ m_user.city + ", " + m_user.street);
 						} else {
-							mShippingAddress.setNameLabels("Einheit", "Abt.", "Firma");
-							mBillingAddress.setNameLabels("Einheit", "Abt.", "Firma");
-							mOfficeAddress.setNameLabels("Einheit", "Abt.", "Firma");	
+							mShippingAddress.setNameLabels("Funkt.", "Zusatz", "Firma");
+							mBillingAddress.setNameLabels("Funkt.", "Zusatz", "Firma");
+							mOfficeAddress.setNameLabels("Funkt.", "Zusatz", "Firma");	
 							System.out.println("Company: " + m_user.gln_code + " - " + m_user.category + ", " 
-									+ m_user.name1 + ", " + m_user.name2 + ", " + m_user.name3);
+									+ m_user.name1 + ", " + m_user.name2 + ", " + m_user.name3 + ", " 
+									+ m_user.city + ", " + m_user.street);
 						}									
 						// Set shipping address
 						mShippingAddress.setDataWithUserInfo(m_user);

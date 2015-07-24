@@ -3,7 +3,7 @@
 
 #define MyAppFolder "10_comeddesk_ibsa_exe32"
 #define MyAppName "CoMed Desktop IBSA"
-#define MyVersion "1.3.6"
+#define MyVersion "1.3.7"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "comeddeskibsa.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"

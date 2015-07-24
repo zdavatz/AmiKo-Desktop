@@ -38,12 +38,43 @@ public class FileLoader {
 		return map_conditions;
 	}
 	
+	public TreeMap<String, TreeMap<String, Float>> loadDesitinConditions() {
+		TreeMap<String, TreeMap<String, Float>> map_conditions = new TreeMap<String, TreeMap<String, Float>>();
+		
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\desitin_conditions.ser");
+		if (encrypted_msg==null) {
+			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "desitin_conditions.ser");
+			System.out.println("Loading desitin_conditions.ser from default folder... " + encrypted_msg.length);
+		} else {
+			System.out.println("Loading desitin_conditions.ser from app data folder..." + encrypted_msg.length);	
+		}
+		if (encrypted_msg!=null) {
+			Crypto crypto = new Crypto();
+			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
+			map_conditions = (TreeMap<String, TreeMap<String, Float>>)FileOps.deserialize(plain_msg);
+			
+			/** TEST */
+			/*
+			for (Map.Entry<String, TreeMap<String, Float>> entry : map_conditions.entrySet()) {
+				if (entry.getKey().equals("7601002024853")) {
+					System.out.println("Found customer 7601002024853");
+					for (Map.Entry<String, Float> entry2 : entry.getValue().entrySet()) {
+						System.out.println("ean = " + entry2.getKey() + " -> rebate = " + entry2.getValue());
+					}
+				}
+			}
+			*/			
+		}	
+		
+		return map_conditions;
+	}
+		
 	public TreeMap<String, String> loadIbsaGlns() {
 		TreeMap<String, String> map_glns = new TreeMap<String, String>();
 		
 		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\ibsa_glns.ser");
 		if (encrypted_msg==null) {
-			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER+"ibsa_glns.ser");
+			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "ibsa_glns.ser");
 			System.out.println("Loading ibsa_glns.ser from default folder...");
 		} else {
 			System.out.println("Loading ibsa_glns.ser from app data folder...");
@@ -57,25 +88,36 @@ public class FileLoader {
 		return map_glns;
 	}
 	
-	
 	/**
 	 * Load gln to user map
 	 * @return HashMap
 	 */
-	public HashMap<String, User> loadGlnCodes() {
+	public HashMap<String, User> loadGlnCodes(String ser_file_name) {
 		HashMap<String, User> user_map = new HashMap<String, User>();
 		
-		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\gln_codes.ser");
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\" + ser_file_name);	// "gln_codes.ser"
 		if (encrypted_msg==null) {
-			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + "gln_codes.ser");
-			System.out.println("Loading gln_codes.ser from default folder...");
+			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + ser_file_name);
+			System.out.println("Loading " + ser_file_name + " from default folder...");
 		} else {
-			System.out.println("Loading gln_codes.ser from app data folder...");
+			System.out.println("Loading " + ser_file_name + " from app data folder...");
 		}
 		if (encrypted_msg!=null) {
 			Crypto crypto = new Crypto();
 			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
 			user_map = (HashMap<String, User>)FileOps.deserialize(plain_msg);
+			
+			/** TEST
+			for (Map.Entry<String, User> entry : user_map.entrySet()) {
+				String gln = entry.getKey();
+				User user = entry.getValue();
+				if (gln.contains("7601002028004")) {
+					System.out.println(user.gln_code + " - " + user.category + ", " 
+							+ user.title + ", " + user.first_name + ", " + user.last_name + ", " 
+							+ user.city + ", " + user.street);
+				}
+			}
+			*/
 		}	
 		
 		return user_map;

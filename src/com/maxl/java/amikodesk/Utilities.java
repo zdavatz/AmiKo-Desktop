@@ -24,6 +24,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Entities.EscapeMode;
+
 public class Utilities {
 
 	static public String appDataFolder() {
@@ -63,7 +66,8 @@ public class Utilities {
 	}
 	
 	static public boolean showFullSettings() {
-		return (appCustomization().equals("ibsa") || appCustomization().equals("zurrose") || appCustomization().equals("ywesee"));
+		return (appCustomization().equals("ibsa") || appCustomization().equals("zurrose") 
+				|| appCustomization().equals("ywesee") || appCustomization().equals("desitin"));
 	}
 	
 	static public String prettyFormat(float value) {
@@ -90,4 +94,14 @@ public class Utilities {
         }
         return true;
     }
+	
+	static public String prettyHtml(String str) {
+		org.jsoup.nodes.Document mDoc = Jsoup.parse(str);
+		
+		mDoc.outputSettings().escapeMode(EscapeMode.xhtml);
+		mDoc.outputSettings().prettyPrint(true);
+		mDoc.outputSettings().indentAmount(2);
+		
+		return mDoc.toString();
+	}
 }

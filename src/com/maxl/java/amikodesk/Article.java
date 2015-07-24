@@ -56,6 +56,7 @@ public class Article implements java.io.Serializable {
 	private int onstock;
 	private int likes;
 	private int visible;
+	private int free_samples;
 	
 	public Article() {
 		//
@@ -98,8 +99,14 @@ public class Article implements java.io.Serializable {
 					ean_code = entry[9];
 				if (!entry[10].isEmpty())
 					pharma_code = entry[10];
-				if (!entry[11].isEmpty()) {
-					visible = Integer.parseInt(entry[11]);
+				if (entry.length>11) {
+					if (!entry[11].isEmpty()) {
+						visible = Integer.parseInt(entry[11]);
+					}
+				}
+				if (entry.length>12) {
+					if (!entry[12].isEmpty())
+						free_samples = Integer.parseInt(entry[12]);
 				}
 			}
 			quantity = 1;
@@ -259,7 +266,7 @@ public class Article implements java.io.Serializable {
     }
     
     /*
-		user/customer categories are defined in aips2sqlite:glncodes.java
+		user/customer categories are defined in aips2sqlite:GlnCodes.java
 			arzt, apotheke, drogerie, spital, grossist
      */
     public boolean isVisible(String user_category) {
@@ -279,9 +286,35 @@ public class Article implements java.io.Serializable {
     		return ((visible & 0x02)>0);
     	} else if (user_category.equals("grossist")) {
     		return ((visible & 0x01)>0);    	
-    	} else { // for all other categories
+    	} else { // always true for all other categories
     		return true;
     	}
+    }
+
+    /*
+		user/customer categories are defined in aips2sqlite:ShoppingCart.java
+     */
+    public boolean hasFreeSamples(String user_category) {
+    	if (user_category.equals("B-arzt"))
+    		return ((free_samples & 0x0001)>0);
+    	else if (user_category.equals("A-arzt"))
+    		return ((free_samples & 0x0002)>0);
+    	else if (user_category.equals("B-apotheke"))
+    		return ((free_samples & 0x0004)>0);
+    	else if (user_category.equals("A-apotheke"))
+    		return ((free_samples & 0x0008)>0);
+       	else if (user_category.equals("B-drogerie"))
+    		return ((free_samples & 0x0010)>0);
+    	else if (user_category.equals("A-drogerie"))
+    		return ((free_samples & 0x0020)>0);
+       	else if (user_category.equals("C-spital"))
+    		return ((free_samples & 0x0040)>0);
+       	else if (user_category.equals("B-spital"))
+    		return ((free_samples & 0x0080)>0);
+    	else if (user_category.equals("A-spital"))
+    		return ((free_samples & 0x0100)>0);   	
+    	// for all other cases
+    	return false;
     }
     
 	public boolean isSpecial() {		

@@ -53,7 +53,7 @@ function showAgbs() {
 	invokeJava("show_agbs",0);
 }
 
-function changeQty(tableID,currentRow) {
+function changeQty(tableID,currentRow,cellIdx) {
     try {
 		var key = window.event.keyCode;
 		if (key==9 || key==13) {
@@ -63,18 +63,11 @@ function changeQty(tableID,currentRow) {
 				for (var i=0; i<rowCount; i++) {
 					var row = table.rows[i];
 					if (row==currentRow.parentNode.parentNode) {
-						var qty = row.cells[5].firstChild.value;
+						var qty = row.cells[cellIdx].firstChild.value;
 						// Check if value is in safe bounds and call java
 						var eanCode = row.cells[0].innerText;	// used to be row.cells[1]
 						if (qty>=0 && qty<=99999) {
-							// alert(document.forms[0].elements.length);						
 							invokeJava("change_qty"+qty,eanCode);
-							/*
-							if (i<(document.forms[0].elements.length-1))
-								document.forms[0].elements[i+1].focus();
-							else
-								document.forms[0].elements[0].focus();
-								*/
 						}
 					}
 				}

@@ -12,3 +12,11 @@ exes/07_amikodesk_zurrose_exe32/
 exes/08_comeddesk_zurrose_exe32/
 *.db
 *.zip
+.settings/org.eclipse.ltk.core.refactoring.prefs
+exes/10_comeddesk_ibsa_exe32/jre7/lib/zi/America/Belem
+exes/10_comeddesk_ibsa_exe32/jre7/lib/zi/Africa/Mbabane
+exes/10_comeddesk_ibsa_exe32/jre7/
+exes/09_amikodesk_ibsa_exe32/jre7/lib/zi/Europe/Minsk
+exes/09_amikodesk_ibsa_exe32/jre7/
+exes/10_comeddesk_ibsa_exe32/
+exes/09_amikodesk_ibsa_exe32/
