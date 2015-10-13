@@ -42,6 +42,8 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 	private static String m_css_shopping_cart_str = null;		
 	private static String m_images_dir = "";
 	
+	private static char m_user_class;
+	
 	private static Preferences m_prefs;
 	
     private boolean isMuster(Article article, float cr) {
@@ -99,12 +101,16 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 	private int getDraufgabe(Article article) {
 		if (m_map_ibsa_conditions!=null) {
 			String ean_code = article.getEanCode();
+			// First make sure ean code is in conditions map
 			if (m_map_ibsa_conditions.containsKey(ean_code)) {
+				// Get rebate map
 				NavigableMap<Integer, Float> rebate = getRebateMap(ean_code);
 				if (rebate!=null && rebate.size()>0) {					
 					int qty = article.getQuantity();
 					int assorted_qty = qty + article.getAssortedQuantity();
-					// If rebate map contains key, get bonus (draufgabe) otherwise get closest possible value using "floorKey"
+					// If rebate map contains assorted quantity
+					// then get bonus (draufgabe) 
+					// otherwise get closest possible value using "floorKey"
 					if (rebate.containsKey(assorted_qty)) {
 						if (rebate.get(assorted_qty)>0)
 							return (int)(qty*rebate.get(assorted_qty)/100.0f);
@@ -127,25 +133,35 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 		return draufgabe;
 	}
 	
+	/**
+	 * This function returns either 
+	 * - a cash rebate (which is represented as a negative number in the conditions file)
+	 * - or the cash rebate closest to the chosen quantity 
+	 */
 	private float getCashRebate(Article article) {
 		if (m_map_ibsa_conditions!=null) {
 			String ean_code = article.getEanCode();
+			// First make sure ean code is in conditions map
 			if (m_map_ibsa_conditions.containsKey(ean_code)) {
 				NavigableMap<Integer, Float> rebate = getRebateMap(ean_code);
 				if (rebate!=null && rebate.size()>0) {
 					int qty = article.getQuantity();
 					int assorted_qty = qty + article.getAssortedQuantity();
-					// If rebate map contains key, get bonus (draufgabe) otherwise get closest possible value using "floorKey"
+					// If rebate map contains key 
+					// then get bonus (draufgabe) 
+					// otherwise get closest possible value using "floorKey"
 					if (rebate.containsKey(assorted_qty)) {
 						if (rebate.get(assorted_qty)<=0)
 							return -rebate.get(assorted_qty);	// returns a quantity >=0.0
 					} else {
 						int floor_units = rebate.floorKey(assorted_qty);	
-						return -rebate.get(floor_units);
+						if (rebate.get(floor_units)<=0)
+							return -rebate.get(floor_units);
 					}
 				}
 			}
 		}
+		// All other cases return 0.0
 		return 0.0f;
 	}
 	
@@ -197,6 +213,9 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 			String uc[] = m_map_ibsa_glns.get(gln_code).split(";");
 			// This is the default class
 			char user_class = uc[0].charAt(0);			
+			m_user_class = user_class;
+			if (uc.length>1)
+				m_user_class = uc[1].charAt(0);
 			// Is the user human or corporate?
 			String user_type = m_prefs.get("type", "arzt");
 			// System.out.println("Category for GLN " + gln_code + ": " + user_class + "-" + user_type + " / " + m_map_ibsa_glns.get(gln_code));
@@ -478,11 +497,12 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 					if (rebate_map!=null && rebate_map.size()>0) {
 						// Update draufgabe 	
 						String bonus = "";
-						int dg = getDraufgabe(article); //ean_code, article.getQuantity(), article.getAssortedQuantity());
-						if (dg>0) {
-							article.setDraufgabe(dg);									
-							bonus = String.format("+ %d", dg);
-						}						
+						int dg = getDraufgabe(article); 
+						if (dg>=0) {	// Used to be dg>0! ... DOUBLE-CHECK!
+							article.setDraufgabe(dg);
+							if (dg>0)
+								bonus = String.format("+ %d", dg);							
+						}
 						// Update cash rebate
 						String cash_rebate_percent = "0%";
 						float cr = getCashRebate(article);
@@ -713,7 +733,7 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 		// Update draufgabe 										
 		String draufgabe = ""; 		
 		int dg = getDraufgabe(article);
-		if (dg>0) {
+		if (dg>=0) {	// Used to be dg>0! ... DOUBLE-CHECK!
 			article.setDraufgabe(dg);									
 			draufgabe = String.format("+ %d", dg);
 		}
@@ -721,7 +741,7 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 		String cash_rebate_percent = "0%";	
 		
 		float cr = getCashRebate(article);
-		if (cr>=0.0f)	// Used to be cr>0.0f... DOUBLE-CHECK!
+		if (cr>=0.0f)	
 			article.setCashRebate(cr);				
 		cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
 		
@@ -731,7 +751,6 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 		String muster = "";
 		
 		System.out.println("cash rebate = " + cash_rebate_percent + " / " + cr);
-
 		
 		if (article.getCode()!=null && article.getCode().equals("ibsa")) {
 			cr = 0.0f;
@@ -856,7 +875,8 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 		
 		boolean shipping_free = true; 	// Some combinations of articles can be shipped for free... keep track
 		float shipping_CHF = 0.0f;		
-		char shipping_type = 'Z';
+		String shipping_type = "BZ";
+		
 		// Loop through all articles in shopping basket
 		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 			Article article = entry.getValue();			
@@ -874,8 +894,10 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 			} else {
 				price = article.getTotExfactoryPrice();						
 			}
+			
 			// Update map from author/owner to total spent
 			vat = price * article.getVat()/100.0f;
+			// This is the manufacturer of the article
 			author = article.getAuthor();
 			// Loop through set of authors and find matches
 			for (String a : set_of_authors) {
@@ -884,29 +906,45 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 			}			
 			// System.out.println(author);
 			if (author!=null) {
-				float sum_price = 0.0f;
+				float sum_price = price;
 				float sum_vat25 = 0.0f;
 				float sum_vat80 = 0.0f;
 				if (m_map_owner_total.containsKey(author)) {
-					sum_price = m_map_owner_total.get(author).subtotal_CHF;
+					sum_price += m_map_owner_total.get(author).subtotal_CHF;
 					sum_vat25 = m_map_owner_total.get(author).vat25_CHF;
 					sum_vat80 = m_map_owner_total.get(author).vat80_CHF;
 				}
-				if (shipping_free) {
-					shipping_CHF = 0.0f;
-					shipping_type = 'Z';
-				} else if (sum_price>=500.0f) {
-					shipping_CHF = 0.0f;
-					shipping_type = 'Z';
+				// Set default shipping values
+				if (!shipping_free) {
+					if (sum_price<500.0f) {
+						if (m_user_class=='A') {
+							shipping_CHF = 7.95f;
+							shipping_type = "A";
+						} else {
+							shipping_CHF = 7.35f;
+							shipping_type = "B";
+						}
+					} else {
+						if (m_user_class=='A') {
+							shipping_CHF = 0.0f;
+							shipping_type = "AZ";
+						} else {
+							shipping_CHF = 0.0f;
+							shipping_type = "BZ";
+						}
+					}
 				} else {
-					shipping_CHF = 7.35f;
-					shipping_type = 'B';					
+					shipping_CHF = 0.0f;
+					shipping_type = "AZ";
 				}
+				
+				// System.out.println("User class / shipping type / cost -> " + m_user_class + " / " + shipping_type + " / " + shipping_CHF + " / " + sum_price);
+				
 				if (article.getVat()==2.5f) {
-					Owner o = new Owner(sum_price + price, sum_vat25 + vat, sum_vat80, shipping_CHF, shipping_type); 	// Default: B-Post
+					Owner o = new Owner(author, sum_price, sum_vat25 + vat, sum_vat80, shipping_CHF, shipping_type); 	
 					m_map_owner_total.put(author, o);				
 				} else {
-					Owner o = new Owner(sum_price + price, sum_vat25, sum_vat80 + vat, shipping_CHF, shipping_type); 	// Default: B-Post
+					Owner o = new Owner(author, sum_price, sum_vat25, sum_vat80 + vat, shipping_CHF, shipping_type); 	
 					m_map_owner_total.put(author, o);									
 				}
 			}
@@ -927,23 +965,27 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 			float vat80_CHF = e.getValue().vat80_CHF;
 			shipping_CHF = e.getValue().shipping_CHF;
 			shipping_type = e.getValue().shipping_type;
+			
 			String versand_optionen = "";
 			if (checkIfSponsor(author)) {
-				if (!shipping_free) {
-					if (subtotal_CHF<=500.0f) {
-						versand_optionen = "<option value=\"B\">" + m_rb.getString("BPost") + ": +7.35 CHF</option>"
-								+ "<option value=\"A\">" + m_rb.getString("APost") + ": +7.95 CHF</option>"
-								+ "<option value=\"E\">" + m_rb.getString("express") + ": +17.90 CHF</option>";
-					} else {
-						shipping_CHF = 0.0f;
-						versand_optionen = "<option value=\"Z\">" + m_rb.getString("BPost") +": +0.00 CHF</option>"
-								+ "<option value=\"Z\">" + m_rb.getString("APost") + ": +0.00 CHF</option>"
-								+ "<option value=\"E\">" + m_rb.getString("express") + ": +17.90 CHF</option>";
-					}
-				} else {
-					shipping_CHF = 0.0f;
-					versand_optionen = "<option value=\"A\">" + m_rb.getString("APost") + ": +0.00 CHF</option>";
-				}
+				if (shipping_type.equals("B")) 
+					versand_optionen = "<option value=\"B\">" + m_rb.getString("BPost") + ": +7.35 CHF</option>"
+							+ "<option value=\"A\">" + m_rb.getString("APost") + ": +7.95 CHF</option>"
+							+ "<option value=\"E\">" + m_rb.getString("express") + ": +17.90 CHF</option>";
+				else if (shipping_type.equals("A"))
+					versand_optionen = "<option value=\"A\">" + m_rb.getString("APost") + ": +7.95 CHF</option>"
+							+ "<option value=\"B\">" + m_rb.getString("BPost") + ": +7.35 CHF</option>"
+							+ "<option value=\"E\">" + m_rb.getString("express") + ": +17.90 CHF</option>";
+				else if (shipping_type.equals("BZ"))
+					versand_optionen = "<option value=\"BZ\">" + m_rb.getString("BPost") + ": +0.00 CHF</option>"
+							+ "<option value=\"A\">" + m_rb.getString("APost") + ": +7.95 CHF</option>"
+							+ "<option value=\"E\">" + m_rb.getString("express") + ": +17.90 CHF</option>";					
+				else if (shipping_type.equals("AZ"))
+					versand_optionen = "<option value=\"AZ\">" + m_rb.getString("APost") + ": +0.00 CHF</option>"
+							+ "<option value=\"BZ\">" + m_rb.getString("BPost") + ": +0.00 CHF</option>"
+							+ "<option value=\"E\">" + m_rb.getString("express") + ": +17.90 CHF</option>";					
+				else
+					versand_optionen = "<option value=\"A\">" + m_rb.getString("APost") + ": +7.95 CHF</option>";			
 			} else {
 				versand_optionen = m_rb.getString("deskOrder");
 				shipping_CHF = 0.0f;
@@ -1021,7 +1063,7 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 				billing_addr = new Address();
 			if (ordering_addr==null)
 				ordering_addr = new Address();
-			
+						
 			String color_change_str = "width=\"30%25\" style=\"cursor:pointer; background-color:#ffffff; padding-left:8px; padding-top:16px;\" "
 						+ "onmouseover=\"changeColor(this,true);\" "
 						+ "onmouseout=\"changeColor(this,false);\" ";
@@ -1065,27 +1107,23 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 		return html_str;
 	}
 	
-	public String getCheckoutUpdateJS(String author, char shipping_type) {
+	public String getCheckoutUpdateJS(String author, String shipping_type) {
 		float shipping_CHF = 0.0f;
-		switch (shipping_type) {
-		case 'Z':
+		if (shipping_type.equals("AZ"))
 			shipping_CHF = 0.0f;
-			break;
-		case 'B':
+		else if (shipping_type.equals("BZ"))
+			shipping_CHF = 0.0f;
+		else if (shipping_type.equals("B"))
 			shipping_CHF = 7.35f;
-			break;
-		case 'A':
+		else if (shipping_type.equals("A"))
 			shipping_CHF = 7.95f;
-			break;
-		case 'E':
+		else if (shipping_type.equals("E"))
 			shipping_CHF = 17.90f;
-			break;
-		}
 		// Update shipping costs
 		float subtotal_CHF = m_map_owner_total.get(author).subtotal_CHF;	
 		float vat25_CHF = m_map_owner_total.get(author).vat25_CHF;
 		float vat80_CHF = m_map_owner_total.get(author).vat80_CHF;
-		Owner owner = new Owner(subtotal_CHF, vat25_CHF, vat80_CHF, shipping_CHF, shipping_type);
+		Owner owner = new Owner(author, subtotal_CHF, vat25_CHF, vat80_CHF, shipping_CHF, shipping_type);
 		m_map_owner_total.put(author, owner);
 		// Calculate new total
 		float total_CHF = subtotal_CHF + vat25_CHF + vat80_CHF + 1.08f*shipping_CHF; 
@@ -1101,7 +1139,7 @@ public class ShoppingIbsa extends ShoppingCart implements java.io.Serializable {
 			float t_CHF = e.getValue().subtotal_CHF + e.getValue().vat25_CHF + e.getValue().vat80_CHF + 1.08f*e.getValue().shipping_CHF;
 			// All sums
 			sum_total_CHF += e.getValue().subtotal_CHF;
-			if (shipping_type!='Z' && checkIfSponsor(author)) 
+			if (!shipping_type.contains("Z") && checkIfSponsor(author)) 
 				sum_shipping_CHF += e.getValue().shipping_CHF;
 			sum_vat25_CHF += e.getValue().vat25_CHF;
 			sum_vat80_CHF += e.getValue().vat80_CHF + e.getValue().shipping_CHF*0.08f;

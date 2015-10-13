@@ -89,17 +89,19 @@ public class SaveBasket {
 
         public void onEndPage(PdfWriter writer, Document document) {
             Rectangle rect = writer.getBoxSize("art");
-            switch(writer.getPageNumber() % 2) {
-                case 0:
-                    ColumnText.showTextAligned(writer.getDirectContent(),
-                        Element.ALIGN_RIGHT, new Phrase(m_rb.getString("sponsoring"), 
-                        		font_norm_10), rect.getRight()-18, rect.getTop(), 0);
-                    break;
-                case 1:
-                    ColumnText.showTextAligned(writer.getDirectContent(),
-                        Element.ALIGN_LEFT, new Phrase(m_rb.getString("sponsoring"),
-                        		font_norm_10), rect.getLeft(), rect.getTop(), 0);
-                    break;
+            if (Utilities.appCustomization().equals("ibsa")) {
+	            switch(writer.getPageNumber() % 2) {
+	                case 0:
+	                    ColumnText.showTextAligned(writer.getDirectContent(),
+	                        Element.ALIGN_RIGHT, new Phrase(m_rb.getString("sponsoring"), 
+	                        		font_norm_10), rect.getRight()-18, rect.getTop(), 0);
+	                    break;
+	                case 1:
+	                    ColumnText.showTextAligned(writer.getDirectContent(),
+	                        Element.ALIGN_LEFT, new Phrase(m_rb.getString("sponsoring"),
+	                        		font_norm_10), rect.getLeft(), rect.getTop(), 0);
+	                    break;
+	            }
             }
             ColumnText.showTextAligned(writer.getDirectContent(),
                     Element.ALIGN_CENTER, new Phrase(String.format("%s-%d", m_rb.getString("page"), writer.getPageNumber()), 
@@ -226,7 +228,8 @@ public class SaveBasket {
 	       			logoImageStr = Constants.IMG_FOLDER + "empty_logo.png";        		
 	       		
 	       		Image logo = Image.getInstance(logoImageStr);
-	       		logo.scalePercent(30);
+       			logo.scalePercent(40);
+	       		
 	       		logo.setAlignment(Rectangle.ALIGN_RIGHT);
 	       		document.add(logo);        		
 	      		document.add(Chunk.NEWLINE);
@@ -531,9 +534,13 @@ public class SaveBasket {
 							payment = "Bezahlt";
 						}						
 						if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {	
-							char shipping_type = 'U';	// unknown shipping type
+							String shipping_type = "U";	// unknown shipping type
 							if (m_map_of_authors.containsKey(author.getShortName())) 
-								shipping_type = m_map_of_authors.get(author.getShortName()).getShippingType();
+								shipping_type = m_map_of_authors.get(author.getShortName()).getShippingType() + "";
+							if (shipping_type.equals("Z"))
+								shipping_type = "AZ";
+							else if (shipping_type.equals("Y"))
+								shipping_type = "BZ";
 							/*
 							String cash_rebate = "0.0";
 							if (article.getDraufgabe()<=0)

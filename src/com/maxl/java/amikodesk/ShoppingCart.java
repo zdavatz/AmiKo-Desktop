@@ -23,20 +23,72 @@ import com.maxl.java.shared.Conditions;
  */
 public abstract class ShoppingCart {
 
+	/**
+	 * This class is used to calculate the total costs (incl. shipping cost) per article manufacturer
+	 * @author Max
+	 *
+	 */
 	protected class Owner {		
 		
+		String author;
 		float subtotal_CHF;
 		float vat25_CHF;
 		float vat80_CHF;
 		float shipping_CHF;		
-		char shipping_type;		// Z: gratis, A: A-Post, B: B-Post, E: Express
+		String shipping_type;		// AZ, BZ: gratis, A: A-Post, B: B-Post, E: Express
+		boolean shipping_free;
 		
-		public Owner(float subtotal, float vat25, float vat80, float shipping, char type) {
+		public Owner(String auth, float subtotal, float vat25, float vat80, float shipping, String type) {
+			author = auth.toLowerCase();
 			subtotal_CHF = subtotal;
 			vat25_CHF = vat25;
 			vat80_CHF = vat80;
 			shipping_CHF = shipping;
 			shipping_type = type;
+		}
+		
+		public void updateShippingCosts(char category) {
+			if (author.contains("desitin")) {
+				// Default
+				shipping_CHF = 0.0f;
+				shipping_type = "AZ";
+				shipping_free = true;
+				// 
+				switch(category) {
+				case 'S':	// Spitalapotheke (Spital)
+					if (subtotal_CHF<100.0f) {
+						shipping_CHF = 10.0f;
+						shipping_type = "A";
+						shipping_free = false;
+					}
+					break;
+				case 'P':	// Praxisapotheke (Arzt)
+					if (subtotal_CHF<200.0f) {
+						shipping_CHF = 15.0f;
+						shipping_type = "A";
+						shipping_free = false;
+					}
+					break;
+				case 'O':	// Offizinalapotheke
+					if (subtotal_CHF<1000.0f) {
+						shipping_CHF = 15.0f;
+						shipping_type = "A";	
+						shipping_free = false;
+					}
+					break;
+				case 'G':	// Grossist
+					if (subtotal_CHF<500.0f) {
+						shipping_CHF = 15.0f;
+						shipping_type = "A";	
+						shipping_free = false;
+					} else if (subtotal_CHF>=500.0f && subtotal_CHF<=5000.0f) {
+						shipping_CHF = 15.0f + subtotal_CHF*0.01f;
+						shipping_type = "A";
+						shipping_free = false;
+					}
+					break;
+				}				
+			}
 		}
 	}
 	
@@ -64,6 +116,10 @@ public abstract class ShoppingCart {
 		//
 	}
 	
+	public void setUserCategory(String cat) {
+		//
+	}
+	
 	public List<String> getAssortList(String ean_code) {
 		return null;
 	}
@@ -88,7 +144,7 @@ public abstract class ShoppingCart {
 		return null;
 	}
 	
-	public String getCheckoutUpdateJS(String author, char shipping_type) {
+	public String getCheckoutUpdateJS(String author, String shipping_type) {
 		return null;
 	}
 	
@@ -128,7 +184,7 @@ public abstract class ShoppingCart {
 	public String getCustomerGlnCode() {
 		return m_customer_gln_code;
 	}
-	
+		
 	public Map<String, Article> getShoppingBasket() {
 		return m_shopping_basket;
 	}
@@ -232,7 +288,7 @@ public abstract class ShoppingCart {
 		m_shopping_basket = basket;
 		int index = getCartIndex();
 		if (index>0) {
-			String subfolder = "";
+			String subfolder = "";	
 			if (!m_customer_gln_code.isEmpty())
 				subfolder = "\\" + m_customer_gln_code;			
 			String path_name = m_application_data_folder + "\\shop" + subfolder;

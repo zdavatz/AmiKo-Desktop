@@ -56,14 +56,18 @@ public class FileLoader {
 			/** TEST */
 			/*
 			for (Map.Entry<String, TreeMap<String, Float>> entry : map_conditions.entrySet()) {
-				if (entry.getKey().equals("7601002024853")) {
-					System.out.println("Found customer 7601002024853");
+				// System.out.println("customer gln = " + entry.getKey());
+				for (Map.Entry<String, Float> entry2 : entry.getValue().entrySet()) {
+					System.out.println("article ean = " + entry2.getKey() + " -> rebate = " + entry2.getValue());
+				}
+				if (entry.getKey().equals("7601001297500")) {
+					System.out.println("Found customer " + entry.getKey());
 					for (Map.Entry<String, Float> entry2 : entry.getValue().entrySet()) {
 						System.out.println("ean = " + entry2.getKey() + " -> rebate = " + entry2.getValue());
 					}
 				}
 			}
-			*/			
+			*/
 		}	
 		
 		return map_conditions;
@@ -98,24 +102,23 @@ public class FileLoader {
 		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\" + ser_file_name);	// "gln_codes.ser"
 		if (encrypted_msg==null) {
 			encrypted_msg = FileOps.readBytesFromFile(Constants.SHOP_FOLDER + ser_file_name);
-			System.out.println("Loading " + ser_file_name + " from default folder...");
+			System.out.println("Loading " + ser_file_name + " from default folder... " + encrypted_msg.length);
 		} else {
-			System.out.println("Loading " + ser_file_name + " from app data folder...");
+			System.out.println("Loading " + ser_file_name + " from app data folder... " + encrypted_msg.length);
 		}
 		if (encrypted_msg!=null) {
 			Crypto crypto = new Crypto();
 			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
 			user_map = (HashMap<String, User>)FileOps.deserialize(plain_msg);
 			
-			/** TEST
+			/*
 			for (Map.Entry<String, User> entry : user_map.entrySet()) {
 				String gln = entry.getKey();
 				User user = entry.getValue();
-				if (gln.contains("7601002028004")) {
-					System.out.println(user.gln_code + " - " + user.category + ", " 
-							+ user.title + ", " + user.first_name + ", " + user.last_name + ", " 
-							+ user.city + ", " + user.street);
-				}
+				System.out.println(user.gln_code + " - " + user.category + ", " 
+						+ user.title + ", " + user.first_name + ", " + user.last_name + ", " 
+						+ user.name1 + ", " + user.name2 + ", " + user.name3 + ", "
+						+ user.city + ", " + user.street);
 			}
 			*/
 		}	
@@ -161,6 +164,7 @@ public class FileLoader {
 							auth.setL(s[1]);
 							auth.setP(s[2]);
 							auth.setO(s[3]);
+							// System.out.println(s[0] + " -> " + s[3]);
 						}
 					}
 					list_of_authors.add(auth);

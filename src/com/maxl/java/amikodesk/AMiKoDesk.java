@@ -25,6 +25,7 @@ import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -54,16 +55,15 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Enumeration;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -125,7 +125,6 @@ import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
-import javax.swing.plaf.FontUIResource;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -239,7 +238,8 @@ public class AMiKoDesk {
 
 	// Colors
 	private static Color m_toolbar_bg = new Color(240, 240, 240); 			// light gray
-	private static Color m_but_color_bg = new Color(220, 220, 250); 		// yellow-ish
+	private static Color m_but_color_bg = new Color(220, 220, 250); 		// blue-ish
+	private static Color m_hover_but_color_bg = new Color(190, 190, 220);
 	private static Color m_selected_but_color = new Color(240, 240, 240); 	// light gray
 	private static Color m_list_selected_color = new Color(235, 235, 235); 	// light gray 2
 	private static Color m_search_field_bg = new Color(230, 250, 250);		// green-ish
@@ -274,21 +274,12 @@ public class AMiKoDesk {
 			"Cinétique", "Préclinique", "Remarques", "Numéro d'autorisation",
 			"Présentation", "Titulaire", "Mise à jour" };
 
-	// Checks if this is a first pass
-	private static boolean m_first_pass = true;
-
 	/**
 	 * Adds an option into the command line parser
-	 * 
-	 * @param optionName
-	 *            - the option name
-	 * @param description
-	 *            - option descriptiuon
-	 * @param hasValue
-	 *            - if set to true, --option=value, otherwise, --option is a
-	 *            boolean
-	 * @param isMandatory
-	 *            - if set to true, the option must be provided.
+	 * @param optionName - option name
+	 * @param description - option description
+	 * @param hasValue - if set to true, --option=value, otherwise, --option is a boolean
+	 * @param isMandatory - if set to true, option must be provided
 	 */
 	@SuppressWarnings("static-access")
 	static void addOption(Options opts, String optionName, String description, boolean hasValue, boolean isMandatory) {
@@ -378,19 +369,6 @@ public class AMiKoDesk {
 				|| !CML_OPT_EANCODE.isEmpty() || !CML_OPT_REGNR.isEmpty() || CML_OPT_SERVER == true));
 	}
 	
-	private static void setUIFont(FontUIResource f) {
-		Enumeration<Object> keys = UIManager.getDefaults().keys();
-	    while (keys.hasMoreElements()) {
-	    	Object key = keys.nextElement();
-	        Object value = UIManager.get(key);
-	        if (value instanceof FontUIResource) {
-	        	FontUIResource orig = (FontUIResource) value;
-	            Font font = new Font(f.getFontName(), orig.getStyle(), orig.getSize());
-	            UIManager.put(key, new FontUIResource(font));
-	        }
-	    }
-	}
-	
 	private static char getUserClass() {
 		String uc[] = m_map_ibsa_glns.get(m_customer_gln_code).split(";");
 		char user_class = uc[0].charAt(0);
@@ -400,6 +378,9 @@ public class AMiKoDesk {
 		return user_class;
 	}
 	
+	/*
+	 * MAIN function
+	 */
 	public static void main(String[] args) {
 
 		// Initialize globales
@@ -410,9 +391,7 @@ public class AMiKoDesk {
 
 		// Register toolkit
 		Toolkit tk = Toolkit.getDefaultToolkit();
-		tk.addAWTEventListener(
-				WindowSaver.getInstance(m_application_data_folder),
-				AWTEvent.WINDOW_EVENT_MASK);
+		tk.addAWTEventListener(WindowSaver.getInstance(m_application_data_folder), AWTEvent.WINDOW_EVENT_MASK);
 
 		// Specify command line options
 		Options options = new Options();
@@ -499,33 +478,38 @@ public class AMiKoDesk {
 		// Load all modules-related files
 		FileLoader file_loader = new FileLoader();
 		
-		// Load shop related files for ibsa
 		if (Utilities.appCustomization().equals("ibsa")) {
+			// Load shop related files for ibsa
 			m_user_map = file_loader.loadGlnCodes("gln_codes.ser");		// maps gln -> user address
 			m_list_of_authors = file_loader.loadAuthors();
 			m_map_ibsa_conditions = file_loader.loadIbsaConditions();	// maps gln -> customer conditions
-			m_map_ibsa_glns = file_loader.loadIbsaGlns();				// maps gln -> customer category
-		
+			m_map_ibsa_glns = file_loader.loadIbsaGlns();				// maps gln -> customer category	
 			// Create shopping cart and load related files
 			m_shopping_cart = new ShoppingIbsa();
 			m_shopping_cart.setMaps(m_map_ibsa_glns, m_map_ibsa_conditions);
 			m_emailer = new Emailer(m_rb);
-		}
-		// Load shop related files for desitin
-		if (Utilities.appCustomization().equals("desitin")) {
-			m_user_map = file_loader.loadGlnCodes("gln_codes_desitin.ser");	// maps gln -> user address
-			m_list_of_authors = file_loader.loadAuthors();					
-			m_map_desitin_conditions = file_loader.loadDesitinConditions();	// maps gln -> customer conditions
-			
+		} else if (Utilities.appCustomization().equals("desitin")) {
+			// Load shop related files for desitin			
+			m_user_map = file_loader.loadGlnCodes("desitin_gln_codes.ser");	// maps gln -> user address
+			m_list_of_authors = file_loader.loadAuthors();		
+			m_map_desitin_conditions = file_loader.loadDesitinConditions();	// maps gln -> customer conditions	
+
 			// Create shopping cart and load pertinent files
 			m_shopping_cart = new ShoppingDesitin();
-			if (m_map_desitin_conditions.containsKey(m_customer_gln_code))
-				m_shopping_cart.setMap(m_map_desitin_conditions.get(m_customer_gln_code));
+			if (m_shopping_cart!=null) {
+				if (m_user_map.containsKey(m_customer_gln_code+"S")) {
+					User user = m_user_map.get(m_customer_gln_code+"S");	// using only m_customer_gln_code leads to nullpointer exception!
+					m_shopping_cart.setUserCategory(user.category);
+				}	
+				if (m_map_desitin_conditions.containsKey(m_customer_gln_code)) {
+					m_shopping_cart.setMap(m_map_desitin_conditions.get(m_customer_gln_code));
+				}
+			}
 			m_emailer = new Emailer(m_rb);
-		}				
-		// Create comparison cart and load related files
-		if (Utilities.appCustomization().equals("zurrose"))
+		} else if (Utilities.appCustomization().equals("zurrose")) {
+			// Create comparison cart and load related files
 			m_comparison_cart = new ComparisonCart();
+		}
 				
 		// Set default query type
 		m_curr_uistate.setQueryType(m_query_type = NAME);
@@ -571,8 +555,8 @@ public class AMiKoDesk {
 		// Setup colors
 		UIManager.put("ToggleButton.select", m_selected_but_color);
 		
-		// Schedule a job for the event-dispatching thread:
-		// creating and showing this application's GUI
+		// Schedule a job for the event-dispatching thread.
+		// This job creates and shows this application's GUI
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			@Override
 			public void run() {
@@ -592,8 +576,7 @@ public class AMiKoDesk {
 		NativeInterface.runEventPump();
 	}
 
-	static class CheckListRenderer extends JCheckBox implements
-			ListCellRenderer<Object> {
+	static class CheckListRenderer extends JCheckBox implements ListCellRenderer<Object> {
 
 		final static Icon imgFavNotSelected = new ImageIcon(Constants.IMG_FOLDER + "28-star-gy.png");
 		final static Icon imgFavSelected = new ImageIcon(Constants.IMG_FOLDER + "28-star-ye.png");
@@ -696,8 +679,7 @@ public class AMiKoDesk {
 	 * @author Max
 	 * 
 	 */
-	static class ListPanel extends JPanel implements ListSelectionListener,
-			FocusListener {
+	static class ListPanel extends JPanel implements ListSelectionListener, FocusListener {
 
 		private JList<String> list = null;
 		private JScrollPane jscroll = null;
@@ -1240,8 +1222,9 @@ public class AMiKoDesk {
 							});
 							m_web_panel.updateShoppingHtml();
 						} else if (msg.startsWith("change_shipping")) {
-							// Extract shipping type (known types: free delivery, A-Post, B-Post, Express delivery)
-							char shipping_type = msg.replace("change_shipping", "").charAt(0);
+							// Extract shipping type (known types: AZ, BZ, A, B, and E)
+							String shipping_type = msg.replace("change_shipping", "");
+							System.out.println(" -> " + shipping_type);
 							updateCheckoutTable(row_key, shipping_type);
 						} else if (msg.equals("check_out")) {
 							// Get shipping and billing address (if they exist)		
@@ -1255,6 +1238,7 @@ public class AMiKoDesk {
 									m_address_map.put("O", new Address(m_user_map.get(m_customer_gln_code+"O")));	
 							}
 							// Save shopping basket
+							m_shopping_cart.setCustomerGlnCode(m_customer_gln_code);
 							m_shopping_cart.saveWithIndex(m_shopping_basket);
 							// Set AGB checkbox
 							m_shopping_cart.setAgbsAccepted(false);
@@ -1549,7 +1533,7 @@ public class AMiKoDesk {
 			jWeb.executeJavascript(js);
 		}
 
-		public void updateCheckoutTable(String row_key, char shipping_type) {
+		public void updateCheckoutTable(String row_key, String shipping_type) {
 			String js = m_shopping_cart.getCheckoutUpdateJS(row_key, shipping_type);
 			jWeb.executeJavascript(js);
 		}
@@ -1579,8 +1563,8 @@ public class AMiKoDesk {
 									if (article.isVisible(user_category) && article.hasPrice(user_category)) {
 										list_of_articles.add(article);
 										// Get user class
-										char user_class = ' ';
 										if (Utilities.appCustomization().equals("ibsa")) {
+											char user_class = ' ';
 	  										if (m_map_ibsa_glns.containsKey(m_customer_gln_code))
 												user_class = getUserClass();
 											// Check if article has free samples, use user class (A-,B-,C-Kunde)
@@ -1812,7 +1796,7 @@ public class AMiKoDesk {
 			StyleSheet style_sheet = kit.getStyleSheet();
 			String css_str = "";
 			try {
-				css_str = readFromFileFast(Constants.HTML_FILES + "amiko_stylesheet.css", StandardCharsets.UTF_8);
+				css_str = FileOps.readFromFileFast(Constants.HTML_FILES + "amiko_stylesheet.css", StandardCharsets.UTF_8);
 				System.out.println(css_str);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -2134,20 +2118,34 @@ public class AMiKoDesk {
 		button.setSelectedIcon(new ImageIcon(Constants.IMG_FOLDER + selectedImg));
 		button.setBackground(m_selected_but_color);
 		button.setToolTipText(toolTipText);
-
 		// Remove border
 		button.setBorder(BorderFactory.createEmptyBorder());
 		button.setMargin(new Insets(0, 0, 0, 0));
 		// Set adequate size
 		// button.setPreferredSize(new Dimension(64, 32));
+		// Set hand cursor
+		button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 	}
 
-	private static void setupToggleButton(JToggleButton button) {
+	private static void setupToggleButton(final JToggleButton button) {
 		button.setBackground(m_but_color_bg);
 		button.setFocusPainted(false);
 		button.setBorder(new CompoundBorder(new LineBorder(m_but_color_bg),
 				new EmptyBorder(0, 3, 0, 0)));
+		button.setBorderPainted(false);
 		button.setHorizontalAlignment(SwingConstants.LEFT);
+		// Set hand cursor
+		button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		// 
+		button.setRolloverEnabled(true);
+		button.addMouseListener(new java.awt.event.MouseAdapter() {
+		    public void mouseEntered(java.awt.event.MouseEvent evt) {
+		        button.setBackground(m_hover_but_color_bg);
+		    }
+		    public void mouseExited(java.awt.event.MouseEvent evt) {
+		        button.setBackground(m_but_color_bg);
+		    }
+		});
 	}
 
 	private static boolean isOperator(int id) {
@@ -2227,28 +2225,20 @@ public class AMiKoDesk {
 		// ------ Setup menubar ------
 		JMenuBar menu_bar = new JMenuBar();
 		// menu_bar.add(Box.createHorizontalGlue()); // --> aligns menu items to the right!
-		// -- Menu "Datei" --
-		JMenu datei_menu = new JMenu("Datei");
-		if (Utilities.appLanguage().equals("fr"))
-			datei_menu.setText("Fichier");
+		// --- Menu "Datei" ---
+		JMenu datei_menu = new JMenu(m_rb.getString("datei"));
 		menu_bar.add(datei_menu);
-		JMenuItem print_item = new JMenuItem("Drucken...");
+		JMenuItem print_item = new JMenuItem(m_rb.getString("print") + "...");
 		JMenuItem settings_item = new JMenuItem(m_rb.getString("settings") + "...");
-		JMenuItem quit_item = new JMenuItem("Beenden");
-		if (Utilities.appLanguage().equals("fr")) {
-			print_item.setText("Imprimer");
-			quit_item.setText("Terminer");
-		}
+		JMenuItem quit_item = new JMenuItem(m_rb.getString("beenden"));
 		datei_menu.add(print_item);
 		datei_menu.addSeparator();
 		datei_menu.add(settings_item);
 		datei_menu.addSeparator();
 		datei_menu.add(quit_item);
 
-		// -- Menu "Aktualisieren" --
-		JMenu update_menu = new JMenu("Aktualisieren");
-		if (Utilities.appLanguage().equals("fr"))
-			update_menu.setText("Mise à jour");
+		// --- Menu "Aktualisieren" ---
+		JMenu update_menu = new JMenu(m_rb.getString("update"));
 		menu_bar.add(update_menu);
 		final JMenuItem updatedb_item = new JMenuItem("Aktualisieren via Internet...");
 		updatedb_item.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, ActionEvent.CTRL_MASK));
@@ -2261,12 +2251,9 @@ public class AMiKoDesk {
 			choosedb_item.setText("Ajourner la banque de données...");
 		}
 
-		// -- Menu "Hilfe" --
-		JMenu hilfe_menu = new JMenu("Hilfe");
-		if (Utilities.appLanguage().equals("fr"))
-			hilfe_menu.setText("Aide");
+		// --- Menu "Hilfe" ---
+		JMenu hilfe_menu = new JMenu(m_rb.getString("help"));
 		menu_bar.add(hilfe_menu);
-
 		JMenuItem about_item = new JMenuItem("Über " + Constants.APP_NAME + "...");
 		JMenuItem ywesee_item = new JMenuItem(Constants.APP_NAME + " im Internet");
 		if (Utilities.appCustomization().equals("meddrugs"))
@@ -2294,14 +2281,20 @@ public class AMiKoDesk {
 		hilfe_menu.addSeparator();
 		hilfe_menu.add(contact_item);
 
-		// Menu "Abonnieren" (only for ywesee)
-		JMenu subscribe_menu = new JMenu("Abonnieren");
-		if (Utilities.appLanguage().equals("fr"))
-			subscribe_menu.setText("Abonnement");
+		// --- Menu "Abonnieren" (only for ywesee) ---
+		JMenu subscribe_menu = new JMenu(m_rb.getString("subscribe"));
 		if (Utilities.appCustomization().equals("ywesee")) {
 			menu_bar.add(subscribe_menu);
 		}
 
+		// --- Menu "Neue Datenbank verfügbar!"
+		final JMenu db_push_menu = new JMenu(m_rb.getString("newDb"));	
+		menu_bar.add(db_push_menu);
+		JMenuItem db_version_item = new JMenuItem("");
+		db_push_menu.add(db_version_item);
+		// Hide menu
+		db_push_menu.setVisible(false);
+		
 		jframe.setJMenuBar(menu_bar);
 
 		// ------ Setup toolbar ------
@@ -2318,15 +2311,14 @@ public class AMiKoDesk {
 		final JToggleButton selectComparisonCartButton = new JToggleButton(
 				new ImageIcon(Constants.IMG_FOLDER + "comparisoncart32x32_bright.png"));
 
-		final JToggleButton list_of_buttons[] = { selectAipsButton,
-				selectFavoritesButton, selectInteractionsButton,
+		final JToggleButton list_of_buttons[] = { selectAipsButton,	selectFavoritesButton, selectInteractionsButton,
 				selectShoppingCartButton, selectComparisonCartButton };
 
 		if (Utilities.appLanguage().equals("de")) {
 			setupButton(selectAipsButton, "Kompendium", "aips32x32_gray.png", "aips32x32_dark.png");
 			setupButton(selectFavoritesButton, "Favoriten",	"favorites32x32_gray.png", "favorites32x32_dark.png");
 			setupButton(selectInteractionsButton, "Interaktionen", "interactions32x32_gray.png", "interactions32x32_dark.png");
-			setupButton(selectShoppingCartButton, "Warenkorb", "shoppingcart32x32_gray.png", "shoppingcart32x32_dark.png");
+			setupButton(selectShoppingCartButton, "Shop", "shoppingcart32x32_gray.png", "shoppingcart32x32_dark.png");
 			setupButton(selectComparisonCartButton, "Preisvergleich", "comparisoncart32x32_gray.png", "comparisoncart32x32_dark.png");
 		} else if (Utilities.appLanguage().equals("fr")) {
 			setupButton(selectAipsButton, "Compendium", "aips32x32_gray.png", "aips32x32_dark.png");
@@ -2357,17 +2349,27 @@ public class AMiKoDesk {
 		toolBar.addSeparator();
 		toolBar.add(m_progress_indicator);
 		// Add image on the right
-		if (Utilities.appCustomization().equals("ibsa")) {
-			JLabel jImageLabel = new JLabel(new ImageIcon(Constants.IMG_FOLDER + "ibsa_image.png"));
+		if (Utilities.appCustomization().equals("ibsa") || Utilities.appCustomization().equals("desitin")) {			
+			JLabel jImageLabel = null;
+			if (Utilities.appCustomization().equals("ibsa"))
+				jImageLabel = new JLabel(new ImageIcon(Constants.IMG_FOLDER + "ibsa_image.png"));
+			else if (Utilities.appCustomization().equals("desitin"))
+				jImageLabel = new JLabel(new ImageIcon(Constants.IMG_FOLDER + "desitin_image.png"));
+			jImageLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
 			toolBar.add(Box.createHorizontalGlue());
 			toolBar.add(jImageLabel);
 			jImageLabel.addMouseListener(new MouseAdapter() {
 				@Override
 				public void mouseClicked(MouseEvent me)  
 				{  
+					String service_address = "";
+					if (Utilities.appCustomization().equals("ibsa"))
+						service_address = "service@ibsa.ch";
+					else if (Utilities.appCustomization().equals("desitin"))
+						service_address = "info@desitin.ch";
 					if (Desktop.isDesktopSupported()) {
 						try {
-							URI mail_to_uri = URI.create("mailto:service@ibsa.ch?subject=AmiKo%20Desktop%20IBSA%20Feedback");
+							URI mail_to_uri = URI.create("mailto:" + service_address + "?subject=AmiKo%20Desktop%20IBSA%20Feedback");
 							Desktop.getDesktop().mail(mail_to_uri);
 						} catch (IOException e) {
 							// TODO:
@@ -2382,7 +2384,7 @@ public class AMiKoDesk {
 		//
 		toolBar.setRollover(true);
 		toolBar.setFloatable(false);
-
+		
 		// ------ Setup settingspage ------
 		m_settings_page = new SettingsPage(jframe, m_rb, m_user_map);
 		m_settings_page.initUserSettings();
@@ -2493,18 +2495,15 @@ public class AMiKoDesk {
 			public void actionPerformed(ActionEvent event) {
 				// Check first m_application_folder otherwise resort to
 				// pre-installed report
-				String report_file = m_application_data_folder + "\\"
-						+ Constants.DEFAULT_AMIKO_REPORT_BASE
+				String report_file = m_application_data_folder + "\\" + Constants.DEFAULT_AMIKO_REPORT_BASE
 						+ Utilities.appLanguage() + ".html";
 				if (!(new File(report_file)).exists())
-					report_file = System.getProperty("user.dir") + "/dbs/"
-							+ Constants.DEFAULT_AMIKO_REPORT_BASE
+					report_file = System.getProperty("user.dir") + "/dbs/" + Constants.DEFAULT_AMIKO_REPORT_BASE
 							+ Utilities.appLanguage() + ".html";
 				// Open report file in browser
 				if (Desktop.isDesktopSupported()) {
 					try {
-						Desktop.getDesktop().browse(
-								new File(report_file).toURI());
+						Desktop.getDesktop().browse(new File(report_file).toURI());
 					} catch (IOException e) {
 						// TODO:
 					}
@@ -2533,6 +2532,45 @@ public class AMiKoDesk {
 			public void actionPerformed(ActionEvent event) {
 				AmiKoDialogs ad = new AmiKoDialogs(Utilities.appLanguage(), Utilities.appCustomization());
 				ad.AboutDialog();
+			}
+		});
+		updatedb_item.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				if (m_mutex_update==false) {
+					m_mutex_update = true;
+					String db_file = m_maindb_update.doIt(jframe, Utilities.appLanguage(), Utilities.appCustomization(), m_application_data_folder, m_full_db_update);
+					// ... and update time
+					if (m_full_db_update==true) {
+						DateTime dT = new DateTime();
+						m_prefs.put("updateTime", dT.now().toString());		
+					}
+					//
+					if (!db_file.isEmpty()) {
+						// Save db path (can't hurt)
+						WindowSaver.setDbPath(db_file);
+					}
+				}
+			}
+		});
+		choosedb_item.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				String db_file = m_maindb_update.chooseFromFile(jframe, Utilities.appLanguage(), Utilities.appCustomization(), m_application_data_folder);
+				// ... and update time
+				DateTime dT = new DateTime();
+				m_prefs.put("updateTime", dT.now().toString());				
+				//
+				if (!db_file.isEmpty()) {
+					// Save db path (can't hurt)
+					WindowSaver.setDbPath(db_file);
+				}
+			}
+		});
+		db_version_item.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				updatedb_item.doClick();
 			}
 		});
 		
@@ -2635,6 +2673,9 @@ public class AMiKoDesk {
 		gbc.weightx = gbc.weighty = 0.0;
 		// --> container.add(but_customer, gbc);
 		left_panel.add(but_customer, gbc);
+
+		// Default: inititalize but title 
+		but_title.doClick();
 		
 		// Configure according to user id
 		boolean but_customer_enabled = isOperator(18) && m_curr_uistate.isShoppingMode();
@@ -2685,11 +2726,10 @@ public class AMiKoDesk {
 
 		// ---- Section titles ----
 		m_middle_pane = null;
-		if (Utilities.appLanguage().equals("de")) {
+		if (Utilities.appLanguage().equals("de"))
 			m_middle_pane = new MiddlePane(SectionTitle_DE);
-		} else if (Utilities.appLanguage().equals("fr")) {
+		else if (Utilities.appLanguage().equals("fr"))
 			m_middle_pane = new MiddlePane(SectionTitle_FR);
-		}
 		m_middle_pane.setMinimumSize(new Dimension(150, 150));
 		m_middle_pane.setMaximumSize(new Dimension(320, 1000));
 
@@ -2700,15 +2740,13 @@ public class AMiKoDesk {
 		// Add JSplitPane on the RIGHT
 		final int Divider_location = 150;
 		final int Divider_size = 10;
-		final JSplitPane split_pane_right = new JSplitPane(
-				JSplitPane.HORIZONTAL_SPLIT, m_middle_pane, m_web_panel);
+		final JSplitPane split_pane_right = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, m_middle_pane, m_web_panel );
 		split_pane_right.setOneTouchExpandable(true);
 		split_pane_right.setDividerLocation(Divider_location);
 		split_pane_right.setDividerSize(Divider_size);
 
 		// Add JSplitPane on the LEFT
-		JSplitPane split_pane_left = new JSplitPane(
-				JSplitPane.HORIZONTAL_SPLIT, left_panel, split_pane_right /* right_panel */);
+		JSplitPane split_pane_left = new JSplitPane( JSplitPane.HORIZONTAL_SPLIT, left_panel, split_pane_right /* right_panel */ );
 		split_pane_left.setOneTouchExpandable(true);
 		split_pane_left.setDividerLocation(320); // Sets the pane divider location
 		split_pane_left.setDividerSize(Divider_size);
@@ -2778,13 +2816,14 @@ public class AMiKoDesk {
 							if (m_curr_uistate.getPrevUseMode().equals("shopping")) {							
 								med_search = m_sqldb.searchRegNr(m_curr_regnr);
 								sRegNr();
-								cardl.show(p_results, final_regnr);
+								but_title.doClick();
+								cardl.show(p_results, final_title);
 								num_hits = med_search.size();
 								if (num_hits>0)
 									med_index = 0;	// Choose first hit
-							}
-							else
+							} else {
 								num_hits = retrieveAipsSearchResults(true);
+							}
 							m_status_label.setText(med_search.size() + " Suchresultate in " 
 									+ (System.currentTimeMillis() - m_start_time) / 1000.0f + " Sek.");
 							if (med_index < 0 && prev_med_index >= 0)
@@ -2897,23 +2936,30 @@ public class AMiKoDesk {
 						// Switch to shopping cart
 						int index = 1;
 						if (m_shopping_cart != null) {
+							m_shopping_cart.setCustomerGlnCode(m_customer_gln_code);
 							index = m_shopping_cart.getCartIndex();
 							m_web_panel.loadShoppingCartWithIndex(index);
 							// m_shopping_cart.printShoppingBasket();
 						}
 						// m_web_panel.updateShoppingHtml();
 						m_web_panel.updateListOfPackages();
-						// return;
-					}
-					// If button is clicked again, then show only ibsa or desitin products
-					m_curr_uistate.setQueryType(m_query_type=OWNER);
-					but_title.setSelected(true);
-					if (Utilities.appCustomization().equals("ibsa"))
-						med_search = m_sqldb.searchAuth("ibsa");
-					else if (Utilities.appCustomization().equals("desitin"))				
-						med_search = m_sqldb.searchAuth("desitin");
-					sAuth();
-					cardl.show(p_results, final_author);
+						//
+						/*
+						but_title.doClick();
+						cardl.show(p_results, final_title);
+						*/
+						// If button is clicked again, then show only ibsa or desitin products						
+						m_curr_uistate.setQueryType(m_query_type=OWNER);
+						if (Utilities.appCustomization().equals("ibsa"))
+							med_search = m_sqldb.searchAuth("ibsa");
+						else if (Utilities.appCustomization().equals("desitin"))				
+							med_search = m_sqldb.searchAuth("desitin");
+						// but_title.setSelected(true);
+						// sAuth();
+						but_auth.doClick();
+						cardl.show(p_results, final_author);
+						// but_title.doClick();
+					} 
 				} else {
 					selectShoppingCartButton.setSelected(false);
 					m_settings_page.displayUserSettings();
@@ -3151,42 +3197,6 @@ public class AMiKoDesk {
 		sTitle(); // Used instead of sTitle (which is slow)
 		cardl.show(p_results, final_title);
 
-		// Add menu item listeners
-		updatedb_item.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (m_mutex_update==false) {
-					m_mutex_update = true;
-					String db_file = m_maindb_update.doIt(jframe, Utilities.appLanguage(), Utilities.appCustomization(), m_application_data_folder, m_full_db_update);
-					// ... and update time
-					if (m_full_db_update==true) {
-						DateTime dT = new DateTime();
-						m_prefs.put("updateTime", dT.now().toString());		
-					}
-					//
-					if (!db_file.isEmpty()) {
-						// Save db path (can't hurt)
-						WindowSaver.setDbPath(db_file);
-					}
-				}
-			}
-		});
-
-		choosedb_item.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				String db_file = m_maindb_update.chooseFromFile(jframe, Utilities.appLanguage(), Utilities.appCustomization(), m_application_data_folder);
-				// ... and update time
-				DateTime dT = new DateTime();
-				m_prefs.put("updateTime", dT.now().toString());				
-				//
-				if (!db_file.isEmpty()) {
-					// Save db path (can't hurt)
-					WindowSaver.setDbPath(db_file);
-				}
-			}
-		});
-
 		/**
 		 * Observers
 		 */
@@ -3203,6 +3213,8 @@ public class AMiKoDesk {
 					if (!email_addr.isEmpty())
 						user_name += " / " + email_addr.trim();
 					jframe.setTitle(Constants.APP_NAME + user_name);
+					// Get gln code
+					m_customer_gln_code = m_prefs.get("glncode", "7610000000000");
 					// Change layout according to user id
 					boolean but_customer_enabled = isOperator(18) && m_curr_uistate.isShoppingMode();
 					but_customer.setVisible(but_customer_enabled);
@@ -3210,21 +3222,36 @@ public class AMiKoDesk {
 					//
 					boolean but_comparison_enabled = isOperator(19);
 					selectComparisonCartButton.setVisible(but_comparison_enabled);
-					selectComparisonCartButton.setEnabled(but_comparison_enabled);		
+					selectComparisonCartButton.setEnabled(but_comparison_enabled);							
 					// Refresh shopping if user has changed...
 					if (m_shopping_cart!=null) {
 						// Refresh some stuff
 						m_shopping_basket.clear();
-						m_customer_gln_code = "";					
+						m_shopping_cart.setCustomerGlnCode(m_customer_gln_code);
 						m_shopping_cart.saveWithIndex(m_shopping_basket);
+						// Desitin
+						if (Utilities.appCustomization().equals("desitin")) {
+							String ext_gln_code = m_customer_gln_code+"S";
+							if (m_user_map.containsKey(ext_gln_code)) {
+								User user = m_user_map.get(ext_gln_code);	// using only m_customer_gln_code leads to nullpointer exception!
+								m_shopping_cart.setUserCategory(user.category);
+							}														
+							if (m_map_desitin_conditions.containsKey(m_customer_gln_code)) {
+								m_shopping_cart.setMap(m_map_desitin_conditions.get(m_customer_gln_code));
+							}
+						}
 						m_web_panel.updateShoppingHtml();
 					}
 					// Go back to compendium search mode
 					new Toggle().toggleButton(selectAipsButton);
 					m_curr_uistate.setUseMode("aips");
+					m_curr_uistate.setQueryType(m_query_type=NAME);
 					med_search = m_sqldb.searchTitle("");
 					sTitle(); // Used instead of sTitle (which is slow)
-					cardl.show(p_results, final_title);				
+					but_title.doClick();
+					cardl.show(p_results, final_title);			
+					// Clean middle pane
+					m_web_panel.updateListOfPackages();
 					m_web_panel.noclickPage();
 				} else if (arg instanceof Address) {
 					// Update address
@@ -3246,13 +3273,15 @@ public class AMiKoDesk {
 				System.out.println(arg);
 				// Reset flag
 				m_full_db_update = true;
-				m_mutex_update = false;
+				m_mutex_update = false;				
+				db_push_menu.setVisible(false);
 				// Refresh some stuff after update
 				if (Utilities.appCustomization().equals("ibsa") || Utilities.appCustomization().equals("ywesee")) {
 					FileLoader file_loader = new FileLoader();
 					m_user_map = file_loader.loadGlnCodes("gln_codes.ser");				
 					m_list_of_authors = file_loader.loadAuthors();
 					m_emailer.loadAccess();
+					//
 					if (m_shopping_cart!=null) {
 						m_map_ibsa_conditions = file_loader.loadIbsaConditions();
 						m_map_ibsa_glns = file_loader.loadIbsaGlns();
@@ -3260,11 +3289,19 @@ public class AMiKoDesk {
 					}
 				} else if (Utilities.appCustomization().equals("desitin")) {
 					FileLoader file_loader = new FileLoader();
-					m_user_map = file_loader.loadGlnCodes("gln_codes_desitin.ser");				
+					m_user_map = file_loader.loadGlnCodes("desitin_gln_codes.ser");				
 					m_list_of_authors = file_loader.loadAuthors();
 					m_emailer.loadAccess();
+					//
 					if (m_shopping_cart!=null) {
+						if (m_user_map.containsKey(m_customer_gln_code+"S")) {
+							User user = m_user_map.get(m_customer_gln_code+"S");	// using only m_customer_gln_code leads to nullpointer exception!
+							m_shopping_cart.setUserCategory(user.category);
+						}														
 						m_map_desitin_conditions = file_loader.loadDesitinConditions();
+						if (m_map_desitin_conditions.containsKey(m_customer_gln_code)) {
+							m_shopping_cart.setMap(m_map_desitin_conditions.get(m_customer_gln_code));
+						}					
 					}
 				}
 				// Empty shopping basket
@@ -3316,7 +3353,35 @@ public class AMiKoDesk {
 			else if (!CML_OPT_REGNR.isEmpty())
 				startAppWithRegnr(but_regnr);
 		}
-
+		
+		// Check if new database is online!
+		if (Utilities.isInternetReachable()) {
+			String db_url = "http://pillbox.oddb.org/amiko_db_full_idx_" + Utilities.appLanguage() + ".zip";			
+			String local_file = Utilities.appDataFolder() + "/" + Constants.DEFAULT_AMIKO_DB_BASE + Utilities.appLanguage() + ".db.zip";
+			System.out.println(local_file);
+			try {
+				// Retrieve file length and date of remote file 
+				URL uri = new URL(db_url);
+				URLConnection ucon = uri.openConnection();
+				long size_remote_db_bytes = Long.parseLong(ucon.getHeaderField("Content-Length"));
+				long date = ucon.getDate();
+				// Local file size
+				long size_local_db_bytes = (new File(local_file)).length();
+				// Comparison
+				long diff_bytes = size_remote_db_bytes - size_local_db_bytes;
+				System.out.println("Size difference local and remote db = " + diff_bytes);
+				if (diff_bytes!=0) {
+					db_push_menu.setVisible(true);
+					if (Utilities.appLanguage().equals("de"))
+						db_version_item.setText("Version vom " + new SimpleDateFormat("dd.MM.yyyy").format(new Date(date)) + " runterladen...");
+					else if (Utilities.appLanguage().equals("fr"))
+						db_version_item.setText("Installez la version du " + new SimpleDateFormat("dd.MM.yyyy").format(new Date(date)) + "...");						
+				}
+			} catch(IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
 		// Start timer
 		Timer global_timer = new Timer();
 		// Time checks all 2 minutes (120'000 milliseconds)
@@ -3558,17 +3623,17 @@ public class AMiKoDesk {
 			// Use to group title if it exists
 			Product product = new Product();
 			product.title = ms.getAddInfo();
-			product.group_title = ms.getAddInfo();
+			product.group_title = ms.getAddInfo();		
 			product.author = ms.getAuth();
 			product.regnrs = ms.getRegnrs();
-			// If there is a group title, use it!
+			// If there is a group title, use it! group_title = title
 			if (product.group_title!=null && !product.group_title.isEmpty()) {
 				if (map_id.containsKey(product))
 					list_of_ids = map_id.get(product);
 				list_of_ids.add(ms.getId());
 				map_id.put(product, list_of_ids);
 			} else {	
-				// No group title available...
+				// No group title available... group_title = empty string
 				list_of_ids.add(ms.getId());
 				product.title = ms.getTitle();						
 				map_id.put(product, list_of_ids);
@@ -3600,7 +3665,7 @@ public class AMiKoDesk {
 							else
 								pack_info_str += "<font color=gray>" + pack_str_line + "</font><br>";
 						}								
-						pack_str_scanner.close();					
+						pack_str_scanner.close();				
 						m.add("<html><b>" + ms.getTitle() + "</b><br><font size=-1>" + pack_info_str + "</font></html>");
 						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
 						med_id.add(al);
@@ -3849,7 +3914,7 @@ public class AMiKoDesk {
 				info_str += "<font color=gray size=-1>" + s.zip + " " + s.city + "</font></body></html>";
 			} else if (!s.name1.isEmpty()){
 				info_str = "<html><body style=\"width:1024px;\"><b>" + s.name1 + "</b><br>";
-				info_str += "<font color=gray size=-1>" + s.street + " " + s.number + "</font><br>";
+				info_str += "<font color=gray size=-1>" + s.street + "</font><br>";
 				info_str += "<font color=gray size=-1>" + s.zip + " " + s.city + "</font></body></html>";
 			}
 			m.add(info_str);
@@ -3857,12 +3922,7 @@ public class AMiKoDesk {
 		}
 		m_list_customers.update(m);
 	}
-	
-	/**
-	 * Nicely formats search for ingredient ("Wirkstoff")
-	 * 
-	 * @param query_str
-	 */
+
 	static void sIngredient() {
 		med_id.clear();
 		List<String> m = new ArrayList<String>();
@@ -3884,11 +3944,5 @@ public class AMiKoDesk {
 			}
 		}
 		m_list_ingredients.update(m);
-	}
-
-	static String readFromFileFast(String filename, Charset encoding)
-			throws IOException {
-		byte[] encoded = Files.readAllBytes(Paths.get(filename));
-		return encoding.decode(ByteBuffer.wrap(encoded)).toString();
 	}
 }

@@ -3,12 +3,11 @@
 
 #define MyAppFolder "09_amikodesk_ibsa_exe32"
 #define MyAppName "AmiKo Desktop IBSA"
-#define MyVersion "1.3.7"
+#define MyVersion "1.3.9"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "amikodeskibsa.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"
 #define MyWorkingDir = "E:\Projects\Pharmax\AmiKoWindows"
-#define MyIconDir "icons\ibsa_ico.ico"
 
 [Code]
 function IsRegularUser(): Boolean;

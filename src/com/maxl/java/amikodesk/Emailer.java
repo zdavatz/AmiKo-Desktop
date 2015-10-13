@@ -475,9 +475,9 @@ public class Emailer {
 							mSbasket.generateCsv(author, p + ".csv", "specific");
 							index++;
 							mDialog.setLabel("Sending " + author.getCompany() + " order...");
-							// Send email							
+							// Send email			
 							sendWithAttachment(author, order_filename, p);
-							// If ibsa send FTP					
+							// If ibsa or desitin send FTP					
 							if (author.getS()!=null && !author.getS().isEmpty()) {
 								uploadToFTPServer(author, order_filename, p + ".csv");
 								uploadToFTPServer(author, address_filename, path + "\\" + address_filename + ".csv");

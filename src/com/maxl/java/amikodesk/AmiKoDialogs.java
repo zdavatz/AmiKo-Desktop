@@ -392,11 +392,12 @@ public class AmiKoDialogs extends JDialog {
 		jAgb.setBarsVisible(false);	
 		// Default AGB text
 		String agb_html = "<html>No AGBs...</html>";
-		String agb_file = Utilities.appDataFolder() + "/" + Constants.AGBS_HTML + Utilities.appLanguage() + ".html";
+		String agb_prefix = Constants.AGBS_HTML;
+		String agb_file = Utilities.appDataFolder() + "/" + agb_prefix + Utilities.appCustomization() + "_" + Utilities.appLanguage() + ".html";
 		if ((new File(agb_file)).exists())
 			agb_html = FileOps.readFromFile(agb_file);
 		else 
-			agb_html = FileOps.readFromFile("./shop/agbs_" + Utilities.appLanguage() + ".html");				
+			agb_html = FileOps.readFromFile(Constants.SHOP_FOLDER + agb_prefix + Utilities.appCustomization() + "_" + Utilities.appLanguage() + ".html");
 		jAgb.setHTMLContent("<html>" + agb_html + "</html>");
 		jAgb.setVisible(true);
 		

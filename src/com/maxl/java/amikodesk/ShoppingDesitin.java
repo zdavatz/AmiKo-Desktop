@@ -20,6 +20,8 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 	
 	private static Preferences m_prefs;
 	
+	private static char m_user_class = ' ';
+	
 	private boolean checkForArticle(String n) {
 		// For these articles the shipping is free
 		return false;
@@ -88,8 +90,25 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 		m_map_desitin_conditions = conditions;
 	}
 	
+	public void setUserCategory(String cat) {
+		switch(cat) {
+		case "Spital":
+			m_user_class = 'S';
+			break;
+		case "Arzt":
+			m_user_class = 'P'; // Praxisapotheke
+			break;
+		case "Apotheke":
+			m_user_class = 'O'; // Offizinalapotheke
+			break;
+		case "Grossist":
+			m_user_class = 'G';
+			break;
+		}
+	}	
+	
 	public String updateShoppingCartHtml(Map<String, Article> shopping_basket) {
-		String basket_html_str = "<table style=\"background-color:#fffff0\" id=\"Warenkorb\" width=\"99%25\" >";
+		String basket_html_str = "<table style=\"background-color:#ffffe0\" id=\"Warenkorb\" width=\"99%25\" >";
 		String bar_charts_str = "";
 		
 		String load_order_str = "";
@@ -137,7 +156,7 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 						article.setCashRebate(cr);
 					// Set buying price
 					article.setBuyingPrice(article.getExfactoryPriceAsFloat());					
-					
+															
 					// For the sum
 					subtotal_buying_CHF += (article.getTotBuyingPrice(cr));
 					if (article.isSpecial())	// article is in SL Liste
@@ -179,7 +198,7 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 					String tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
 					String profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
 					String cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
-					
+
 					basket_html_str += "<tr id=\"" + ean_code + "\">";
 					basket_html_str += "<td>" + ean_code + "</td>"
 							+ "<td>" + category + "</td>"
@@ -253,7 +272,7 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 				+ "<div id=\"shopping\">" + basket_html_str + bar_charts_str + "<br />"
 				+ "<form><table class=\"container\"><tr>" + delete_all_button_str + generate_pdf_str + generate_csv_str + checkout_str + "</tr>"
 				+ "<tr>" + delete_all_text + generate_pdf_text + generate_csv_text + checkout_text + "</tr></table></form>"
-				+ footnotes_str
+				// + footnotes_str
 				+ "</div></body></html>";		
 		
 		return m_html_str;
@@ -348,7 +367,7 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 			fast_order_str[i-1] = "<button " + button_pressed + " id=\"loadCart" + i + "\" tabindex=\"-1\" onclick=\"loadCart(this," + i + ")\">" + m_rb.getString("shoppingCart") + " " + i + "</button>";
 		}
 		
-		String checkout_html_str = "<table id=\"Checkout\" width=\"99%25\">";
+		String checkout_html_str = "<table style=\"background-color:#ffffe0\" id=\"Checkout\" width=\"99%25\">";
 		
 		checkout_html_str += "<tr>"
 				+ "<td style=\"text-align:left; padding-top:8px; padding-bottom:8px;\";><b>" + m_rb.getString("owner") + "</b></td>"			
@@ -361,23 +380,18 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 
 		m_map_owner_total = new TreeMap<String, Owner>();		
 		String author = "";
-		// Generate set of authors
+		// Generate set of authors for all articles listed in shopping basket
 		Set<String> set_of_authors = new HashSet<String>();
 		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 			set_of_authors.add(entry.getValue().getAuthor());
 		}
-		
-		boolean shipping_free = true; 	// Some combinations of articles can be shipped for free... keep track
-		float shipping_CHF = 0.0f;		
-		char shipping_type = 'Z';
+			
 		// Loop through all articles in shopping basket
 		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
 			Article article = entry.getValue();			
 			float price = 0.0f;
 			float vat = 0.0f;	// vat in [CHF]
-			// Is the shipping still free?
-			shipping_free &= checkForArticle(article.getPackTitle());
-			// Special rule for "ibsa"
+			// Special rule for "desitin"
 			if (article.getCode()!=null && article.getCode().equals("desitin")) {
 				float cr = article.getCashRebate();
 				price = article.getTotBuyingPrice(cr);
@@ -386,6 +400,7 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 			}
 			// Update map from author/owner to total spent
 			vat = price * article.getVat()/100.0f;
+			// This is the manufacturer of the article
 			author = article.getAuthor();
 			// Loop through set of authors and find matches
 			for (String a : set_of_authors) {
@@ -394,29 +409,22 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 			}			
 			// System.out.println(author);
 			if (author!=null) {
-				float sum_price = 0.0f;
+				float sum_price = price;
 				float sum_vat25 = 0.0f;
 				float sum_vat80 = 0.0f;
 				if (m_map_owner_total.containsKey(author)) {
-					sum_price = m_map_owner_total.get(author).subtotal_CHF;
+					sum_price += m_map_owner_total.get(author).subtotal_CHF;
 					sum_vat25 = m_map_owner_total.get(author).vat25_CHF;
 					sum_vat80 = m_map_owner_total.get(author).vat80_CHF;
 				}
-				if (shipping_free) {
-					shipping_CHF = 0.0f;
-					shipping_type = 'Z';
-				} else if (sum_price>=500.0f) {
-					shipping_CHF = 0.0f;
-					shipping_type = 'Z';
-				} else {
-					shipping_CHF = 7.35f;
-					shipping_type = 'B';					
-				}
+				
 				if (article.getVat()==2.5f) {
-					Owner o = new Owner(sum_price + price, sum_vat25 + vat, sum_vat80, shipping_CHF, shipping_type); 	// Default: B-Post
+					Owner o = new Owner(author, sum_price, sum_vat25 + vat, sum_vat80, 0.0f, "AZ"); 	// Default: B-Post
+					o.updateShippingCosts(m_user_class);
 					m_map_owner_total.put(author, o);				
 				} else {
-					Owner o = new Owner(sum_price + price, sum_vat25, sum_vat80 + vat, shipping_CHF, shipping_type); 	// Default: B-Post
+					Owner o = new Owner(author, sum_price, sum_vat25, sum_vat80 + vat, 0.0f, "AZ"); 	// Default: B-Post
+					o.updateShippingCosts(m_user_class);
 					m_map_owner_total.put(author, o);									
 				}
 			}
@@ -432,27 +440,24 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 		// Loop through all authors and generate html
 		for (Map.Entry<String, Owner> e : m_map_owner_total.entrySet()) { 
 			author = e.getKey();
-			float subtotal_CHF = e.getValue().subtotal_CHF;			
-			float vat25_CHF = e.getValue().vat25_CHF;
-			float vat80_CHF = e.getValue().vat80_CHF;
-			shipping_CHF = e.getValue().shipping_CHF;
-			shipping_type = e.getValue().shipping_type;
+			Owner owner = e.getValue();
+			float subtotal_CHF = owner.subtotal_CHF;			
+			float vat25_CHF = owner.vat25_CHF;
+			float vat80_CHF = owner.vat80_CHF;
+			float shipping_CHF = owner.shipping_CHF;
+			boolean shipping_free = owner.shipping_free;			
 			String versand_optionen = "";
+
 			if (checkIfSponsor(author)) {
 				if (!shipping_free) {
-					if (subtotal_CHF<=500.0f) {
-						versand_optionen = "<option value=\"B\">" + m_rb.getString("BPost") + ": +7.35 CHF</option>"
-								+ "<option value=\"A\">" + m_rb.getString("APost") + ": +7.95 CHF</option>"
-								+ "<option value=\"E\">" + m_rb.getString("express") + ": +17.90 CHF</option>";
-					} else {
-						shipping_CHF = 0.0f;
-						versand_optionen = "<option value=\"Z\">" + m_rb.getString("BPost") +": +0.00 CHF</option>"
-								+ "<option value=\"Z\">" + m_rb.getString("APost") + ": +0.00 CHF</option>"
-								+ "<option value=\"E\">" + m_rb.getString("express") + ": +17.90 CHF</option>";
-					}
+					String shipping_APost_CHF = "+" + String.format("%.2f", shipping_CHF) + " CHF";
+					String shipping_express_CHF = "+" + String.format("%.2f", (shipping_CHF + 40.0)) + " CHF";
+					versand_optionen = "<option value=\"A\">" + m_rb.getString("APost") + ": " + shipping_APost_CHF + "</option>"
+							+ "<option value=\"E\">" + m_rb.getString("express") + ": " + shipping_express_CHF + "</option>";					
 				} else {
 					shipping_CHF = 0.0f;
-					versand_optionen = "<option value=\"A\">" + m_rb.getString("APost") + ": +0.00 CHF</option>";
+					versand_optionen = "<option value=\"AZ\">" + m_rb.getString("APost") + ": +0.00 CHF</option>"
+						+ "<option value=\"E\">" + m_rb.getString("express") + ": +40.00 CHF</option>";
 				}
 			} else {
 				versand_optionen = m_rb.getString("deskOrder");
@@ -473,7 +478,7 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 			index++;
 			checkout_html_str += "<tr id=\"" + author + "\">"
 					+ "<td style=\"text-align:left; padding-top:8px;\">" + author + "</td>"			
-					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(subtotal_CHF) + "</td>";			// Subtotal (exkl. MwSt. + shipping costs)			
+					+ "<td style=\"text-align:right; padding-top:8px;\";>" + Utilities.prettyFormat(subtotal_CHF) + "</td>";		// Subtotal (exkl. MwSt. + shipping costs)			
 			if (checkIfSponsor(author)) {
 					checkout_html_str += "<td style=\"text-align:right; padding-top:8px;\"><select id=\"selected" + index + "\" style=\"width:180px; direction:rtl; text-align:left;\""
 						+ "onchange=\"changeShipping('Checkout',this," + index + ")\">"
@@ -575,28 +580,18 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 		return html_str;
 	}
 	
-	public String getCheckoutUpdateJS(String author, char shipping_type) {
-		float shipping_CHF = 0.0f;
-		switch (shipping_type) {
-		case 'Z':
-			shipping_CHF = 0.0f;
-			break;
-		case 'B':
-			shipping_CHF = 7.35f;
-			break;
-		case 'A':
-			shipping_CHF = 7.95f;
-			break;
-		case 'E':
-			shipping_CHF = 17.90f;
-			break;
-		}
-		// Update shipping costs
-		float subtotal_CHF = m_map_owner_total.get(author).subtotal_CHF;	
-		float vat25_CHF = m_map_owner_total.get(author).vat25_CHF;
-		float vat80_CHF = m_map_owner_total.get(author).vat80_CHF;
-		Owner owner = new Owner(subtotal_CHF, vat25_CHF, vat80_CHF, shipping_CHF, shipping_type);
+	public String getCheckoutUpdateJS(String author, String shipping_type) {	
+		Owner owner = m_map_owner_total.get(author);
+
+		float subtotal_CHF = owner.subtotal_CHF;	
+		float vat25_CHF = owner.vat25_CHF;
+		float vat80_CHF = owner.vat80_CHF;
+		float shipping_CHF = owner.shipping_CHF;
+		if (shipping_type.equals("E"))
+			shipping_CHF += 40.0f;
+		owner.updateShippingCosts(m_user_class);
 		m_map_owner_total.put(author, owner);
+		
 		// Calculate new total
 		float total_CHF = subtotal_CHF + vat25_CHF + vat80_CHF + 1.08f*shipping_CHF; 
 		vat80_CHF += 0.08f*shipping_CHF;
@@ -606,15 +601,17 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 		float sum_vat80_CHF = 0.0f;
 		float sum_shipping_CHF = 0.0f;
 		float grand_total_CHF = 0.0f;
+		// Loop through all owners...
 		for (Map.Entry<String, Owner> e : m_map_owner_total.entrySet()) { 
 			author = e.getKey();
-			float t_CHF = e.getValue().subtotal_CHF + e.getValue().vat25_CHF + e.getValue().vat80_CHF + 1.08f*e.getValue().shipping_CHF;
+			Owner o = e.getValue();
+			float t_CHF = o.subtotal_CHF + o.vat25_CHF + o.vat80_CHF + 1.08f*o.shipping_CHF;
 			// All sums
-			sum_total_CHF += e.getValue().subtotal_CHF;
-			if (shipping_type!='Z' && checkIfSponsor(author)) 
-				sum_shipping_CHF += e.getValue().shipping_CHF;
-			sum_vat25_CHF += e.getValue().vat25_CHF;
-			sum_vat80_CHF += e.getValue().vat80_CHF + e.getValue().shipping_CHF*0.08f;
+			sum_total_CHF += o.subtotal_CHF;
+			if (!shipping_type.contains("Z") && checkIfSponsor(author)) 
+				sum_shipping_CHF += o.shipping_CHF;
+			sum_vat25_CHF += o.vat25_CHF;
+			sum_vat80_CHF += o.vat80_CHF + o.shipping_CHF*0.08f;
 			grand_total_CHF += t_CHF;
 		}		
 		

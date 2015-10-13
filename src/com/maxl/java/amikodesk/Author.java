@@ -36,7 +36,7 @@ public class Author {
 	private float vat80_CHF;
 	private float shipping_CHF;
 	private float additional_discount;
-	private char shipping_type;
+	private String shipping_type;
 	
 	public Author() {
 		//
@@ -151,7 +151,7 @@ public class Author {
 		return this.o;
 	}
 
-	public void setCosts(float subtotal, float vat25, float vat80, float shipping, char type) {
+	public void setCosts(float subtotal, float vat25, float vat80, float shipping, String type) {
 		subtotal_CHF = subtotal;
 		vat25_CHF = vat25;
 		vat80_CHF = vat80;
@@ -175,7 +175,7 @@ public class Author {
 		return shipping_CHF;
 	}	
 	
-	public char getShippingType() {
+	public String getShippingType() {
 		return shipping_type;
 	}
 	

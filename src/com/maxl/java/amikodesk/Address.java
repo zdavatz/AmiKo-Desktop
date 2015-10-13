@@ -116,10 +116,12 @@ public class Address implements java.io.Serializable {
 		// Title, first name and last name
 		addr_str += addLine(title + " " + fname + " " + lname);
 
-		// Not sooo important
+		// Not sooo important, but try to avoid lines which are identical
 		addr_str += addLine(name1);
-		addr_str += addLine(name2);
-		addr_str += addLine(name3);
+		if (!name2.equals(name1))
+			addr_str += addLine(name2);
+		if (!name3.equals(name2))
+			addr_str += addLine(name3);
 		
 		// Street, zip code and city
 		addr_str += addLine(street);

@@ -32,9 +32,12 @@ import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CodingErrorAction;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -55,9 +58,8 @@ public class FileOps {
             br.close();
         }
         catch (Exception e) {
-        	System.err.println(">> Error in reading file");        	
-        }
-        
+        	System.err.println(">> Error reading file " + filename);        	
+        }        
 		return file_str;	
 	}	
 	
@@ -123,6 +125,12 @@ public class FileOps {
 		} catch(IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	static public String readFromFileFast(String filename, Charset encoding)
+			throws IOException {
+		byte[] encoded = Files.readAllBytes(Paths.get(filename));
+		return encoding.decode(ByteBuffer.wrap(encoded)).toString();
 	}
 	
 	static public byte[] serialize(Object obj) {

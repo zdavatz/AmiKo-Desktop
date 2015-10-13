@@ -58,7 +58,7 @@ public class SplashWindow extends JWindow {
             JLabel image = new JLabel(new ImageIcon("./images/desitin_new.jpg"));
             JLabel copyrt = new JLabel
             		("<html><center><br>" + m_app_name + "<br>" +
-            				"Copyright @ 2014 ywesee GmbH<br>" +
+            				"Copyright @ 2015 ywesee GmbH<br>" +
             				"" +
             				"</center><br></html>", JLabel.CENTER);
             copyrt.setFont(new Font("Dialog", Font.PLAIN, 14));

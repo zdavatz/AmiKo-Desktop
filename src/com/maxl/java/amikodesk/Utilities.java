@@ -19,10 +19,17 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package com.maxl.java.amikodesk;
 
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Font;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
+
+import javax.swing.UIManager;
+import javax.swing.plaf.FontUIResource;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Entities.EscapeMode;
@@ -74,7 +81,6 @@ public class Utilities {
 		return String.format("%,.2f", value);
 	}
 	
-	
 	static public boolean isInternetReachable() {
         try {
             // Make a URL to a known source
@@ -104,4 +110,26 @@ public class Utilities {
 		
 		return mDoc.toString();
 	}
+	
+	static public void setUIFont(FontUIResource f) {
+		Enumeration<Object> keys = UIManager.getDefaults().keys();
+	    while (keys.hasMoreElements()) {
+	    	Object key = keys.nextElement();
+	        Object value = UIManager.get(key);
+	        if (value instanceof FontUIResource) {
+	        	FontUIResource orig = (FontUIResource) value;
+	            Font font = new Font(f.getFontName(), orig.getStyle(), orig.getSize());
+	            UIManager.put(key, new FontUIResource(font));
+	        }
+	    }
+	}
+	
+   static void recursivelySetFonts(Component comp, Font font) {
+        comp.setFont(font);
+        if (comp instanceof Container) {
+            Container cont = (Container) comp;
+            for(int j=0, ub=cont.getComponentCount(); j<ub; ++j)
+                recursivelySetFonts(cont.getComponent(j), font);
+        }
+    }
 }

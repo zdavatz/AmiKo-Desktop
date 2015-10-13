@@ -29,6 +29,7 @@ public class Constants {
 	public static final String DEFAULT_INTERACTION_DB_BASE = "drug_interactions_idx_";
 	public static final String DEFAULT_INTERACTION_CSV_BASE = "drug_interactions_csv_";
 	public static final String AGBS_HTML = "agbs_";
+	public static final String GLN_CODES_FILE = "gln_codes_csv.csv";
 	public static final String DEFAULT_ROSE_DB = "rose_db_full.db";
 	
 	// Important folders and files
@@ -75,6 +76,6 @@ public class Constants {
 	// public static final String APP_NAME = COMED_ZURROSE_NAME;
 	// public static final String APP_NAME = AMIKO_IBSA_NAME;
 	// public static final String APP_NAME = COMED_IBSA_NAME;
-	public static final String APP_VERSION = "1.3.7 (32-bit)";	
-	public static final String GEN_DATE = "19.07.2015";	
+	public static final String APP_VERSION = "1.4.0 (32-bit)";	
+	public static final String GEN_DATE = "12.10.2015";	
 }

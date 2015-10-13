@@ -100,12 +100,14 @@ public class UpdateDb {
 		String amiko_report_url = "http://pillbox.oddb.org/amiko_report_de.html";
 		String drug_interactions_url = "http://pillbox.oddb.org/drug_interactions_csv_de.zip";
 		String shop_files_url = "http://pillbox.oddb.org/shop.zip";
+		String desitin_files_url = "http://pillbox.oddb.org/desitin.zip";
 		String rose_files_url = "http://pillbox.oddb.org/rose.zip";
 		// These are the local filenames
 		String db_unzipped = app_folder + "\\amiko_db_full_idx_de.db";
 		String amiko_report_plain = app_folder + "\\amiko_report_de.html";
 		String drug_interactions_unzipped = app_folder + "\\drug_interactions_csv_de.csv";
 		String shop_files_zipped = app_folder + "\\shop_files.zip";
+		String desitin_files_zipped = app_folder + "\\desitin_files.zip";
 		String rose_files_zipped = app_folder + "\\rose_files.zip";		
 		
 		// ... works also for "fr"
@@ -127,11 +129,13 @@ public class UpdateDb {
 			new DownloadDialog(
 					db_url, amiko_report_url, 
 					drug_interactions_url, 
-					shop_files_url, 
+					shop_files_url,
+					desitin_files_url,
 					rose_files_url,
 					db_unzipped, amiko_report_plain, 
 					drug_interactions_unzipped, 
 					shop_files_zipped, 
+					desitin_files_zipped,
 					rose_files_zipped);
 		else {
 			AmiKoDialogs cd = new AmiKoDialogs(db_lang, custom);
@@ -153,10 +157,12 @@ public class UpdateDb {
 	    		String databaseURL, String reportURL, 
 	    		String drugInteractionsURL, 
 	    		String shopFilesURL, 
+	    		String desitinFilesURL,
 	    		String roseFilesURL,
 	    		String unzippedDB, String amikoReport, 
 	    		String drugInteractionsUnzipped, 
 	    		String shopFilesZipped, 
+	    		String desitinFilesZipped,
 	    		String roseFilesZipped) {
 	    	progressBar.setPreferredSize(new Dimension(640, 30));
 	    	progressBar.setStringPainted(true);			
@@ -188,6 +194,8 @@ public class UpdateDb {
 				icon = new ImageIcon(Constants.DESITIN_ICON);
 			else if (m_customization.equals("meddrugs"))
 				icon = new ImageIcon(Constants.MEDDRUGS_ICON);
+			else if (m_customization.equals("ibsa")) 
+				icon = new ImageIcon(Constants.IBSA_ICON);
 			dialog.setIconImage(icon.getImage());			
 			dialog.setVisible(true);
 			
@@ -199,10 +207,12 @@ public class UpdateDb {
 					databaseURL, reportURL, 
 					drugInteractionsURL, 
 					shopFilesURL, 
+					desitinFilesURL,
 					roseFilesURL,
 					new File(unzippedDB), new File(amikoReport), 
 					new File(drugInteractionsUnzipped), 
 					new File(shopFilesZipped),
+					new File(desitinFilesZipped),
 					new File(roseFilesZipped)); 
 			// Attach property listener to it
     		mainDownloadWorker.addPropertyChangeListener(this);
@@ -250,32 +260,38 @@ public class UpdateDb {
 		private String mReportURL;
 		private String mDrugInteractionsURL;
 		private String mShopFilesURL;
+		private String mDesitinFilesURL;
 		private String mRoseFilesURL;
 		private File mAmikoDatabase;
 		private File mAmikoReport;
 		private File mDrugInteractions;
 		private File mShopFiles;
+		private File mDesitinFiles;
 		private File mRoseFiles;
 
 		public MainDownloadWorker(DownloadDialog dialog, 
 				String databaseURL, String reportURL, 
 				String drugInteractionsURL, 
 				String shopFilesURL,
+				String desitinFilesURL,
 				String roseFilesURL,
 				File amikoDatabase, File amikoReport, 
 				File drugInteractions, 
 				File shopFiles,
+				File desitinFiles,
 				File roseFiles) {
 			mDialog = dialog;			
 			mDatabaseURL = databaseURL;
 			mReportURL = reportURL;
 			mDrugInteractionsURL = drugInteractionsURL;			
 			mShopFilesURL = shopFilesURL;
+			mDesitinFilesURL = desitinFilesURL;
 			mRoseFilesURL = roseFilesURL;
 			mAmikoDatabase = amikoDatabase;
 			mAmikoReport = amikoReport;
 			mDrugInteractions = drugInteractions;
 			mShopFiles = shopFiles;
+			mDesitinFiles = desitinFiles;
 			mRoseFiles = roseFiles;
 		}
 		
@@ -390,6 +406,9 @@ public class UpdateDb {
 				if (Utilities.appCustomization().equals("ibsa")) {
 					downloadedFile = downloader("shopping files", mShopFilesURL, mShopFiles, true);
 					unzipper(downloadedFile, mShopFiles);
+				} else if (Utilities.appCustomization().equals("desitin")) {
+					downloadedFile = downloader("desitin files", mDesitinFilesURL, mDesitinFiles, true);
+					unzipper(downloadedFile, mDesitinFiles);
 				}
 			}
 						
@@ -416,7 +435,9 @@ public class UpdateDb {
 		        	if (m_sqldb.loadDBFromPath(db_file)>0 && m_sqldb.getUserVersion()>0 && m_sqldb.getNumRecords()>0) {
 		        		// Setup icon
 		        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
-		    			if (m_customization.equals("desitin"))
+		        		if (m_customization.equals("ibsa"))
+		        			icon = new ImageIcon(Constants.IBSA_ICON);
+		        		else if (m_customization.equals("desitin"))
 		    				icon = new ImageIcon(Constants.DESITIN_ICON);	        		
 		    	        Image img = icon.getImage();
 		    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
@@ -489,7 +510,7 @@ public class UpdateDb {
 		fc.setAccessory(bc);		
 		
 		// Adjust fonts
-        recursivelySetFonts(fc, new Font("Dialog", Font.PLAIN, 12));
+        Utilities.recursivelySetFonts(fc, new Font("Dialog", Font.PLAIN, 12));
         int returnVal = -1;
         
         // Language settings
@@ -531,7 +552,9 @@ public class UpdateDb {
 	        		m_sqldb.copyDB(new File(db_file), new File(app_folder + "\\amiko_db_full_idx_" + db_lang + ".db"));
 	        		// Setup icon
 	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
-	    			if (m_customization.equals("desitin"))
+	        		if (m_customization.equals("ibsa"))
+	        			icon = new ImageIcon(Constants.IBSA_ICON);
+	        		else if (m_customization.equals("desitin"))
 	    				icon = new ImageIcon(Constants.DESITIN_ICON);
 	    	        Image img = icon.getImage();
 	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
@@ -598,7 +621,9 @@ public class UpdateDb {
 			dialog.setLocationRelativeTo(null);
 			dialog.setModal(false);			
 			ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
-			if (m_customization.equals("desitin"))
+    		if (m_customization.equals("ibsa"))
+    			icon = new ImageIcon(Constants.IBSA_ICON);
+    		else if (m_customization.equals("desitin"))
 				icon = new ImageIcon(Constants.DESITIN_ICON);
 			dialog.setIconImage(icon.getImage());			
 			dialog.setVisible(true);
@@ -705,17 +730,18 @@ public class UpdateDb {
 	        	if (m_sqldb.loadDBFromPath(db_file)>0 && m_sqldb.getNumRecords()>0) {
 	        		// Setup icon
 	        		ImageIcon icon = new ImageIcon(Constants.AMIKO_ICON);
-	    			if (m_customization.equals("desitin"))
+	        		if (m_customization.equals("ibsa"))
+	        			icon = new ImageIcon(Constants.IBSA_ICON);
+	        		else if (m_customization.equals("desitin"))
 	    				icon = new ImageIcon(Constants.DESITIN_ICON);
 	    	        Image img = icon.getImage();
 	    		    Image scaled_img = img.getScaledInstance(48, 48, java.awt.Image.SCALE_SMOOTH);
 	    		    icon = new ImageIcon(scaled_img);
 	    		    // Display friendly message
-	    		    if (m_app_lang.equals("de")) {
+	    		    if (m_app_lang.equals("de"))
 	    		    	mDialog.getLabel().setText("Neue AmiKo Datenbank mit " + m_sqldb.getNumRecords() + " Fachinfos erfolgreich geladen!");
-	    		    } else if (m_app_lang.equals("fr")) {
+	    		    else if (m_app_lang.equals("fr"))
 	    		    	mDialog.getLabel().setText("Nouvelle base de données avec " + m_sqldb.getNumRecords() + " notice infopro chargée avec succès!");
-	    		    }
 	    		    // Notify to GUI, update database 		    
 	    		    notifyObserver(db_file);
 	        	} else {
@@ -733,13 +759,4 @@ public class UpdateDb {
 			}
 		}
 	}
-	
-    private void recursivelySetFonts(Component comp, Font font) {
-        comp.setFont(font);
-        if (comp instanceof Container) {
-            Container cont = (Container) comp;
-            for(int j=0, ub=cont.getComponentCount(); j<ub; ++j)
-                recursivelySetFonts(cont.getComponent(j), font);
-        }
-    }
 }

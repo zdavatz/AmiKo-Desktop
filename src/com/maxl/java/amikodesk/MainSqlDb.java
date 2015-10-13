@@ -227,10 +227,17 @@ public class MainSqlDb {
 
 		try {
 			m_stat = m_conn.createStatement();
-			String query = "select " + SHORT_TABLE + " from " + DATABASE_TABLE + " where " 
-					+ KEY_TITLE + " like " + "'" + title + "%' or "
-					+ KEY_TITLE + " like " + "'%" + title + "%'";
-			m_rs = m_stat.executeQuery(query);
+			// Allow for search to start inside a word...
+			if (title.length()>2) {
+				String query = "select " + SHORT_TABLE + " from " + DATABASE_TABLE + " where " 
+						+ KEY_TITLE + " like " + "'" + title + "%' or "
+						+ KEY_TITLE + " like " + "'%" + title + "%'";
+				m_rs = m_stat.executeQuery(query);
+			} else {
+				String query = "select " + SHORT_TABLE + " from " + DATABASE_TABLE + " where " 
+						+ KEY_TITLE + " like " + "'" + title + "%'";
+				m_rs = m_stat.executeQuery(query);
+			}
 			while (m_rs.next()) {
 				med_titles.add(cursorToShortMedi(m_rs));
 			}

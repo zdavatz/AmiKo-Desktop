@@ -432,11 +432,13 @@ public class Article implements java.io.Serializable {
 	}
 	
 	public float getPublicPriceAsFloat() {
-		float public_as_float = 0.0f;
+		float public_as_float = 0.0f;		
 		String price_pruned = public_price.replaceAll("[^\\d.]", "");
 		if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {
 			public_as_float = Float.parseFloat(price_pruned);
-		}						
+		} else {
+			public_as_float = getExfactoryPriceAsFloat() * 1.80f;
+		}
 		return public_as_float;	
 	}
 	
@@ -505,7 +507,8 @@ public class Article implements java.io.Serializable {
 	}
 
 	public void setCashRebate(float cash_rebate) {
-		draufgabe = 0;
+		if (cash_rebate>0)
+			draufgabe = 0;
 		this.cash_rebate = cash_rebate;
 	}
 	

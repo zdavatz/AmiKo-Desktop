@@ -26,6 +26,7 @@ public class InteractionsCart {
 
 	private static String m_application_data_folder = null;
 	private static Map<String, String> m_interactions_map = null;
+	private static String m_images_dir = "";
 	private static String m_jscripts_str = null;
 	private static String m_css_interactions_str = null;
 	private static String[] m_section_titles = null;
@@ -37,6 +38,8 @@ public class InteractionsCart {
 			System.out.println("Loading default drug interactions csv file");
 			m_interactions_map = FileOps.readFromCsvToMap("./dbs/" + Constants.DEFAULT_INTERACTION_CSV_BASE + Utilities.appLanguage() + ".csv");
 		}
+		//
+		m_images_dir = System.getProperty("user.dir") + "/images/";	
 		// Load javascripts
 		m_jscripts_str = FileOps.readFromFile(Constants.JS_FOLDER + "interaction_callbacks.js");
 		// Load interactions css style sheet
@@ -87,13 +90,16 @@ public class InteractionsCart {
 						+ "<td>" + entry1.getKey() + " </td> " 
 						+ "<td>" + atc_code1 + "</td>"
 						+ "<td>" + name1 + "</td>"
-						+ "<td align=\"right\">" + "<input type=\"button\" value=\"" + delete_text + "\" onclick=\"deleteRow('Interaktionen',this)\" />" + "</td>";
+						// + "<td align=\"right\">" + "<input type=\"button\" value=\"" + delete_text + "\" onclick=\"deleteRow('Interaktionen',this)\" />" + "</td>";
+						+ "<td style=\"text-align:center;\">" + "<button type=\"button\" style=\"border:none;\" onclick=\"deleteRow('Interaktionen',this)\"><img src=\"" 
+							+ m_images_dir + "trash_icon_2.png\" /></button>" + "</td>";
+
 				basket_html_str += "</tr>";
-				med_counter++;					
+				med_counter++;												
 			}
 			basket_html_str += "</table>";
 			// Medikamentenkorb löschen
-			delete_all_button_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"" + delete_all_text + "\" onclick=\"deleteRow('Delete_all',this)\" /></div>";				
+			delete_all_button_str = "<div id=\"Delete_all\"><input type=\"button\" value=\"" + delete_all_text + "\" onclick=\"deleteRow('Delete_all',this)\" /></div>";	
 		} else {
 			// Medikamentenkorb ist leer
 			if (Utilities.appLanguage().equals("de"))
