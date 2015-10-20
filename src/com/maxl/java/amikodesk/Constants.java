@@ -68,8 +68,8 @@ public class Constants {
 	// -->> Note: uncomment name of app to compile!
 	// public static final String APP_NAME = AMIKO_NAME;
 	// public static final String APP_NAME = COMED_NAME;
-	public static final String APP_NAME = AMIKO_DESITIN_NAME;
-	// public static final String APP_NAME = COMED_DESITIN_NAME;
+	// public static final String APP_NAME = AMIKO_DESITIN_NAME;
+	public static final String APP_NAME = COMED_DESITIN_NAME;
 	// public static final String APP_NAME = AMIKO_MEDDRUGS_NAME;
 	// public static final String APP_NAME = COMED_MEDDRUGS_NAME;
 	// public static final String APP_NAME = AMIKO_ZURROSE_NAME;

@@ -29,8 +29,8 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 	
 	private boolean checkIfSponsor(String a) {
 		String author = a.toLowerCase();
-		return (author.contains("ibsa") || 
-				author.contains("desitin"));
+		return (author.contains("desitin")
+				/*|| author.contains("ibsa")*/);
 	}
 	
     private int totQuantity() {
@@ -582,14 +582,15 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 	
 	public String getCheckoutUpdateJS(String author, String shipping_type) {	
 		Owner owner = m_map_owner_total.get(author);
-
+		
 		float subtotal_CHF = owner.subtotal_CHF;	
 		float vat25_CHF = owner.vat25_CHF;
 		float vat80_CHF = owner.vat80_CHF;
+		owner.updateShippingCosts(m_user_class);
 		float shipping_CHF = owner.shipping_CHF;
 		if (shipping_type.equals("E"))
 			shipping_CHF += 40.0f;
-		owner.updateShippingCosts(m_user_class);
+		owner.shipping_CHF = shipping_CHF;
 		m_map_owner_total.put(author, owner);
 		
 		// Calculate new total
@@ -601,20 +602,16 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 		float sum_vat80_CHF = 0.0f;
 		float sum_shipping_CHF = 0.0f;
 		float grand_total_CHF = 0.0f;
-		// Loop through all owners...
+		// Loop through all owners...		
 		for (Map.Entry<String, Owner> e : m_map_owner_total.entrySet()) { 
-			author = e.getKey();
 			Owner o = e.getValue();
-			float t_CHF = o.subtotal_CHF + o.vat25_CHF + o.vat80_CHF + 1.08f*o.shipping_CHF;
 			// All sums
 			sum_total_CHF += o.subtotal_CHF;
-			if (!shipping_type.contains("Z") && checkIfSponsor(author)) 
-				sum_shipping_CHF += o.shipping_CHF;
 			sum_vat25_CHF += o.vat25_CHF;
 			sum_vat80_CHF += o.vat80_CHF + o.shipping_CHF*0.08f;
-			grand_total_CHF += t_CHF;
+			grand_total_CHF += o.subtotal_CHF + o.vat25_CHF + o.vat80_CHF + 1.08f*o.shipping_CHF;;
 		}		
-		
+			
 		String js = "document.getElementById('Checkout').rows.namedItem(\"" + author + "\").cells[4].innerHTML=\"" + Utilities.prettyFormat(vat80_CHF) + "\";"
 				+ "document.getElementById('Checkout').rows.namedItem(\"" + author + "\").cells[5].innerHTML=\"" + Utilities.prettyFormat(total_CHF) + "\";"
 				+ "document.getElementById('Checkout').rows.namedItem(\"GrandTotal\").cells[1].innerHTML=\"<b>" + Utilities.prettyFormat(sum_total_CHF) + "</b>\";"

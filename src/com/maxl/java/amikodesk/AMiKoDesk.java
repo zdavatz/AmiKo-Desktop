@@ -1224,7 +1224,7 @@ public class AMiKoDesk {
 						} else if (msg.startsWith("change_shipping")) {
 							// Extract shipping type (known types: AZ, BZ, A, B, and E)
 							String shipping_type = msg.replace("change_shipping", "");
-							System.out.println(" -> " + shipping_type);
+							// System.out.println(row_key + " -> " + shipping_type);
 							updateCheckoutTable(row_key, shipping_type);
 						} else if (msg.equals("check_out")) {
 							// Get shipping and billing address (if they exist)		
