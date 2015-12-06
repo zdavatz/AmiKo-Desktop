@@ -108,16 +108,20 @@ public abstract class ShoppingCart {
 	/**
 	 *  Virtual methods - implement in derived class, if required.
 	 */
-	public void setMap(TreeMap<String, Float> conditions) {
-		//
+	public void setMap(Map<String, Float> conditions) {
+		// VIRTUAL
 	}
 	
 	public void setMaps(Map<String, String> glns, TreeMap<String, Conditions> conditions) {
-		//
+		// VIRTUAL
+	}
+	
+	public void updateMapSimilarArticles(Map<String, List<Article>> similar_articles) {
+		// VIRTUAL
 	}
 	
 	public void setUserCategory(String cat) {
-		//
+		// VIRTUAL
 	}
 	
 	public List<String> getAssortList(String ean_code) {

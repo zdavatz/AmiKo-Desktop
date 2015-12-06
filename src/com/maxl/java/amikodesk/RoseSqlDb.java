@@ -11,7 +11,7 @@ import java.util.List;
 
 public class RoseSqlDb {
 
-	// private static final String KEY_ROWID = "_id";
+	private static final String KEY_ROWID = "_id";
 	private static final String KEY_TITLE = "title";
 	// private static final String KEY_SIZE = "size";
 	// private static final String KEY_GALEN = "galen";
@@ -37,7 +37,7 @@ public class RoseSqlDb {
 			// Initialize org.sqlite.JDBC driver
 			Class.forName("org.sqlite.JDBC");
 			// Create connection to db
-			String db_path = Constants.ROSE_FOLDER + "/rose_db_full.db";
+			String db_path = Constants.ROSE_FOLDER + "/rose_db_new_full.db";
 			m_conn = DriverManager.getConnection("jdbc:sqlite:" + db_path);		
 			m_stat = m_conn.createStatement();
 		} catch (SQLException e ) {
@@ -72,6 +72,34 @@ public class RoseSqlDb {
 			return 0;
 		}
 		return 1;
+	}
+	
+	private ResultSet getRecord(long rowId) throws SQLException {
+		ResultSet result = null;
+		
+		try {
+			m_stat = m_conn.createStatement();
+			String query = "select * from " + ROSE_DB_TABLE + " where "
+					+ KEY_ROWID + "=" + rowId;
+			m_rs = m_stat.executeQuery(query);
+			result = m_rs;
+		} catch (SQLException e) {
+			System.err.println(">> SqlDatabase: SQLException in getRecord!");
+		}
+
+		return result;
+	}
+	
+	public Article getArticleWithId(long rowId) {
+		Article article = null;
+
+		try {
+			article = cursorToArticle(getRecord(rowId));
+		} catch (SQLException e) {
+			System.err.println(">> SqlDatabase: SQLException in getMediWithId!");
+		}
+
+		return article;
 	}
 	
 	public List<Article> searchTitle(String title) {
@@ -173,7 +201,8 @@ public class RoseSqlDb {
 	}
 		
 	private Article cursorToArticle(ResultSet result) {
-		Article article = new Article();
+		Article article = new Article();		
+
 		try {
 			article.setId(result.getLong(1));			 	// KEY_ROWID
 			article.setPackTitle(result.getString(2));	 	// KEY_TITLE
@@ -201,10 +230,14 @@ public class RoseSqlDb {
 			}
 			article.setTherapyCode(result.getString(9)); 	// KEY_THERAPY
 			article.setItemsOnStock(result.getInt(10));	 	// KEY_STOCK
-			article.setExfactoryPrice(result.getString(11));// KEY_PRICE			
+			article.setExfactoryPrice(result.getString(11));// KEY_PRICE (= Rose Basis Preis)	
 			article.setAvailability(result.getString(12));	// KEY_AVAIL
 			article.setSupplier(result.getString(13));		// KEY_SUPPLIER
-			article.setLikes(result.getInt(14));			// KEY_LIKES		
+			article.setLikes(result.getInt(14));			// KEY_LIKES	
+			boolean off_market = result.getBoolean(17);
+			if (off_market)
+				article.setAvailability("-1");				// -1 -> not on the market anymore!
+			article.setFlags(result.getString(18));
 		} catch (SQLException e) {
 			System.err.println(">> RoseSqlDb: SQLException in cursorToArticle");
 		}

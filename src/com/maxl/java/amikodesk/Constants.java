@@ -24,6 +24,22 @@ public class Constants {
 		
 	public static String DB_LANGUAGE = "";	
 	
+	// German section title abbreviations
+	public static final String[] SectionTitle_DE = { "Zusammensetzung",
+			"Galenische Form", "Kontraindikationen", "Indikationen",
+			"Dosierung/Anwendung", "Vorsichtsmassnahmen", "Interaktionen",
+			"Schwangerschaft", "Fahrtüchtigkeit", "Unerwünschte Wirk.",
+			"Überdosierung", "Eig./Wirkung", "Kinetik", "Präklinik",
+			"Sonstige Hinweise", "Zulassungsnummer", "Packungen", "Inhaberin",
+			"Stand der Information" };
+	// French section title abbrevations
+	public static final String[] SectionTitle_FR = { "Composition",
+			"Forme galénique", "Contre-indications", "Indications",
+			"Posologie", "Précautions", "Interactions", "Grossesse/All.",
+			"Conduite", "Effets indésir.", "Surdosage", "Propriétés/Effets",
+			"Cinétique", "Préclinique", "Remarques", "Numéro d'autorisation",
+			"Présentation", "Titulaire", "Mise à jour" };
+	
 	public static final String DEFAULT_AMIKO_DB_BASE = "amiko_db_full_idx_";
 	public static final String DEFAULT_AMIKO_REPORT_BASE = "amiko_report_";
 	public static final String DEFAULT_INTERACTION_DB_BASE = "drug_interactions_idx_";
@@ -31,6 +47,7 @@ public class Constants {
 	public static final String AGBS_HTML = "agbs_";
 	public static final String GLN_CODES_FILE = "gln_codes_csv.csv";
 	public static final String DEFAULT_ROSE_DB = "rose_db_full.db";
+	public static final String ROSE_DB_NEW = "rose_db_new_full.db";
 	
 	// Important folders and files
 	public static final String IMG_FOLDER = "./images/";	
@@ -69,13 +86,13 @@ public class Constants {
 	// public static final String APP_NAME = AMIKO_NAME;
 	// public static final String APP_NAME = COMED_NAME;
 	// public static final String APP_NAME = AMIKO_DESITIN_NAME;
-	public static final String APP_NAME = COMED_DESITIN_NAME;
+	// public static final String APP_NAME = COMED_DESITIN_NAME;
 	// public static final String APP_NAME = AMIKO_MEDDRUGS_NAME;
 	// public static final String APP_NAME = COMED_MEDDRUGS_NAME;
-	// public static final String APP_NAME = AMIKO_ZURROSE_NAME;
+	public static final String APP_NAME = AMIKO_ZURROSE_NAME;
 	// public static final String APP_NAME = COMED_ZURROSE_NAME;
 	// public static final String APP_NAME = AMIKO_IBSA_NAME;
 	// public static final String APP_NAME = COMED_IBSA_NAME;
-	public static final String APP_VERSION = "1.4.0 (32-bit)";	
-	public static final String GEN_DATE = "12.10.2015";	
+	public static final String APP_VERSION = "1.4.1 (32-bit)";	
+	public static final String GEN_DATE = "25.11.2015";	
 }

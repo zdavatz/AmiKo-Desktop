@@ -27,6 +27,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.swing.UIManager;
 import javax.swing.plaf.FontUIResource;
@@ -36,6 +38,28 @@ import org.jsoup.nodes.Entities.EscapeMode;
 
 public class Utilities {
 
+	static public final Map<String, Integer> doctorPreferences;
+	static {
+		// LinkedHashMap preserves insertion order
+		doctorPreferences = new LinkedHashMap<String, Integer>();
+		doctorPreferences.put("actavis", 1);	// actavis switzerland ag
+		doctorPreferences.put("helvepharm", 2);	// helvepharm ag	
+		doctorPreferences.put("mepha", 3);	// mepha schweiz ag	
+		doctorPreferences.put("sandoz", 4);	// sandoz pharmaceuticals ag
+		doctorPreferences.put("spirig", 5);	// spirig healthcare ag
+	}
+	
+	static public final Map<String, String> rosePreferences;
+	static {
+		// LinkedHashMap preserves insertion order
+		rosePreferences = new LinkedHashMap<String, String>();
+		rosePreferences.put("7601001003736", "helvepharm");	// helvepharm ag
+		rosePreferences.put("7601001002340", "sanofi");		// sanofi-aventis (suisse) sa
+		rosePreferences.put("7601001029439", "sandoz");		// sandoz pharmaceuticals ag
+		rosePreferences.put("7601001396685", "mepha");		// mepha schweiz ag	
+		rosePreferences.put("7601001331709", "teva");		// teva pharma ag
+	}
+		
 	static public String appDataFolder() {
 		return (System.getenv("APPDATA") + "\\Ywesee\\" + Constants.APP_NAME);
 	}
@@ -72,11 +96,15 @@ public class Utilities {
 		return "";
 	}
 	
+	static public boolean isRoseShoppingApp() {
+		return appCustomization().equals("zurrose");
+	}
+	
 	static public boolean showFullSettings() {
 		return (appCustomization().equals("ibsa") || appCustomization().equals("zurrose") 
 				|| appCustomization().equals("ywesee") || appCustomization().equals("desitin"));
-	}
-	
+	}	
+	 
 	static public String prettyFormat(float value) {
 		return String.format("%,.2f", value);
 	}

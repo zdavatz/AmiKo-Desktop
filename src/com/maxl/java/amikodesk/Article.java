@@ -46,6 +46,7 @@ public class Article implements java.io.Serializable {
 	private String availability = "";
 	private String dropdown_str;
 	private String author_code = "";
+	private String flags = "";
 	private float margin = -1.0f;	// <0.0f -> not initialized
 	private float buying_price = 0.0f;
 	private float selling_price = 0.0f;;
@@ -592,5 +593,13 @@ public class Article implements java.io.Serializable {
 	
 	public String getAvailability() {
 		return availability;
+	}
+	
+	public void setFlags(String flags) {
+		this.flags = flags;
+	}
+	
+	public String getFlags() {
+		return flags;
 	}
 }

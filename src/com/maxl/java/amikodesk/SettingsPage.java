@@ -1477,7 +1477,10 @@ public class SettingsPage implements java.io.Serializable {
 				String mGLNCodeStr = mTextFieldGLN.getText();
 				if (mGLNCodeStr.matches("[\\d]{13}")) {
 					mPrefs.put(GLNCodeID, mGLNCodeStr);
-					m_user = m_user_map.get(mGLNCodeStr+"S");
+					if (Utilities.appCustomization().equals("zurrose"))
+						m_user = m_user_map.get(mGLNCodeStr);
+					else					
+						m_user = m_user_map.get(mGLNCodeStr+"S");
 					if (m_user!=null) {
 						//
 						jcheckAddress1.setSelected(false);

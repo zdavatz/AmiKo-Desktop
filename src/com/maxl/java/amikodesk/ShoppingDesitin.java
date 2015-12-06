@@ -22,11 +22,6 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 	
 	private static char m_user_class = ' ';
 	
-	private boolean checkForArticle(String n) {
-		// For these articles the shipping is free
-		return false;
-	}
-	
 	private boolean checkIfSponsor(String a) {
 		String author = a.toLowerCase();
 		return (author.contains("desitin")
@@ -86,8 +81,8 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 			m_rb = ResourceBundle.getBundle("amiko_fr_CH", new Locale("fr", "CH"));	
 	}
 	
-	public void setMap(TreeMap<String, Float> conditions) {
-		m_map_desitin_conditions = conditions;
+	public void setMap(Map<String, Float> conditions) {
+		m_map_desitin_conditions = (TreeMap<String, Float>)conditions;
 	}
 	
 	public void setUserCategory(String cat) {
@@ -107,6 +102,9 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 		}
 	}	
 	
+	/**
+	 * Html pages
+	 */	
 	public String updateShoppingCartHtml(Map<String, Article> shopping_basket) {
 		String basket_html_str = "<table style=\"background-color:#ffffe0\" id=\"Warenkorb\" width=\"99%25\" >";
 		String bar_charts_str = "";
@@ -276,79 +274,6 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 				+ "</div></body></html>";		
 		
 		return m_html_str;
-	}
-	
-	public String getRowUpdateJS(String ean_code, Article article) {
-		// Update cash rebate
-		String cash_rebate_percent = "0%";	
-		
-		float cr = getCashRebate(article);
-		if (cr>=0.0f)	// Used to be cr>0.0f... DOUBLE-CHECK!
-			article.setCashRebate(cr);				
-		cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
-		
-		String tot_buying_price_CHF = "";
-		String tot_selling_price_CHF = "";
-		String profit_CHF = "";
-				
-		if (article.getCode()!=null && article.getCode().equals("ibsa")) {
-			cr = getCashRebate(article);
-			if (article.isSpecial()) {
-				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice(cr));
-				tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
-				profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotBuyingPrice(cr));
-			} else {
-				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice(cr));
-				tot_selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
-				profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice(cr));
-			}			
-		} else {			
-			tot_buying_price_CHF = Utilities.prettyFormat(article.getTotExfactoryPrice());
-			tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
-			profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
-		}
-				
-		String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[4].innerHTML=\"" + tot_buying_price_CHF + "\";" 
-				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[5].innerHTML=\"" + tot_selling_price_CHF + "\";" 
-				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[6].innerHTML=\"" + profit_CHF + "\";"
-				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[7].innerHTML=\"" + cash_rebate_percent + "\";";
-
-		return js;
-	}
-	
-	public String getTotalsUpdateJS() {
-		float subtotal_buying = 0.0f;
-		float subtotal_selling = 0.0f;
-		
-		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-			Article article = entry.getValue();
-			if (article.getCode()!=null && article.getCode().equals("desitin")) {
-				float cr = article.getCashRebate();
-				if (article.isSpecial()) {
-					subtotal_buying += article.getTotBuyingPrice(cr);
-					subtotal_selling += article.getTotPublicPrice();
-				} else {
-					subtotal_buying += article.getTotBuyingPrice(cr);
-					subtotal_selling += article.getTotSellingPrice();					
-				}
-			} else {
-				subtotal_buying += article.getTotExfactoryPrice();
-				subtotal_selling += article.getTotPublicPrice();
-			}
-		}
-		String subtotal_buying_CHF = Utilities.prettyFormat(subtotal_buying);
-		String subtotal_selling_CHF = Utilities.prettyFormat(subtotal_selling);
-		String total_cash_rebate_percent = String.format("%.1f%%", getGrandTotalCashRebate());
-		String total_profit_CHF = Utilities.prettyFormat((subtotal_selling-subtotal_buying)/**1.08f*/);
-		String tot_quantity = String.format("%d", totQuantity());
-
-		String js =	"document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[3].innerHTML=\"<b>" + tot_quantity + "</b>\";"
-				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[4].innerHTML=\"<b>" + subtotal_buying_CHF + "</b>\";"
-				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[5].innerHTML=\"<b>" + subtotal_selling_CHF + "</b>\";"
-				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[6].innerHTML=\"<b>" + total_profit_CHF + "</b>\";"
-				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[7].innerHTML=\"<b>" + total_cash_rebate_percent + "</b>\";";
-		
-		return js;
 	}
 	
 	public String checkoutHtml(HashMap<String, Address> address_map) {
@@ -578,6 +503,82 @@ public class ShoppingDesitin extends ShoppingCart implements java.io.Serializabl
 				+ "</div></body></html>";		
 			
 		return html_str;
+	}
+	
+	/**
+	 * Javascript strings
+	 */	
+	public String getRowUpdateJS(String ean_code, Article article) {
+		// Update cash rebate
+		String cash_rebate_percent = "0%";	
+		
+		float cr = getCashRebate(article);
+		if (cr>=0.0f)	// Used to be cr>0.0f... DOUBLE-CHECK!
+			article.setCashRebate(cr);				
+		cash_rebate_percent = String.format("%.1f%%", article.getCashRebate());
+		
+		String tot_buying_price_CHF = "";
+		String tot_selling_price_CHF = "";
+		String profit_CHF = "";
+				
+		if (article.getCode()!=null && article.getCode().equals("ibsa")) {
+			cr = getCashRebate(article);
+			if (article.isSpecial()) {
+				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice(cr));
+				tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
+				profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotBuyingPrice(cr));
+			} else {
+				tot_buying_price_CHF = Utilities.prettyFormat(article.getTotBuyingPrice(cr));
+				tot_selling_price_CHF = Utilities.prettyFormat(article.getTotSellingPrice());
+				profit_CHF = Utilities.prettyFormat(article.getTotSellingPrice()-article.getTotBuyingPrice(cr));
+			}			
+		} else {			
+			tot_buying_price_CHF = Utilities.prettyFormat(article.getTotExfactoryPrice());
+			tot_selling_price_CHF = Utilities.prettyFormat(article.getTotPublicPrice());
+			profit_CHF = Utilities.prettyFormat(article.getTotPublicPrice()-article.getTotExfactoryPrice());
+		}
+				
+		String js = "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[4].innerHTML=\"" + tot_buying_price_CHF + "\";" 
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[5].innerHTML=\"" + tot_selling_price_CHF + "\";" 
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[6].innerHTML=\"" + profit_CHF + "\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"" + ean_code + "\").cells[7].innerHTML=\"" + cash_rebate_percent + "\";";
+
+		return js;
+	}
+	
+	public String getTotalsUpdateJS() {
+		float subtotal_buying = 0.0f;
+		float subtotal_selling = 0.0f;
+		
+		for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+			Article article = entry.getValue();
+			if (article.getCode()!=null && article.getCode().equals("desitin")) {
+				float cr = article.getCashRebate();
+				if (article.isSpecial()) {
+					subtotal_buying += article.getTotBuyingPrice(cr);
+					subtotal_selling += article.getTotPublicPrice();
+				} else {
+					subtotal_buying += article.getTotBuyingPrice(cr);
+					subtotal_selling += article.getTotSellingPrice();					
+				}
+			} else {
+				subtotal_buying += article.getTotExfactoryPrice();
+				subtotal_selling += article.getTotPublicPrice();
+			}
+		}
+		String subtotal_buying_CHF = Utilities.prettyFormat(subtotal_buying);
+		String subtotal_selling_CHF = Utilities.prettyFormat(subtotal_selling);
+		String total_cash_rebate_percent = String.format("%.1f%%", getGrandTotalCashRebate());
+		String total_profit_CHF = Utilities.prettyFormat((subtotal_selling-subtotal_buying)/**1.08f*/);
+		String tot_quantity = String.format("%d", totQuantity());
+
+		String js =	"document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[3].innerHTML=\"<b>" + tot_quantity + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[4].innerHTML=\"<b>" + subtotal_buying_CHF + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[5].innerHTML=\"<b>" + subtotal_selling_CHF + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[6].innerHTML=\"<b>" + total_profit_CHF + "</b>\";"
+				+ "document.getElementById('Warenkorb').rows.namedItem(\"Total\").cells[7].innerHTML=\"<b>" + total_cash_rebate_percent + "</b>\";";
+		
+		return js;
 	}
 	
 	public String getCheckoutUpdateJS(String author, String shipping_type) {	

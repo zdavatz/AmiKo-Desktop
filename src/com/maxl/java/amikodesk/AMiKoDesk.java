@@ -67,6 +67,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -183,12 +184,16 @@ public class AMiKoDesk {
 	private static List<User> list_of_gln_codes = new ArrayList<User>();
 	private static Map<String, Medication> m_med_basket = new TreeMap<String, Medication>();
 	private static Map<String, Article> m_shopping_basket = new LinkedHashMap<String, Article>();
-	private static Map<String, Article> m_comparison_basket = new LinkedHashMap<String, Article>();
 	private static HashMap<String, User> m_user_map = null;
 	private static HashMap<String, Address> m_address_map = null;
+	// Ibsa
 	private static TreeMap<String, Conditions> m_map_ibsa_conditions = null;
-	private static TreeMap<String, TreeMap<String, Float>> m_map_desitin_conditions = null;
 	private static Map<String, String> m_map_ibsa_glns = null;
+	// Desitin
+	private static TreeMap<String, TreeMap<String, Float>> m_map_desitin_conditions = null;
+	// Rose
+	private static Map<String, Article> m_comparison_basket = new LinkedHashMap<String, Article>();	
+	private static Map<String, List<Article>> m_map_similar_articles = new HashMap<String, List<Article>>();
 	
 	private static HashSet<String> favorite_meds_set;
 	private static DataStore favorite_data = null;
@@ -257,22 +262,6 @@ public class AMiKoDesk {
 	private static final int THERAPY = 4;
 	private static final int CUSTOMER = 5;
 	private static int m_query_type = NAME;
-	
-	// German section title abbreviations
-	private static final String[] SectionTitle_DE = { "Zusammensetzung",
-			"Galenische Form", "Kontraindikationen", "Indikationen",
-			"Dosierung/Anwendung", "Vorsichtsmassnahmen", "Interaktionen",
-			"Schwangerschaft", "Fahrtüchtigkeit", "Unerwünschte Wirk.",
-			"Überdosierung", "Eig./Wirkung", "Kinetik", "Präklinik",
-			"Sonstige Hinweise", "Zulassungsnummer", "Packungen", "Inhaberin",
-			"Stand der Information" };
-	// French section title abbrevations
-	private static final String[] SectionTitle_FR = { "Composition",
-			"Forme galénique", "Contre-indications", "Indications",
-			"Posologie", "Précautions", "Interactions", "Grossesse/All.",
-			"Conduite", "Effets indésir.", "Surdosage", "Propriétés/Effets",
-			"Cinétique", "Préclinique", "Remarques", "Numéro d'autorisation",
-			"Présentation", "Titulaire", "Mise à jour" };
 
 	/**
 	 * Adds an option into the command line parser
@@ -438,8 +427,7 @@ public class AMiKoDesk {
 
 		// Load main database
 		m_sqldb = new MainSqlDb();
-		// Attempt to load alternative database. if db does not exist, load
-		// default database
+		// Attempt to load alternative database. if db does not exist, load default database
 		// These databases are NEVER zipped!
 		if (m_sqldb.loadDBFromPath(m_application_data_folder + "\\" + Constants.DEFAULT_AMIKO_DB_BASE + Utilities.appLanguage() + ".db") == 0) {
 			System.out.println("Loading default amiko database");
@@ -452,7 +440,7 @@ public class AMiKoDesk {
 		// Load rose database
 		if (Utilities.appCustomization().equals("zurrose")) {
 			m_rosedb = new RoseSqlDb();
-			if (m_rosedb.loadDBFromPath(m_application_data_folder + "\\" + Constants.DEFAULT_ROSE_DB) == 0) {
+			if (m_rosedb.loadDBFromPath(m_application_data_folder + "\\" + Constants.ROSE_DB_NEW) == 0) {
 				System.out.println("Loading default rose db");
 				m_rosedb.loadDB();
 			}
@@ -493,11 +481,10 @@ public class AMiKoDesk {
 			m_user_map = file_loader.loadGlnCodes("desitin_gln_codes.ser");	// maps gln -> user address
 			m_list_of_authors = file_loader.loadAuthors();		
 			m_map_desitin_conditions = file_loader.loadDesitinConditions();	// maps gln -> customer conditions	
-
 			// Create shopping cart and load pertinent files
 			m_shopping_cart = new ShoppingDesitin();
 			if (m_shopping_cart!=null) {
-				if (m_user_map.containsKey(m_customer_gln_code+"S")) {
+				if (m_user_map!=null && m_user_map.containsKey(m_customer_gln_code+"S")) {
 					User user = m_user_map.get(m_customer_gln_code+"S");	// using only m_customer_gln_code leads to nullpointer exception!
 					m_shopping_cart.setUserCategory(user.category);
 				}	
@@ -507,8 +494,18 @@ public class AMiKoDesk {
 			}
 			m_emailer = new Emailer(m_rb);
 		} else if (Utilities.appCustomization().equals("zurrose")) {
+			// Load files
+			m_user_map = file_loader.loadRoseGlnCodesFromCsv(Constants.ROSE_FOLDER + "Kunden.csv");	
 			// Create comparison cart and load related files
 			m_comparison_cart = new ComparisonCart();
+			// Create shopping cart
+			m_shopping_cart = new ShoppingRose();
+			if (m_shopping_cart!=null) {
+				if (m_user_map.containsKey(m_customer_gln_code)) {
+					LinkedHashMap<String, Float> rebate_map = m_user_map.get(m_customer_gln_code).rebate_map;
+					m_shopping_cart.setMap(rebate_map);
+				}
+			}
 		}
 				
 		// Set default query type
@@ -781,10 +778,14 @@ public class AMiKoDesk {
 				 */
 				if (m_curr_uistate.isCustomerSearchMode())
 					m_web_panel.updateCustomerInfo();			
-				else if (m_curr_uistate.isInteractionsMode()) // Display interaction cart
+				else if (m_curr_uistate.isInteractionsMode()) 	// Display interaction cart
 					m_web_panel.updateInteractionsCart();
-				else if (m_curr_uistate.isShoppingMode()) // Display shopping cart
-					m_web_panel.updateListOfPackages();
+				else if (m_curr_uistate.isShoppingMode()) {		// Display shopping cart
+					if (Utilities.isRoseShoppingApp()) 
+						m_web_panel.updateRoseShoppingCart();
+					else
+						m_web_panel.updateListOfPackages();
+				}
 				else if (m_curr_uistate.isComparisonMode())
 					m_web_panel.updateComparisonCart();
 				else	
@@ -1069,7 +1070,7 @@ public class AMiKoDesk {
 					String msg = args[0].toString().trim();
 					String row_key = args[1].toString().trim();
 					// Uncomment following line for debug purposes...
-					// System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
+					System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
 					//
 					if (m_curr_uistate.isInteractionsMode()) {
 						if (msg.equals("delete_all"))
@@ -1099,6 +1100,7 @@ public class AMiKoDesk {
 					} else if (m_curr_uistate.isShoppingMode()) {
 						if (msg.equals("delete_all")) {
 							m_shopping_basket.clear();
+							m_map_similar_articles.clear();
 							// Update shopping basket
 							m_shopping_cart.saveWithIndex(m_shopping_basket);
 							m_web_panel.updateShoppingHtml();
@@ -1106,6 +1108,7 @@ public class AMiKoDesk {
 							Article article = m_shopping_basket.get(row_key);
 							article.setQuantity(1);
 							m_shopping_basket.remove(row_key);
+							m_map_similar_articles.remove(row_key);
 							// Update shopping basket
 							m_shopping_cart.saveWithIndex(m_shopping_basket);
 							m_web_panel.updateShoppingHtml();
@@ -1179,6 +1182,7 @@ public class AMiKoDesk {
 								// Load new cart
 								int index = (int) (Float.parseFloat(row_key));
 								m_shopping_basket.clear();
+								m_map_similar_articles.clear();
 								// m_shopping_cart.setShoppingBasket(m_shopping_basket);
 								m_shopping_cart.setCartIndex(index);
 								loadShoppingCartWithIndex(index);
@@ -1370,10 +1374,10 @@ public class AMiKoDesk {
 			String[] section_titles = null;
 			if (Utilities.appLanguage().equals("de")) {
 				locale = Locale.GERMAN;
-				section_titles = SectionTitle_DE;
+				section_titles = Constants.SectionTitle_DE;
 			} else if (Utilities.appLanguage().equals("fr")) {
 				locale = Locale.FRENCH;
-				section_titles = SectionTitle_FR;
+				section_titles = Constants.SectionTitle_FR;
 			}
 			for (int i = 0; i < titles.length; ++i) {
 				for (String s : section_titles) {
@@ -1504,7 +1508,30 @@ public class AMiKoDesk {
 			}
 			updateShoppingCartTotals();
 		}
-
+		
+		public void updateRoseShoppingCart() {
+			if (med_index>=0) {
+				for (Long row_id : med_id.get(med_index)) {
+					Article article = m_rosedb.getArticleWithId(row_id);
+           			// We have selected a standard / non-assorted article
+					String ean = article.getEanCode();
+					m_shopping_basket.put(ean, article);
+					// Update shopping basket
+					m_shopping_cart.setShoppingBasket(m_shopping_basket);
+					// Update list of similar articles
+					LinkedList<Article> la = listSimilarArticles(article);
+					if (la!=null) {
+						// Check if ean code is already part of the map...
+						if (!m_map_similar_articles.containsKey(ean)) {
+							m_map_similar_articles.put(ean, la);
+							m_shopping_cart.updateMapSimilarArticles(m_map_similar_articles);
+						}
+					}
+					m_web_panel.updateShoppingHtml();
+				}
+			}
+		}
+		
 		public void updateShoppingHtml() {
 			// Retrieve main html
 			String html_str = m_shopping_cart.updateShoppingCartHtml(m_shopping_basket);
@@ -1545,35 +1572,45 @@ public class AMiKoDesk {
 				// user/customer categories are defined in aips2sqlite:glncodes.java
 				String user_category = m_prefs.get("type", "arzt");
 				if (med_index < med_id.size() && med_index >= 0) {
-					// Get full info on selected medication
-					list_of_articles.clear();					
-					// Loop through all indexes listed in med_id (typically there is only one entry)
-					for (Long row_id : med_id.get(med_index)) {
-						Medication m = m_sqldb.getMediWithId(row_id);
-						// Get packages and author
-						packages = m.getPackages().split("\n");
-						// Extract the information that is shown to the user
-						if (packages!=null) {
-							for (String p : packages) {
-								if (!p.isEmpty()) {
-									String[] entry = p.split("\\|");
-									Article article = new Article(entry, m.getAuth());
-									// Set regnr							
-									article.setRegnr(m.getRegnrs());
-									if (article.isVisible(user_category) && article.hasPrice(user_category)) {
-										list_of_articles.add(article);
-										// Get user class
-										if (Utilities.appCustomization().equals("ibsa")) {
-											char user_class = ' ';
-	  										if (m_map_ibsa_glns.containsKey(m_customer_gln_code))
-												user_class = getUserClass();
-											// Check if article has free samples, use user class (A-,B-,C-Kunde)
-											if (article.hasFreeSamples(user_class + "-" + user_category))
-												list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + ", M]");
-											else 
-												list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + "]");
-										} else if (Utilities.appCustomization().equals("desitin")) {
-											list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + "]");
+					// Get full info on selected medication			
+					if (Utilities.isRoseShoppingApp()) {
+						/*
+						for (Long row_id : med_id.get(med_index)) {
+							Article article = m_rosedb.getArticleWithId(row_id);
+							list_of_packages.add(article.getPackTitle().trim() + " [" + article.getExfactoryPrice() + "]");
+						}
+						*/						
+					} else {
+						list_of_articles.clear();
+						// Loop through all indexes listed in med_id (typically there is only one entry)
+						for (Long row_id : med_id.get(med_index)) {
+							Medication m = m_sqldb.getMediWithId(row_id);
+							// Get packages and author
+							packages = m.getPackages().split("\n");
+							// Extract the information that is shown to the user
+							if (packages!=null) {
+								for (String p : packages) {
+									if (!p.isEmpty()) {
+										String[] entry = p.split("\\|");
+										Article article = new Article(entry, m.getAuth());
+										// Set regnr							
+										article.setRegnr(m.getRegnrs());
+										if (article.isVisible(user_category) && article.hasPrice(user_category)) {
+											list_of_articles.add(article);
+											// Get user class
+											if (Utilities.appCustomization().equals("ibsa")) {
+												char user_class = ' ';
+		  										if (m_map_ibsa_glns.containsKey(m_customer_gln_code))
+													user_class = getUserClass();
+												// Check if article has free samples, use user class (A-,B-,C-Kunde)
+												if (article.hasFreeSamples(user_class + "-" + user_category))
+													list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + ", M]");
+												else 
+													list_of_packages.add(article.getPackTitle().trim() + " [" + article.getPrice(user_category) + "]");
+											} else if (Utilities.appCustomization().equals("desitin")) {
+												// 'user_category' is only relevant for "ibsa"
+												list_of_packages.add(article.getPackTitle().trim() + " [" + article.getExfactoryPrice() + "]");
+											}
 										}
 									}
 								}
@@ -1587,6 +1624,20 @@ public class AMiKoDesk {
 				list_of_packages.add(m_rb.getString("nopacks"));
 			packages = list_of_packages.toArray(new String[list_of_packages.size()]);
 			m_middle_pane.update(packages);
+		}
+		
+		public LinkedList<Article> listSimilarArticles(Article article) {
+			LinkedList<Article> list_a = new LinkedList<Article>();
+			String atc_code = article.getAtcCode();	
+			String size = article.getPackSize();
+			String unit = article.getPackUnit();
+			for (Article a : m_rosedb.searchATC(atc_code)) {
+				String s = a.getPackSize().toLowerCase();
+				String u = a.getPackUnit().toLowerCase();					
+				if ((size.contains(s) || s.contains(size)) && (unit.contains(u) || u.contains(unit)) )
+					list_a.add(a);
+			}
+			return list_a;
 		}
 		
 		/*---------------------------------------------------------------------------
@@ -1711,6 +1762,7 @@ public class AMiKoDesk {
 				// Update web panel
 				if (m_shopping_cart!=null) {
 					m_shopping_basket.clear();
+					m_map_similar_articles.clear();
 					m_shopping_cart.setCustomerGlnCode(m_customer_gln_code);
 					m_shopping_cart.saveWithIndex(m_shopping_basket);
 					m_web_panel.updateShoppingHtml();
@@ -1991,9 +2043,9 @@ public class AMiKoDesk {
 		// ---- Section titles ----
 		m_middle_pane = null;
 		if (Utilities.appLanguage().equals("de")) {
-			m_middle_pane = new MiddlePane(SectionTitle_DE);
+			m_middle_pane = new MiddlePane(Constants.SectionTitle_DE);
 		} else if (Utilities.appLanguage().equals("fr")) {
-			m_middle_pane = new MiddlePane(SectionTitle_FR);
+			m_middle_pane = new MiddlePane(Constants.SectionTitle_FR);
 		}
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
@@ -2337,7 +2389,9 @@ public class AMiKoDesk {
 		toolBar.addSeparator();
 		toolBar.add(selectInteractionsButton);
 		// Customizations
-		if (Utilities.appCustomization().equals("ibsa") || Utilities.appCustomization().equals("desitin")) {		
+		if (Utilities.appCustomization().equals("ibsa") 
+				|| Utilities.appCustomization().equals("desitin")
+				|| Utilities.appCustomization().equals("zurrose")) {		
 			toolBar.addSeparator();
 			toolBar.add(selectShoppingCartButton);
 		}
@@ -2349,7 +2403,8 @@ public class AMiKoDesk {
 		toolBar.addSeparator();
 		toolBar.add(m_progress_indicator);
 		// Add image on the right
-		if (Utilities.appCustomization().equals("ibsa") || Utilities.appCustomization().equals("desitin")) {			
+		if (Utilities.appCustomization().equals("ibsa") 
+				|| Utilities.appCustomization().equals("desitin")) {			
 			JLabel jImageLabel = null;
 			if (Utilities.appCustomization().equals("ibsa"))
 				jImageLabel = new JLabel(new ImageIcon(Constants.IMG_FOLDER + "ibsa_image.png"));
@@ -2727,9 +2782,9 @@ public class AMiKoDesk {
 		// ---- Section titles ----
 		m_middle_pane = null;
 		if (Utilities.appLanguage().equals("de"))
-			m_middle_pane = new MiddlePane(SectionTitle_DE);
+			m_middle_pane = new MiddlePane(Constants.SectionTitle_DE);
 		else if (Utilities.appLanguage().equals("fr"))
-			m_middle_pane = new MiddlePane(SectionTitle_FR);
+			m_middle_pane = new MiddlePane(Constants.SectionTitle_FR);
 		m_middle_pane.setMinimumSize(new Dimension(150, 150));
 		m_middle_pane.setMaximumSize(new Dimension(320, 1000));
 
@@ -2940,25 +2995,29 @@ public class AMiKoDesk {
 							index = m_shopping_cart.getCartIndex();
 							m_web_panel.loadShoppingCartWithIndex(index);
 							// m_shopping_cart.printShoppingBasket();
-						}
+						}						
 						// m_web_panel.updateShoppingHtml();
 						m_web_panel.updateListOfPackages();
-						//
-						/*
-						but_title.doClick();
-						cardl.show(p_results, final_title);
-						*/
 						// If button is clicked again, then show only ibsa or desitin products						
 						m_curr_uistate.setQueryType(m_query_type=OWNER);
-						if (Utilities.appCustomization().equals("ibsa"))
+						if (Utilities.appCustomization().equals("ibsa")) {
 							med_search = m_sqldb.searchAuth("ibsa");
-						else if (Utilities.appCustomization().equals("desitin"))				
+							but_auth.doClick();
+						} else if (Utilities.appCustomization().equals("desitin")) {				
 							med_search = m_sqldb.searchAuth("desitin");
-						// but_title.setSelected(true);
-						// sAuth();
-						but_auth.doClick();
-						cardl.show(p_results, final_author);
-						// but_title.doClick();
+							but_auth.doClick();
+						} else {
+							if (Utilities.isRoseShoppingApp()) {
+								// Hide middle pane
+								m_middle_pane.setVisible(false);
+								split_pane_right.setDividerLocation(0);							
+								split_pane_right.setDividerSize(0);
+								//
+								rose_search = m_rosedb.searchTitle("");
+							} else
+								med_search = m_sqldb.searchTitle("");
+							but_title.doClick();
+						}
 					} 
 				} else {
 					selectShoppingCartButton.setSelected(false);
@@ -3029,7 +3088,10 @@ public class AMiKoDesk {
 								if (m_curr_uistate.isComparisonMode()) {
 									rose_search = m_rosedb.searchTitle(m_query_str);
 								} else {
-									med_search = m_sqldb.searchTitle(m_query_str);
+									if (Utilities.isRoseShoppingApp())
+										rose_search = m_rosedb.searchTitle(m_query_str);
+									else
+										med_search = m_sqldb.searchTitle(m_query_str);
 									if (m_curr_uistate.databaseUsed().equals("favorites"))
 										retrieveFavorites();
 								}
@@ -3039,7 +3101,10 @@ public class AMiKoDesk {
 								if (m_curr_uistate.isComparisonMode()) {
 									rose_search = m_rosedb.searchSupplier(m_query_str);
 								} else {
-									med_search = m_sqldb.searchAuth(m_query_str);
+									if (Utilities.isRoseShoppingApp())
+										rose_search = m_rosedb.searchSupplier(m_query_str);
+									else
+										med_search = m_sqldb.searchAuth(m_query_str);
 									if (m_curr_uistate.databaseUsed().equals("favorites"))
 										retrieveFavorites();
 								}
@@ -3049,7 +3114,10 @@ public class AMiKoDesk {
 								if (m_curr_uistate.isComparisonMode()) {
 									rose_search = m_rosedb.searchATC(m_query_str);
 								} else {
-									med_search = m_sqldb.searchATC(m_query_str);
+									if (Utilities.isRoseShoppingApp())
+										rose_search = m_rosedb.searchATC(m_query_str);
+									else
+										med_search = m_sqldb.searchATC(m_query_str);
 									if (m_curr_uistate.databaseUsed().equals("favorites"))
 										retrieveFavorites();
 								}
@@ -3059,7 +3127,10 @@ public class AMiKoDesk {
 								if (m_curr_uistate.isComparisonMode()) {
 									rose_search = m_rosedb.searchEan(m_query_str);
 								} else {
-									med_search = m_sqldb.searchRegNr(m_query_str);
+									if (Utilities.isRoseShoppingApp())
+										rose_search = m_rosedb.searchEan(m_query_str);
+									else
+										med_search = m_sqldb.searchRegNr(m_query_str);
 									if (m_curr_uistate.databaseUsed().equals("favorites"))
 										retrieveFavorites();
 								}
@@ -3069,7 +3140,10 @@ public class AMiKoDesk {
 								if (m_curr_uistate.isComparisonMode()) {
 									rose_search = m_rosedb.searchTherapy(m_query_str);
 								} else {
-									med_search = m_sqldb.searchApplication(m_query_str);
+									if (Utilities.isRoseShoppingApp())
+										rose_search = m_rosedb.searchTherapy(m_query_str);
+									else
+										med_search = m_sqldb.searchApplication(m_query_str);
 									if (m_curr_uistate.databaseUsed().equals("favorites"))
 										retrieveFavorites();
 								}
@@ -3227,6 +3301,7 @@ public class AMiKoDesk {
 					if (m_shopping_cart!=null) {
 						// Refresh some stuff
 						m_shopping_basket.clear();
+						m_map_similar_articles.clear();
 						m_shopping_cart.setCustomerGlnCode(m_customer_gln_code);
 						m_shopping_cart.saveWithIndex(m_shopping_basket);
 						// Desitin
@@ -3307,6 +3382,7 @@ public class AMiKoDesk {
 				// Empty shopping basket
 				if (m_curr_uistate.isShoppingMode()) {
 					m_shopping_basket.clear();
+					m_map_similar_articles.clear();
 					m_customer_gln_code = "";
 					m_shopping_cart.saveWithIndex(m_shopping_basket);
 					m_web_panel.updateShoppingHtml();
@@ -3324,6 +3400,7 @@ public class AMiKoDesk {
 					System.out.println(arg);
 					// Empty shopping basket
 					m_shopping_basket.clear();
+					m_map_similar_articles.clear();				
 					m_shopping_cart.saveWithIndex(m_shopping_basket);
 					m_web_panel.updateShoppingHtml();
 				}
@@ -3405,7 +3482,7 @@ public class AMiKoDesk {
 		switch (m_curr_uistate.getQueryType()) {
 		case 0:
 			if (!simple) {
-				if (!m_curr_uistate.isComparisonMode())
+				if (!m_curr_uistate.isComparisonMode() && !Utilities.isRoseShoppingApp())
 					med_search = m_sqldb.searchTitle(m_query_str);
 				else
 					rose_search = m_rosedb.searchTitle(m_query_str);
@@ -3414,7 +3491,7 @@ public class AMiKoDesk {
 			break;
 		case 1:
 			if (!simple) {
-				if (!m_curr_uistate.isComparisonMode())
+				if (!m_curr_uistate.isComparisonMode() && !Utilities.isRoseShoppingApp())
 					med_search = m_sqldb.searchAuth(m_query_str);
 				else
 					rose_search = m_rosedb.searchSupplier(m_query_str);
@@ -3423,7 +3500,7 @@ public class AMiKoDesk {
 			break;
 		case 2:
 			if (!simple) {
-				if (!m_curr_uistate.isComparisonMode())			
+				if (!m_curr_uistate.isComparisonMode() && !Utilities.isRoseShoppingApp())	
 					med_search = m_sqldb.searchATC(m_query_str);
 				else
 					rose_search = m_rosedb.searchATC(m_query_str);
@@ -3432,7 +3509,7 @@ public class AMiKoDesk {
 			break;
 		case 3:
 			if (!simple) {
-				if (!m_curr_uistate.isComparisonMode())			
+				if (!m_curr_uistate.isComparisonMode() && !Utilities.isRoseShoppingApp())
 					med_search = m_sqldb.searchRegNr(m_query_str);
 				else
 					rose_search = m_rosedb.searchEan(m_query_str);
@@ -3441,7 +3518,7 @@ public class AMiKoDesk {
 			break;
 		case 4:
 			if (!simple) {
-				if (!m_curr_uistate.isComparisonMode())			
+				if (!m_curr_uistate.isComparisonMode() && !Utilities.isRoseShoppingApp())	
 					med_search = m_sqldb.searchIngredient(m_query_str);
 				else
 					rose_search = m_rosedb.searchTherapy(m_query_str);
@@ -3679,18 +3756,27 @@ public class AMiKoDesk {
 				}
 			} else if (!m_curr_uistate.isSearchMode()) {
 				if (m_curr_uistate.isShoppingMode()) {	// Shopping
-					// Map title to id in the sqlite database
-					Map<Product, ArrayList<Long>> map_of_products = pp_list_of_products();
-					// Now loop again to compose the mid pane entries
-					for (Map.Entry<Product, ArrayList<Long>> entry : map_of_products.entrySet()) {
-						Product product = entry.getKey();
-						ArrayList<Long> al = entry.getValue();
-						if (product.group_title==null || product.group_title.isEmpty()) {
-							m.add("<html><body style=\"width: 1024px;\"><b>" + product.title + "</b></html>");
-						} else {
-							m.add("<html><body style=\"width: 1024px;\"><b>" + product.group_title + "</b></html>");
+					if (Utilities.isRoseShoppingApp()) {
+						for (Article as : rose_search) {
+							m.add("<html><body style='width: 1024px;'><b>"+ as.getPackTitle() + "</b><br>"
+									+ "<font color=gray size=-1>Lager: " + as.getItemsOnStock() 
+									+ " (CHF " + as.getCleanExfactoryPrice() + ")" + "</font></html>");
+							ArrayList<Long> al = new ArrayList<>(Arrays.asList(as.getId()));
+							med_id.add(al);
 						}
-						med_id.add(al);
+					} else {
+						// Map title to id in the sqlite database
+						Map<Product, ArrayList<Long>> map_of_products = pp_list_of_products();
+						// Now loop again to compose the mid pane entries
+						for (Map.Entry<Product, ArrayList<Long>> entry : map_of_products.entrySet()) {
+							Product product = entry.getKey();
+							ArrayList<Long> al = entry.getValue();
+							if (product.group_title==null || product.group_title.isEmpty())
+								m.add("<html><body style=\"width: 1024px;\"><b>" + product.title + "</b></html>");
+							else
+								m.add("<html><body style=\"width: 1024px;\"><b>" + product.group_title + "</b></html>");
+							med_id.add(al);
+						}
 					}
 				} else {	// Interactions
 					for (Medication ms : med_search) {
@@ -3733,20 +3819,29 @@ public class AMiKoDesk {
 					}
 				}
 			} else {	// Shopping
-				// Map title to id in the sqlite database
-				Map<Product, ArrayList<Long>> map_id = pp_list_of_products();
-				// Now loop again to compose the mid pane entries
-				for (Map.Entry<Product, ArrayList<Long>> entry : map_id.entrySet()) {
-					Product product = entry.getKey();
-					ArrayList<Long> al = entry.getValue();
-					if (product.group_title==null || product.group_title.isEmpty()) {
-						m.add("<html><body style='width: 1024px;'><b>" + product.title + "</b><br>"
-								+ "<font color=gray size=-1>" + product.author + "</font></html>");
-					} else {
-						m.add("<html><body style='width: 1024px;'><b>" + product.group_title + "</b><br>"
-								+ "<font color=gray size=-1>" + product.author + "</font></html>");
+				if (Utilities.isRoseShoppingApp()) {
+					for (Article as : rose_search) {
+						m.add("<html><body style='width: 1024px;'><b>" + as.getPackTitle()
+								+ "</b><br><font color=gray size=-1>" + as.getSupplier() + "</font></html>");
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(as.getId()));
+						med_id.add(al);
 					}
-					med_id.add(al);
+				} else {
+					// Map title to id in the sqlite database
+					Map<Product, ArrayList<Long>> map_id = pp_list_of_products();
+					// Now loop again to compose the mid pane entries
+					for (Map.Entry<Product, ArrayList<Long>> entry : map_id.entrySet()) {
+						Product product = entry.getKey();
+						ArrayList<Long> al = entry.getValue();
+						if (product.group_title==null || product.group_title.isEmpty()) {
+							m.add("<html><body style='width: 1024px;'><b>" + product.title + "</b><br>"
+									+ "<font color=gray size=-1>" + product.author + "</font></html>");
+						} else {
+							m.add("<html><body style='width: 1024px;'><b>" + product.group_title + "</b><br>"
+									+ "<font color=gray size=-1>" + product.author + "</font></html>");
+						}
+						med_id.add(al);
+					}
 				}
 			}
 		} else {	// Comparison
@@ -3764,56 +3859,65 @@ public class AMiKoDesk {
 	static void sATC() {
 		List<String> m = new ArrayList<String>();
 		if (!m_curr_uistate.isComparisonMode()) {
-			// Kompendium, favorites, interactions and shopping
-			med_id.clear();
-			if (med_search.size() < BigCellNumber) {
-				for (int i=0; i<med_search.size(); ++i) {
-					Medication ms = med_search.get(i);
-					if (ms.getAtcCode() != null) {
-						String[] m_code = ms.getAtcCode().split(";");
-						String atc_code_str = "";
-						String atc_title_str = "";
-						if (m_code.length > 1) {
-							atc_code_str = m_code[0];
-							atc_title_str = m_code[1];
-						}
-						if (ms.getAtcClass() != null) {
-							String[] m_class = ms.getAtcClass().split(";");
-							String atc_class_str = "";
-							if (m_class.length == 2) { // *** Ver.<1.2.4
-								atc_class_str = m_class[1];
-								m.add("<html><b>" + ms.getTitle() 
-										+ "</b><br><font color=gray size=-1>" + atc_code_str + " - " + atc_title_str
-										+ "<br>" + atc_class_str + "</font></html>");
-							} else if (m_class.length == 3) { // *** Ver. 1.2.4 and above
-								atc_class_str = "";
-								String[] atc_class_l4_and_l5 = m_class[2].split("#");
-								if (atc_class_l4_and_l5.length > 0)
-									atc_class_str = atc_class_l4_and_l5[atc_class_l4_and_l5.length - 1];
-								m.add("<html><b>" + ms.getTitle() + "</b><br>"
-										+ "<font color=gray size=-1>" + atc_code_str + " - " + atc_title_str
-										+ "<br>" + atc_class_str + "<br>"
-										+ m_class[1] + "</font></html>");
-							}
-						}
-						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
-						med_id.add(al);
-					}
+			if (Utilities.isRoseShoppingApp()) {
+				for (Article as : rose_search) {
+					m.add("<html><body style='width: 1024px;'><b>" + as.getPackTitle()
+							+ "</b><br><font color=gray size=-1>" + as.getAtcCode() + " - " + as.getAtcClass() + "</font></html>");
+					ArrayList<Long> al = new ArrayList<>(Arrays.asList(as.getId()));
+					med_id.add(al);
 				}
 			} else {
-				for (Medication ms : med_search) {
-					if (ms.getAtcCode() != null) {
-						String[] m_code = ms.getAtcCode().split(";");
-						String atc_code_str = "";
-						String atc_title_str = "";
-						if (m_code.length > 1) {
-							atc_code_str = m_code[0];
-							atc_title_str = m_code[1];
+				// Kompendium, favorites, interactions and shopping
+				med_id.clear();
+				if (med_search.size() < BigCellNumber) {
+					for (int i=0; i<med_search.size(); ++i) {
+						Medication ms = med_search.get(i);
+						if (ms.getAtcCode() != null) {
+							String[] m_code = ms.getAtcCode().split(";");
+							String atc_code_str = "";
+							String atc_title_str = "";
+							if (m_code.length > 1) {
+								atc_code_str = m_code[0];
+								atc_title_str = m_code[1];
+							}
+							if (ms.getAtcClass() != null) {
+								String[] m_class = ms.getAtcClass().split(";");
+								String atc_class_str = "";
+								if (m_class.length == 2) { // *** Ver.<1.2.4
+									atc_class_str = m_class[1];
+									m.add("<html><b>" + ms.getTitle() 
+											+ "</b><br><font color=gray size=-1>" + atc_code_str + " - " + atc_title_str
+											+ "<br>" + atc_class_str + "</font></html>");
+								} else if (m_class.length == 3) { // *** Ver. 1.2.4 and above
+									atc_class_str = "";
+									String[] atc_class_l4_and_l5 = m_class[2].split("#");
+									if (atc_class_l4_and_l5.length > 0)
+										atc_class_str = atc_class_l4_and_l5[atc_class_l4_and_l5.length - 1];
+									m.add("<html><b>" + ms.getTitle() + "</b><br>"
+											+ "<font color=gray size=-1>" + atc_code_str + " - " + atc_title_str
+											+ "<br>" + atc_class_str + "<br>"
+											+ m_class[1] + "</font></html>");
+								}
+							}
+							ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+							med_id.add(al);
 						}
-						m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle()
-								+ "</b><br><font color=gray size=-1>" + atc_code_str + " - " + atc_title_str + "</font></html>");
-						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
-						med_id.add(al);
+					}
+				} else {
+					for (Medication ms : med_search) {
+						if (ms.getAtcCode() != null) {
+							String[] m_code = ms.getAtcCode().split(";");
+							String atc_code_str = "";
+							String atc_title_str = "";
+							if (m_code.length > 1) {
+								atc_code_str = m_code[0];
+								atc_title_str = m_code[1];
+							}
+							m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle()
+									+ "</b><br><font color=gray size=-1>" + atc_code_str + " - " + atc_title_str + "</font></html>");
+							ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+							med_id.add(al);
+						}
 					}
 				}
 			}
@@ -3832,21 +3936,30 @@ public class AMiKoDesk {
 	static void sRegNr() {
 		List<String> m = new ArrayList<String>();
 		if (!m_curr_uistate.isComparisonMode()) {
-			// Kompendium, favorites, interactions and shopping
-			med_id.clear();
-			if (med_search.size() < BigCellNumber) {
-				for (Medication ms : med_search) {
-					m.add("<html><b>" + ms.getTitle() + "</b><br>" 
-							+ "<font color=gray size=-1>" + ms.getRegnrs() + "</font></html>");
-					ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+			if (Utilities.isRoseShoppingApp()) {
+				for (Article as : rose_search) {
+					m.add("<html><body style='width: 1024px;'><b>" + as.getPackTitle()
+							+ "</b><br><font color=gray size=-1>" + as.getPharmaCode() + " (" + as.getEanCode() + ")</font></html>");
+					ArrayList<Long> al = new ArrayList<>(Arrays.asList(as.getId()));
 					med_id.add(al);
 				}
 			} else {
-				for (Medication ms : med_search) {
-					m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle()
-							+ "</b><br><font color=gray size=-1>" + ms.getRegnrs() + "</font></html>");
-					ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));					
-					med_id.add(al);
+				// Kompendium, favorites, interactions and shopping
+				med_id.clear();
+				if (med_search.size() < BigCellNumber) {
+					for (Medication ms : med_search) {
+						m.add("<html><b>" + ms.getTitle() + "</b><br>" 
+								+ "<font color=gray size=-1>" + ms.getRegnrs() + "</font></html>");
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));
+						med_id.add(al);
+					}
+				} else {
+					for (Medication ms : med_search) {
+						m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle()
+								+ "</b><br><font color=gray size=-1>" + ms.getRegnrs() + "</font></html>");
+						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));					
+						med_id.add(al);
+					}
 				}
 			}
 		} else {
@@ -3864,27 +3977,36 @@ public class AMiKoDesk {
 	static void sTherapy() {
 		List<String> m = new ArrayList<String>();
 		if (!m_curr_uistate.isComparisonMode()) {
-			// Kompendium, favorites, interactions and shopping
-			med_id.clear();
-			if (med_search.size() < BigCellNumber) {
-				for (Medication ms : med_search) {
-					if (ms.getApplication() != null) {
-						String application_str = ms.getApplication().replaceAll("\n", "<p>");
-						application_str = ms.getApplication().replaceAll(";", "<p>");
-						m.add("<html><b>" + ms.getTitle()
-								+ "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
-						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));						
-						med_id.add(al);
-					}
+			if (Utilities.isRoseShoppingApp()) {
+				for (Article as : rose_search) {
+					m.add("<html><body style='width: 1024px;'><b>" + as.getPackTitle()
+							+ "</b><br><font color=gray size=-1>" + as.getTherapyCode() + " - " + as.getAtcClass() + "</font></html>");
+					ArrayList<Long> al = new ArrayList<>(Arrays.asList(as.getId()));
+					med_id.add(al);
 				}
 			} else {
-				for (Medication ms : med_search) {
-					if (ms.getApplication() != null) {
-						String application_str = ms.getApplication().replaceAll(";", " / ");
-						m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle()
-								+ "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
-						ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));						
-						med_id.add(al);
+				// Kompendium, favorites, interactions and shopping
+				med_id.clear();
+				if (med_search.size() < BigCellNumber) {
+					for (Medication ms : med_search) {
+						if (ms.getApplication() != null) {
+							String application_str = ms.getApplication().replaceAll("\n", "<p>");
+							application_str = ms.getApplication().replaceAll(";", "<p>");
+							m.add("<html><b>" + ms.getTitle()
+									+ "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
+							ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));						
+							med_id.add(al);
+						}
+					}
+				} else {
+					for (Medication ms : med_search) {
+						if (ms.getApplication() != null) {
+							String application_str = ms.getApplication().replaceAll(";", " / ");
+							m.add("<html><body style='width: 1024px;'><b>" + ms.getTitle()
+									+ "</b><br><font color=gray size=-1>" + application_str + "</font></html>");
+							ArrayList<Long> al = new ArrayList<>(Arrays.asList(ms.getId()));						
+							med_id.add(al);
+						}
 					}
 				}
 			}

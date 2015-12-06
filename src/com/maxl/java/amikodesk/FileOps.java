@@ -96,7 +96,7 @@ public class FileOps {
 			}
 			br.close();
 		} catch (Exception e) {
-			System.err.println(">> Error in reading csv file");
+			System.err.println(">> Error in reading csv file: " + filename);
 		}
 		
 		return map;

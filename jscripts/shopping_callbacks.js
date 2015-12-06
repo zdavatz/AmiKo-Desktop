@@ -147,3 +147,17 @@ function changeColor(tableRow, highLight) {
 function changeAddress(tableRow, type) {
 	invokeJava("change_address", type);
 }
+
+function changeColorEven(tableRow, highLight) {
+	if (highLight) {
+		tableRow.style.backgroundColor = '#dcfac9';
+	} else
+      tableRow.style.backgroundColor = '#ffebcd';
+}
+
+function changeColorOdd(tableRow, highLight) {
+	if (highLight) {
+		tableRow.style.backgroundColor = '#dcfac9';
+	} else
+      tableRow.style.backgroundColor = '#f5f5f5';
+}

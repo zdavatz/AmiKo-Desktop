@@ -14,6 +14,8 @@
 #shopping .right {font-size:0.85em;margin-right:16px;}
 #shopping .chart div {display:inline;font:0.85em;sans-serif;text-align:left;padding:4px;margin:0px;color:white;}
 #shopping .tooltip div {display:none;color:#000;padding:3px;cursor:pointer;text-decoration:none;}
+#shopping .tooltip2 div {display:none;color:#000;padding:3px;cursor:pointer;text-decoration:none;}
 #shopping .tooltip:hover div {display:block;position:absolute;left:30%;font-size:0.75em;background-color:#efefff;border:2px solid;border-color:#fff;margin:6px;padding:6px;}
+#shopping .tooltip2:hover div {display:block;position:absolute;left:15%;font-size:0.8em;background-color:#efeeef;border:2px solid;border-color:#fff;margin:6px;padding:6px;}
 #buttons button {cursor:pointer;background-color:#dcdcfa;border-style:solid;border-color:#fff;} 
 #buttons .buttonPressed {background-color:#f0f0f0;}
