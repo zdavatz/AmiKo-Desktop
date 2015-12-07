@@ -44,20 +44,20 @@ public class Utilities {
 		doctorPreferences = new LinkedHashMap<String, Integer>();
 		doctorPreferences.put("actavis", 1);	// actavis switzerland ag
 		doctorPreferences.put("helvepharm", 2);	// helvepharm ag	
-		doctorPreferences.put("mepha", 3);	// mepha schweiz ag	
-		doctorPreferences.put("sandoz", 4);	// sandoz pharmaceuticals ag
-		doctorPreferences.put("spirig", 5);	// spirig healthcare ag
+		doctorPreferences.put("mepha", 3);		// mepha schweiz ag	
+		doctorPreferences.put("sandoz", 4);		// sandoz pharmaceuticals ag
+		doctorPreferences.put("spirig", 5);		// spirig healthcare ag
 	}
 	
-	static public final Map<String, String> rosePreferences;
+	static public final Map<String, Integer> rosePreferences;
 	static {
 		// LinkedHashMap preserves insertion order
-		rosePreferences = new LinkedHashMap<String, String>();
-		rosePreferences.put("7601001003736", "helvepharm");	// helvepharm ag
-		rosePreferences.put("7601001002340", "sanofi");		// sanofi-aventis (suisse) sa
-		rosePreferences.put("7601001029439", "sandoz");		// sandoz pharmaceuticals ag
-		rosePreferences.put("7601001396685", "mepha");		// mepha schweiz ag	
-		rosePreferences.put("7601001331709", "teva");		// teva pharma ag
+		rosePreferences = new LinkedHashMap<String, Integer>();
+		rosePreferences.put("helvepharm", 1);	// helvepharm ag
+		rosePreferences.put("sanofi", 2);		// sanofi-aventis (suisse) sa
+		rosePreferences.put("sandoz", 3);		// sandoz pharmaceuticals ag
+		rosePreferences.put("mepha", 4);		// mepha schweiz ag	
+		rosePreferences.put("teva", 5);			// teva pharma ag
 	}
 		
 	static public String appDataFolder() {

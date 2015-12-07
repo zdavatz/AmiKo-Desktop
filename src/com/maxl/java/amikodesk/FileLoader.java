@@ -293,6 +293,34 @@ public class FileLoader {
 		return sales_figures_map;
 	}
 	
+	public ArrayList<String> loadRoseAutoGenerika(String csv_file_name) {
+		ArrayList<String> auto_generika_list = new ArrayList<String>();
+
+		try {
+			File file = new File(csv_file_name);
+			if (!file.exists()) 
+				return null;			
+			FileInputStream fis = new FileInputStream(csv_file_name);
+			BufferedReader br = new BufferedReader(new InputStreamReader(fis, "cp1252"));
+			int counter = 0;
+			String line;
+			while ((line = br.readLine()) != null) {
+				String token[] = line.split(";", -1);
+				if (counter>0 && token.length>10) {
+					String ean_code = token[10];
+					if (ean_code!=null)
+					auto_generika_list.add(ean_code);
+				}
+				counter++;
+			}
+			br.close();
+		} catch (Exception e) {
+			System.err.println(">> Error in reading csv file " + csv_file_name);
+		}
+		
+		return auto_generika_list;
+	}
+	
 	/**
 	 * Fill list of authors / med owners
 	 */

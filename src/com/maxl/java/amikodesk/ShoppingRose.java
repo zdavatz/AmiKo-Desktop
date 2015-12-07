@@ -1,5 +1,6 @@
 package com.maxl.java.amikodesk;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -14,7 +15,8 @@ public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
 
 	private static LinkedHashMap<String, Float> m_map_rose_conditions = null;
 	private static HashMap<String, Float> m_sales_figures_map = null;
-	private static HashMap<String, List<Article>> m_map_similar_articles = null;
+	private static ArrayList<String> m_auto_generika_list = null;
+	private static HashMap<String, List<Article>> m_map_similar_articles = null;	
 	
 	private static String m_html_str = "";
 	private static String m_jscripts_str = null;
@@ -116,7 +118,7 @@ public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
 			else
 				return 5;	// RED
 		} 
-		return 1000;		// NEVER
+		return 10;		// NEVER
 	}
 	
 	private Pair<String, String> shippingStatusColor(int status) {
@@ -138,20 +140,74 @@ public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
 
 	private void sortSimilarArticles(final int quantity) {
 		// Loop through all entries and sort/filter
-		for (Map.Entry<String, List<Article>> entry : m_map_similar_articles.entrySet()) {
+		for (Map.Entry<String, List<Article>> entry : m_map_similar_articles.entrySet()) {			
 			String ean_code = entry.getKey();
-			List<Article> list_of_articles = entry.getValue();
+			List<Article> list_of_similar_articles = entry.getValue();
 			// Sort: Lieferfähigkeit
-			Collections.sort(list_of_articles, new Comparator<Article>() {
+			Article min_lead = Collections.min(list_of_similar_articles, new Comparator<Article>() {
 				@Override
 				public int compare(Article a1, Article a2) {
-					 return (shippingStatus(a1, quantity)-shippingStatus(a2, quantity));
+					 return (shippingStatus(a1, quantity) - shippingStatus(a2, quantity));
 				}
-			});
-			// Sort: Autogenerika
+			});		
+			HashMap<String, Article> map_of_min_lead_articles = new HashMap<String, Article>();
+			int min_lead_time = shippingStatus(min_lead, quantity);
+			if (min_lead_time>=0) {
+				for (Article article : list_of_similar_articles) {
+					if (shippingStatus(article, quantity)==min_lead_time) {
+						map_of_min_lead_articles.put(article.getEanCode(), article);
+					}
+				}
+			}
+			// Assert
+			assert(map_of_min_lead_articles.size()>0);			
+			
+			list_of_similar_articles = new ArrayList<Article>(map_of_min_lead_articles.values());
+
+			// Sort: Autogenerika		
+			if (map_of_min_lead_articles.size()>1) {
+				ArrayList<Article> list_of_auto_generika = new ArrayList<Article>();
+				for (String ean : m_auto_generika_list) {
+					if (map_of_min_lead_articles.containsKey(ean)) {
+						list_of_auto_generika.add(map_of_min_lead_articles.get(ean));
+					}
+				}
+				if (list_of_auto_generika.size()>0) {
+					list_of_similar_articles = list_of_auto_generika;
+				}
+			}					
+			// Assert
+			assert(list_of_similar_articles.size()>0);
+						
 			// Sort: Präferenz Arzt
+			if (list_of_similar_articles.size()>1) {
+				Collections.sort(list_of_similar_articles, new Comparator<Article>() {
+					@Override
+					public int compare(Article a1, Article a2) {
+						String author1 = a1.getSupplier().toLowerCase();
+						String author2 = a2.getSupplier().toLowerCase();
+						String short_author1 = "";
+						String short_author2 = "";
+						for (String e : Utilities.doctorPreferences.keySet()) {
+							if (author1.contains(e))
+								short_author1 = e;
+							if (author2.contains(e))
+								short_author2 = e;
+						}
+						int value1 = 100;
+						if (Utilities.doctorPreferences.containsKey(short_author1))
+							value1 = Utilities.doctorPreferences.get(short_author1);
+						int value2 = 100;
+						if (Utilities.doctorPreferences.containsKey(short_author2))
+							value2 = Utilities.doctorPreferences.get(short_author2);
+
+						return value1 - value2;
+					}
+				});
+			}
+			
 			// Sort: Präferenz Rose
-			m_map_similar_articles.put(ean_code, list_of_articles);
+			m_map_similar_articles.put(ean_code, list_of_similar_articles);
 		}
 	}
 	
@@ -161,6 +217,8 @@ public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
 	public ShoppingRose() {
 		// Load sales figures file
 		m_sales_figures_map = (new FileLoader()).loadRoseSalesFigures(Constants.ROSE_FOLDER + "Abverkaufszahlen.csv");
+		// Load auto generika file
+		m_auto_generika_list = (new FileLoader()).loadRoseAutoGenerika(Constants.ROSE_FOLDER + "Autogenerika.csv");
 		// Load javascripts
 		m_jscripts_str = FileOps.readFromFile(Constants.JS_FOLDER + "shopping_callbacks.js");
 		// Load shopping cart css style sheet
@@ -367,7 +425,7 @@ public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
 
 		// TEST
 		sortSimilarArticles(article.getQuantity());
-
+	
 		for (Map.Entry<String, List<Article>> s : m_map_similar_articles.entrySet()) {
 			String ean = s.getKey();
 			Article a1 = m_shopping_basket.get(ean);

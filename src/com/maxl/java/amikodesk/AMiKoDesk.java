@@ -1488,6 +1488,21 @@ public class AMiKoDesk {
 		public void loadShoppingCartWithIndex(final int n) {
 			if (m_shopping_basket==null || m_shopping_basket.size()==0)
 				m_shopping_basket = m_shopping_cart.loadWithIndex(n);
+			if (Utilities.isRoseShoppingApp()) {
+				// Update list of similar articles			
+				for (Map.Entry<String, Article> e : m_shopping_basket.entrySet()) {
+					Article article = e.getValue();
+					String ean = article.getEanCode();
+					LinkedList<Article> la = listSimilarArticles(article);
+					if (la!=null) {
+						// Check if ean code is already part of the map...
+						if (!m_map_similar_articles.containsKey(ean)) {
+							m_map_similar_articles.put(ean, la);
+							m_shopping_cart.updateMapSimilarArticles(m_map_similar_articles);
+						}
+					}
+				}
+			}
 			updateShoppingHtml();
 		}
 
