@@ -237,14 +237,14 @@ public class FileLoader {
 		}
 		// Test
 		if (Constants.DEBUG) {
-			HashMap<String, Float> reb_map = user_map.get("7601000435453").rebate_map;
+			HashMap<String, Float> reb_map = user_map.get("7601000600356").rebate_map;
 			if (reb_map != null) {
 				System.out.println("rebate map");
 				for (Map.Entry<String, Float> m : reb_map.entrySet()) {
 					System.out.println(m.getKey() + " -> " + m.getValue());
 				}
 			}
-			HashMap<String, Float> expenses_map = user_map.get("7601000435453").expenses_map;
+			HashMap<String, Float> expenses_map = user_map.get("7601000600356").expenses_map;
 			if (expenses_map != null) {
 				System.out.println("expenses map");
 				for (Map.Entry<String, Float> m : expenses_map.entrySet()) {

@@ -503,7 +503,8 @@ public class AMiKoDesk {
 			if (m_shopping_cart!=null) {
 				if (m_user_map.containsKey(m_customer_gln_code)) {
 					LinkedHashMap<String, Float> rebate_map = m_user_map.get(m_customer_gln_code).rebate_map;
-					m_shopping_cart.setMap(rebate_map);
+					LinkedHashMap<String, Float> expenses_map = m_user_map.get(m_customer_gln_code).expenses_map;
+					m_shopping_cart.setMaps(rebate_map, expenses_map);
 				}
 			}
 		}

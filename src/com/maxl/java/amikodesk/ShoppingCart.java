@@ -116,6 +116,10 @@ public abstract class ShoppingCart {
 		// VIRTUAL
 	}
 	
+	public void setMaps(Map<String, Float> conditions_A, Map<String, Float> conditions_B) {
+		// VIRTUAL
+	}
+	
 	public void updateMapSimilarArticles(Map<String, List<Article>> similar_articles) {
 		// VIRTUAL
 	}

@@ -13,7 +13,8 @@ import java.util.prefs.Preferences;
 
 public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
 
-	private static LinkedHashMap<String, Float> m_map_rose_conditions = null;
+	private static LinkedHashMap<String, Float> m_rebate_map = null;
+	private static LinkedHashMap<String, Float> m_expenses_map = null;
 	private static HashMap<String, Float> m_sales_figures_map = null;
 	private static ArrayList<String> m_auto_generika_list = null;
 	private static HashMap<String, List<Article>> m_map_similar_articles = null;	
@@ -55,10 +56,10 @@ public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
     }
     
 	private float getCashRebate(Article article) {
-		if (m_map_rose_conditions!=null) {
+		if (m_rebate_map!=null) {
 			String supplier = shortSupplier(article.getSupplier());
-			if (m_map_rose_conditions.containsKey(supplier)) {
-				return m_map_rose_conditions.get(supplier);
+			if (m_rebate_map.containsKey(supplier)) {
+				return m_rebate_map.get(supplier);
 			}
 		}
 		return 0.0f;
@@ -103,6 +104,10 @@ public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
 	 * @return shipping status
 	 */
 	private int shippingStatus(Article article, int quantity) {
+		// Beschaffungsartikel sind immer orange
+		if (article.getSupplier().toLowerCase().contains("voigt")) {
+			return 4;
+		}
 		// Calculate min stock
 		int mstock = minStock(article);
 		if (mstock>=0) {
@@ -138,11 +143,39 @@ public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
 		return new Pair<String, String>("red", "-");
 	}
 
+	private float rebateForSupplier(Article article) {
+		String supplier = article.getSupplier().toLowerCase();
+		String short_supplier = "";
+		for (String p : Utilities.doctorPreferences.keySet()) {
+			if (supplier.contains(p))
+				short_supplier = p;
+		}
+		float value = 0.0f;
+		if (m_rebate_map.containsKey(short_supplier))
+			value = m_rebate_map.get(short_supplier);
+		return value;
+	}
+	
+	private float salesFiguresForSupplier(Article article) {
+		String supplier = article.getSupplier().toLowerCase();
+		String short_supplier = "";
+		for (String p : Utilities.doctorPreferences.keySet()) {
+			if (supplier.contains(p))
+				short_supplier = p;
+		}
+		float value = 0.0f;
+		if (m_expenses_map.containsKey(short_supplier))
+			value = m_expenses_map.get(short_supplier);
+		return value;
+		
+	}
+	
 	private void sortSimilarArticles(final int quantity) {
 		// Loop through all entries and sort/filter
 		for (Map.Entry<String, List<Article>> entry : m_map_similar_articles.entrySet()) {			
 			String ean_code = entry.getKey();
 			List<Article> list_of_similar_articles = entry.getValue();
+			
 			// Sort: Lieferfähigkeit
 			Article min_lead = Collections.min(list_of_similar_articles, new Comparator<Article>() {
 				@Override
@@ -181,32 +214,65 @@ public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
 						
 			// Sort: Präferenz Arzt
 			if (list_of_similar_articles.size()>1) {
-				Collections.sort(list_of_similar_articles, new Comparator<Article>() {
+				Article max_rebate_article = Collections.max(list_of_similar_articles, new Comparator<Article>() {
 					@Override
 					public int compare(Article a1, Article a2) {
-						String author1 = a1.getSupplier().toLowerCase();
-						String author2 = a2.getSupplier().toLowerCase();
-						String short_author1 = "";
-						String short_author2 = "";
-						for (String e : Utilities.doctorPreferences.keySet()) {
-							if (author1.contains(e))
-								short_author1 = e;
-							if (author2.contains(e))
-								short_author2 = e;
+						float value1 = rebateForSupplier(a1);
+						float value2 = rebateForSupplier(a2);	
+						return (int)(value1 - value2);
+					}
+				});
+				HashMap<String, Article> map_of_max_rebate_articles = new HashMap<String, Article>();
+				float max_rebate = rebateForSupplier(max_rebate_article);
+				if (max_rebate>=0.0f) {
+					for (Article article : list_of_similar_articles) {
+						if (rebateForSupplier(article)==max_rebate) {
+							map_of_max_rebate_articles.put(article.getEanCode(), article);
 						}
-						int value1 = 100;
-						if (Utilities.doctorPreferences.containsKey(short_author1))
-							value1 = Utilities.doctorPreferences.get(short_author1);
-						int value2 = 100;
-						if (Utilities.doctorPreferences.containsKey(short_author2))
-							value2 = Utilities.doctorPreferences.get(short_author2);
-
-						return value1 - value2;
+					}
+				}
+				// Assert
+				assert(map_of_max_rebate_articles.size()>0);
+						
+				list_of_similar_articles = new ArrayList<Article>(map_of_max_rebate_articles.values());
+			}
+			
+			if (list_of_similar_articles.size()>1) {
+				Article max_sales_article = Collections.max(list_of_similar_articles, new Comparator<Article>() {
+					@Override
+					public int compare(Article a1, Article a2) {
+						float value1 = salesFiguresForSupplier(a1);
+						float value2 = salesFiguresForSupplier(a2);						
+						return (int)(value1 - value2);
+					}
+				});
+				HashMap<String, Article> map_of_max_sales_articles = new HashMap<String, Article>();
+				float max_sales = salesFiguresForSupplier(max_sales_article);
+				if (max_sales>=0.0f) {
+					for (Article article : list_of_similar_articles) {
+						if (salesFiguresForSupplier(article)==max_sales) {
+							map_of_max_sales_articles.put(article.getEanCode(), article);
+						}
+					}
+				}
+				// Assert
+				assert(map_of_max_sales_articles.size()>0);
+						
+				list_of_similar_articles = new ArrayList<Article>(map_of_max_sales_articles.values());
+			}
+			
+			// Sort: Präferenz Rose
+			if (list_of_similar_articles.size()>1) {
+				Collections.sort(list_of_similar_articles, new Comparator<Article>(){
+					@Override
+					public int compare(Article a1, Article a2) {
+						float value1 = rebateForSupplier(a1);
+						float value2 = rebateForSupplier(a2);	
+						return (int)(value1 - value2);
 					}
 				});
 			}
 			
-			// Sort: Präferenz Rose
 			m_map_similar_articles.put(ean_code, list_of_similar_articles);
 		}
 	}
@@ -237,9 +303,10 @@ public class ShoppingRose extends ShoppingCart implements java.io.Serializable {
 		
 	}
 	
-	public void setMap(Map<String, Float> conditions) {
-		m_map_rose_conditions = (LinkedHashMap<String, Float>)conditions;		
-	}	
+	public void setMaps(Map<String, Float> rebate_map, Map<String, Float> expenses_map) {
+		m_rebate_map = (LinkedHashMap<String, Float>)rebate_map;
+		m_expenses_map = (LinkedHashMap<String, Float>)expenses_map;
+	}
 	
 	public void updateMapSimilarArticles(Map<String, List<Article>> similar_articles) {
 		m_map_similar_articles = (HashMap<String, List<Article>>)similar_articles;
