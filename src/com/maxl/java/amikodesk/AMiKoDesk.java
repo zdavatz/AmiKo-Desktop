@@ -1069,7 +1069,7 @@ public class AMiKoDesk {
 				@Override
 				public Object invoke(JWebBrowser webBrowser, Object... args) {
 					String msg = args[0].toString().trim();
-					String row_key = args[1].toString().trim();
+					String row_key = args[1].toString().trim();		// Typically: a first ean code
 					// Uncomment following line for debug purposes...
 					System.out.println(getName() + " -> msg = " + msg + " / key = " + row_key);
 					//
@@ -1113,6 +1113,71 @@ public class AMiKoDesk {
 							// Update shopping basket
 							m_shopping_cart.saveWithIndex(m_shopping_basket);
 							m_web_panel.updateShoppingHtml();
+						} else if (msg.equals("show_all")) {
+							if (Utilities.isRoseShoppingApp()) {
+								m_compare_show_all = !m_compare_show_all;
+								m_shopping_cart.setFilterState(m_compare_show_all);
+								m_shopping_cart.updateMapSimilarArticles(m_map_similar_articles);
+								m_web_panel.updateShoppingHtml();
+							}
+						} else if (msg.startsWith("select_article")) {
+							if (Utilities.isRoseShoppingApp()) {
+								m_shopping_cart.updateSelectList(row_key.split("-")[0]);
+								m_web_panel.updateShoppingHtml();
+ 							}
+						} else if (msg.startsWith("swap_articles")) {
+							if (Utilities.isRoseShoppingApp()) {
+								// This is the article that will be replaced!
+								String ean_to_be_swapped = msg.replace("swap_articles", "");
+								// Extract information about article to be swapped
+								Article article_to_be_swapped = m_shopping_basket.get(ean_to_be_swapped);
+								int quantity = 1;
+								if (article_to_be_swapped!=null)
+									quantity = article_to_be_swapped.getQuantity();
+								// Search selected similar article in rose db
+								List<Article> la = m_rosedb.searchEan(row_key);							
+								Article sim_article = la.get(0);
+								// This is its ean code
+								String sim_ean = sim_article.getEanCode();
+								sim_article.setQuantity(quantity);
+								// Find index of article that will be swapped
+								ArrayList<String> sim_pos = new ArrayList<String>(m_shopping_basket.keySet());
+								int idx = sim_pos.indexOf(ean_to_be_swapped);
+								assert(sim_ean.equals(row_key));
+								// Generate temporary shopping basket 
+								LinkedHashMap<String, Article> tmp_shopping_basket = new LinkedHashMap<String, Article>(m_shopping_basket);
+								m_shopping_basket.clear();
+								// Fill new map
+								int index = 0;
+								for (Map.Entry<String, Article> entry : tmp_shopping_basket.entrySet()) {
+									if (index!=idx)
+										m_shopping_basket.put(entry.getKey(), entry.getValue());
+									else
+										m_shopping_basket.put(sim_ean, sim_article);
+									index++;
+								}	
+								// Find all similar articles
+								LinkedList<Article> sa = listSimilarArticles(sim_article);
+								if (sa!=null) {		
+									if (m_map_similar_articles.containsKey(sim_ean))
+										m_map_similar_articles.remove(sim_ean);
+									// Check if article to be swapped is in list of similar articles, if not add.
+									boolean in_list = false;
+									for (Article a : sa) {
+										if (a.getEanCode().equals(ean_to_be_swapped)) {
+											in_list = true;
+											break;
+										}
+									}
+									if (!in_list)
+										sa.add(article_to_be_swapped);
+									m_map_similar_articles.put(sim_ean, sa);
+									m_shopping_cart.updateMapSimilarArticles(m_map_similar_articles);
+								}										
+								// Update shopping basket
+								m_shopping_cart.setShoppingBasket(m_shopping_basket);
+								m_web_panel.updateShoppingHtml();
+							}
 						} else if (msg.startsWith("change_marge")) {
 							int marge = Integer.parseInt(row_key.trim());
 							if (marge >= 0) {
@@ -1490,9 +1555,10 @@ public class AMiKoDesk {
 			if (m_shopping_basket==null || m_shopping_basket.size()==0)
 				m_shopping_basket = m_shopping_cart.loadWithIndex(n);
 			if (Utilities.isRoseShoppingApp()) {
-				// Update list of similar articles			
-				for (Map.Entry<String, Article> e : m_shopping_basket.entrySet()) {
-					Article article = e.getValue();
+				// Update list of similar articles 
+				List<String> keys = new ArrayList<String>(m_shopping_basket.keySet());
+				for (String k : keys) {
+					Article article = m_shopping_basket.get(k);
 					String ean = article.getEanCode();
 					LinkedList<Article> la = listSimilarArticles(article);
 					if (la!=null) {
@@ -1501,7 +1567,7 @@ public class AMiKoDesk {
 							m_map_similar_articles.put(ean, la);
 							m_shopping_cart.updateMapSimilarArticles(m_map_similar_articles);
 						}
-					}
+					}				
 				}
 			}
 			updateShoppingHtml();
@@ -1533,8 +1599,8 @@ public class AMiKoDesk {
 					String ean = article.getEanCode();
 					m_shopping_basket.put(ean, article);
 					// Update shopping basket
-					m_shopping_cart.setShoppingBasket(m_shopping_basket);
-					// Update list of similar articles
+					m_shopping_cart.setShoppingBasket(m_shopping_basket);					
+					// Update list of similar articles only for last insert article
 					LinkedList<Article> la = listSimilarArticles(article);
 					if (la!=null) {
 						// Check if ean code is already part of the map...
@@ -1543,8 +1609,8 @@ public class AMiKoDesk {
 							m_shopping_cart.updateMapSimilarArticles(m_map_similar_articles);
 						}
 					}
-					m_web_panel.updateShoppingHtml();
-				}
+				}				
+				m_web_panel.updateShoppingHtml();
 			}
 		}
 		
@@ -1647,11 +1713,16 @@ public class AMiKoDesk {
 			String atc_code = article.getAtcCode();	
 			String size = article.getPackSize();
 			String unit = article.getPackUnit();
-			for (Article a : m_rosedb.searchATC(atc_code)) {
-				String s = a.getPackSize().toLowerCase();
-				String u = a.getPackUnit().toLowerCase();					
-				if ((size.contains(s) || s.contains(size)) && (unit.contains(u) || u.contains(unit)) )
-					list_a.add(a);
+			if (!atc_code.equals("k.A.")) {
+				for (Article a : m_rosedb.searchATC(atc_code)) {
+					if (!a.getAtcCode().equals("k.A.")) {
+						String s = a.getPackSize().toLowerCase();
+						String u = a.getPackUnit().toLowerCase();		
+						// System.out.println(a.getPackTitle() + " -> " + a.getAtcCode() + "|" + s + "|" + u);
+						if ((size.contains(s) || s.contains(size)) && (unit.contains(u) || u.contains(unit)) )
+							list_a.add(a);
+					}
+				}
 			}
 			return list_a;
 		}

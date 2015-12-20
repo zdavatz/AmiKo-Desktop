@@ -235,6 +235,7 @@ public class FileLoader {
 		} catch (Exception e) {
 			System.err.println(">> Error in reading csv file " + csv_file_name);
 		}
+		/*
 		// Test
 		if (Constants.DEBUG) {
 			HashMap<String, Float> reb_map = user_map.get("7601000600356").rebate_map;
@@ -252,6 +253,7 @@ public class FileLoader {
 				}
 			}
 		}
+		*/
 		return user_map;
 	}
 	

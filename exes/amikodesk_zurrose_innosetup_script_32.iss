@@ -3,7 +3,7 @@
 
 #define MyAppFolder "07_amikodesk_zurrose_exe32"
 #define MyAppName "AmiKo Desktop ZR"
-#define MyVersion "1.3.6"
+#define MyVersion "1.4.1"
 #define MyPublisher "ywesee GmbH"
 #define MyAppExe "amikodeskzr.exe"
 #define MyAppURL "http://www.ywesee.com/AmiKo/Desktop"

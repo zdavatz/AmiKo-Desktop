@@ -141,7 +141,7 @@ function changeColor(tableRow, highLight) {
 	if (highLight)
 		tableRow.style.backgroundColor = '#dcfac9';
 	else
-		tableRow.style.backgroundColor = '#ffffff';
+		tableRow.style.backgroundColor = 'ffebcd';
 }
 
 function changeAddress(tableRow, type) {
@@ -150,14 +150,32 @@ function changeAddress(tableRow, type) {
 
 function changeColorEven(tableRow, highLight) {
 	if (highLight) {
-		tableRow.style.backgroundColor = '#dcfac9';
+		tableRow.style.backgroundColor = '#e6d6ea';
 	} else
-      tableRow.style.backgroundColor = '#ffebcd';
+		tableRow.style.backgroundColor = '#e6e6fa';	// lavender
 }
 
 function changeColorOdd(tableRow, highLight) {
 	if (highLight) {
-		tableRow.style.backgroundColor = '#dcfac9';
+		tableRow.style.backgroundColor = '#e6d6ea';
 	} else
-      tableRow.style.backgroundColor = '#f5f5f5';
+		tableRow.style.backgroundColor = '#ffe4e1';	// mistyrose
+}
+
+function swapArticles(tableID, eanSrc, eanDst) {
+    try {
+		if (tableID=="Warenkorb") {
+			invokeJava("swap_articles"+eanDst, eanSrc.toString());
+		}
+    } catch (e) {
+        // alert(e);
+    }
+}
+
+function selectArticle(object) {
+	invokeJava("select_article", object.id);
+}
+
+function showAll(event) {
+	invokeJava("show_all", 0);
 }

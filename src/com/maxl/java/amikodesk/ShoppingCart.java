@@ -128,6 +128,14 @@ public abstract class ShoppingCart {
 		// VIRTUAL
 	}
 	
+	public void setFilterState(boolean state) {
+		// VIRTUAL
+	}
+	
+	public void updateSelectList(String ean) {
+		// VIRTUAL
+	}
+	
 	public List<String> getAssortList(String ean_code) {
 		return null;
 	}
