@@ -1,4 +1,4 @@
-function deleteRow(tableID,currentRow) {
+function deleteRow(tableID, currentRow) {
     try {
 		if (tableID=="Warenkorb") {
 			var table = document.getElementById(tableID);
@@ -53,7 +53,7 @@ function showAgbs() {
 	invokeJava("show_agbs",0);
 }
 
-function changeQty(tableID,currentRow,cellIdx) {
+function changeQty(tableID, currentRow, cellIdx) {
     try {
 		var key = window.event.keyCode;
 		if (key==9 || key==13) {
@@ -78,7 +78,7 @@ function changeQty(tableID,currentRow,cellIdx) {
     }
 }
 
-function onSelect(tableID,currentRow,index) {
+function onSelect(tableID, currentRow, index) {
 	if (tableID=="Warenkorb") {
 		var table = document.getElementById(tableID);
 		var rowCount = table.rows.length;
@@ -94,7 +94,7 @@ function onSelect(tableID,currentRow,index) {
 	}
 }
 
-function assortList(tableID,currentRow) {
+function assortList(tableID, currentRow) {
 	if (tableID=="Warenkorb") {
 		var table = document.getElementById(tableID);
 		var rowCount = table.rows.length;
@@ -108,7 +108,7 @@ function assortList(tableID,currentRow) {
 	}
 }
 
-function changeMarge(tableID,currentRow) {
+function changeMarge(tableID, currentRow) {
     try {
 		var key = window.event.keyCode;
 		if (key==9 || key==13) {
@@ -121,7 +121,7 @@ function changeMarge(tableID,currentRow) {
 	}
 }
 
-function changeShipping(tableID,currentRow,index) {
+function changeShipping(tableID, currentRow, index) {
 	if (tableID=="Checkout") {
 		var table = document.getElementById(tableID);
 		var rowCount = table.rows.length;
@@ -172,8 +172,8 @@ function swapArticles(tableID, eanSrc, eanDst) {
     }
 }
 
-function selectArticle(object) {
-	invokeJava("select_article", object.id);
+function selectArticle(eanSrc, eanDst) {
+	invokeJava("select_article"+eanSrc, eanDst.toString());
 }
 
 function showAll(event) {

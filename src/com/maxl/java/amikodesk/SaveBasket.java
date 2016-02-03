@@ -71,8 +71,10 @@ public class SaveBasket {
 	
 	private static Map<String, Article> m_shopping_basket = null;
 	private static Map<String, Author> m_map_of_authors = null;
-	private static String m_customer_gln_code = "";	
+	private static List<Article> m_select_articles_list = null;
 
+	private static String m_customer_gln_code = "";	
+	
 	private static Preferences m_prefs;
 	
 	private static ResourceBundle m_rb = null;
@@ -80,6 +82,7 @@ public class SaveBasket {
 	public SaveBasket(ShoppingCart shopping_cart) {
 		m_shopping_basket = shopping_cart.getShoppingBasket();
 		m_rb = shopping_cart.getRB();		
+		m_select_articles_list = shopping_cart.getSelectList();
 		m_customer_gln_code = shopping_cart.getCustomerGlnCode();		
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());		
 	}
@@ -425,50 +428,90 @@ public class SaveBasket {
         table.addCell(getStringCell(m_rb.getString("price") + " (CHF)", font_bold_10, Rectangle.TOP|Rectangle.BOTTOM, Element.ALIGN_RIGHT, 1));
         
         if (m_shopping_basket.size()>0) {
-			for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
-				Article article = entry.getValue();				
-					
-				if (mode.equals("all") 
-						|| (mode.equals("rest") && (m_map_of_authors==null || !anyElemIsContained(m_map_of_authors, article.getAuthor().trim().toLowerCase())))) {	
-					String price_pruned = "";					
-					if (article.getCode()!=null && article.getCode().equals("ibsa")) {
+        	if (!Utilities.isRoseShoppingApp()) {
+				for (Map.Entry<String, Article> entry : m_shopping_basket.entrySet()) {
+					Article article = entry.getValue();				
+						
+					if (mode.equals("all") 
+							|| (mode.equals("rest") && (m_map_of_authors==null || !anyElemIsContained(m_map_of_authors, article.getAuthor().trim().toLowerCase())))) {	
+						String price_pruned = "";		
+						if (article.getCode()!=null && article.getCode().equals("ibsa")) {
+							float cr = article.getCashRebate();
+							if (article.getDraufgabe()>0)
+								price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
+							else
+								price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
+						} else {
+							price_pruned = article.getCleanExfactoryPrice();						
+						}
+						
+						if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {						
+							table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+							table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+							
+					        codeEAN.setCode(article.getEanCode());
+					        Image img = codeEAN.createImageWithBarcode(cb, null, null);
+					        img.scalePercent(120);
+					        cell = new PdfPCell(img);
+					        cell.setBorder(Rectangle.NO_BORDER);
+					        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+					        cell.setUseBorderPadding(true);
+					        cell.setBorderWidth(5);
+					        if (position==1)
+					        	cell.setPaddingTop(8);
+					        else
+					        	cell.setPaddingTop(0);
+					        cell.setPaddingBottom(8);
+					        table.addCell(cell);
+					        
+							table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
+							
+							float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
+							sub_total_CHF += price_CHF;					
+							table.addCell(getStringCell(String.format("%.2f", price_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));						
+						}
+					}
+				}
+        	} else {
+        		for (Article article : m_select_articles_list) {
+					if (mode.equals("all") 
+							|| (mode.equals("rest") && (m_map_of_authors==null || !anyElemIsContained(m_map_of_authors, article.getAuthor().trim().toLowerCase())))) {	
+						String price_pruned = "";		
 						float cr = article.getCashRebate();
-						if (article.getDraufgabe()>0)
+						if (cr<0.0f)
 							price_pruned = String.format("%.2f", article.getBuyingPrice(0.0f));
 						else
 							price_pruned = String.format("%.2f", article.getBuyingPrice(cr));
-					} else {
-						price_pruned = article.getCleanExfactoryPrice();						
-					}
-					
-					if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {						
-						table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
-						table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
 						
-				        codeEAN.setCode(article.getEanCode());
-				        Image img = codeEAN.createImageWithBarcode(cb, null, null);
-				        img.scalePercent(120);
-				        cell = new PdfPCell(img);
-				        cell.setBorder(Rectangle.NO_BORDER);
-				        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-				        cell.setUseBorderPadding(true);
-				        cell.setBorderWidth(5);
-				        if (position==1)
-				        	cell.setPaddingTop(8);
-				        else
-				        	cell.setPaddingTop(0);
-				        cell.setPaddingBottom(8);
-				        table.addCell(cell);
-				        
-						table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
-						
-						float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
-						sub_total_CHF += price_CHF;					
-						table.addCell(getStringCell(String.format("%.2f", price_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));						
+						if (!price_pruned.isEmpty() && !price_pruned.equals("..")) {						
+							table.addCell(getStringCell(Integer.toString(++position), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+							table.addCell(getStringCell(Integer.toString(article.getQuantity()), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));
+							
+					        codeEAN.setCode(article.getEanCode());
+					        Image img = codeEAN.createImageWithBarcode(cb, null, null);
+					        img.scalePercent(120);
+					        cell = new PdfPCell(img);
+					        cell.setBorder(Rectangle.NO_BORDER);
+					        cell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+					        cell.setUseBorderPadding(true);
+					        cell.setBorderWidth(5);
+					        if (position==1)
+					        	cell.setPaddingTop(8);
+					        else
+					        	cell.setPaddingTop(0);
+					        cell.setPaddingBottom(8);
+					        table.addCell(cell);
+					        
+							table.addCell(getStringCell(article.getPackTitle(), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_MIDDLE, 1));		        
+							
+							float price_CHF = article.getQuantity()*Float.parseFloat(price_pruned);
+							sub_total_CHF += price_CHF;					
+							table.addCell(getStringCell(String.format("%.2f", price_CHF), font_norm_10, PdfPCell.NO_BORDER, Element.ALIGN_RIGHT, 1));						
+						}
 					}
-				}
-			}
-			
+        		}
+        	}
+        	
 			table.addCell(getStringCell(m_rb.getString("subtotal"), font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell("", font_bold_10, Rectangle.TOP, Element.ALIGN_MIDDLE, 2));
 			table.addCell(getStringCell(String.format("%.2f", sub_total_CHF), font_bold_10, Rectangle.TOP, Element.ALIGN_RIGHT, 2));			

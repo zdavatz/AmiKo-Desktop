@@ -1,19 +1,11 @@
 package com.maxl.java.amikodesk;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -27,6 +19,7 @@ public class FileLoader {
 		//
 	}
 	
+	@SuppressWarnings("unchecked")
 	public TreeMap<String, Conditions> loadIbsaConditions() {
 		TreeMap<String, Conditions> map_conditions = new TreeMap<String, Conditions>();
 		
@@ -46,6 +39,7 @@ public class FileLoader {
 		return map_conditions;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public TreeMap<String, TreeMap<String, Float>> loadDesitinConditions() {
 		TreeMap<String, TreeMap<String, Float>> map_conditions = new TreeMap<String, TreeMap<String, Float>>();
 		
@@ -81,6 +75,7 @@ public class FileLoader {
 		return map_conditions;
 	}
 		
+	@SuppressWarnings("unchecked")
 	public TreeMap<String, String> loadIbsaGlns() {
 		TreeMap<String, String> map_glns = new TreeMap<String, String>();
 		
@@ -104,6 +99,7 @@ public class FileLoader {
 	 * Load gln to user map
 	 * @return HashMap
 	 */
+	@SuppressWarnings("unchecked")
 	public HashMap<String, User> loadGlnCodes(String ser_file_name) {
 		HashMap<String, User> user_map = new HashMap<String, User>();
 		
@@ -140,120 +136,43 @@ public class FileLoader {
 	 * @param csv_file_name
 	 * @return user map
 	 */
-	public HashMap<String, User> loadRoseGlnCodesFromCsv(String csv_file_name) {
+	@SuppressWarnings("unchecked")
+	public HashMap<String, User> loadRoseUserMap(String ser_file_name) {
 		HashMap<String, User> user_map = new HashMap<String, User>();
-		try {
-			File file = new File(csv_file_name);
-			if (!file.exists()) 
-				return null;			
-			FileInputStream fis = new FileInputStream(csv_file_name);
-			BufferedReader br = new BufferedReader(new InputStreamReader(fis, "cp1252"));
-			int counter = 0;
-			String line;
-			while ((line = br.readLine()) != null) {
-				String token[] = line.split(";", -1);
-				if (counter>0 && token.length>23) {
-					User user = new User();
-					user.gln_code = token[3];
-					user.name1 = token[16];
-					user.street = token[19];
-					user.zip = token[21];
-					user.city = token[22];
-					user.email = token[23];
-					LinkedHashMap<String, Float> rebate_map = new LinkedHashMap<String, Float>();
-					LinkedHashMap<String, Float> expenses_map = new LinkedHashMap<String, Float>();
-									
-					for (int i=0; i<5; ++i) {
-						String pharma_company = (new ArrayList<String>(Utilities.doctorPreferences.keySet())).get(i);
-						//
-						String rebate = token[4+i].replaceAll("[^\\d.]", "");
-						if (!rebate.isEmpty())
-							rebate_map.put(pharma_company, Float.valueOf(rebate));
-						else
-							rebate_map.put(pharma_company, 0.0f);
-						String expenses = token[9+i].replaceAll("[^\\d.]", "");
-						//							
-						if (!expenses.isEmpty())
-							expenses_map.put(pharma_company, Float.valueOf(expenses));						
-						else
-							expenses_map.put(pharma_company, 0.0f);
-					}					
-							
-					// Is the user already in the user_map?
-					if (user_map.containsKey(user.gln_code)) {
-						user = user_map.get(user.gln_code);
-						// Compare maps and always get biggest numbers
-						for (Map.Entry<String, Float> r : user.rebate_map.entrySet()) {
-							String name = r.getKey();
-							if (rebate_map.containsKey(name)) {
-								if (rebate_map.get(name)<user.rebate_map.get(name))
-									rebate_map.put(name, user.rebate_map.get(name));
-							}
-						}
-						for (Map.Entry<String, Float> e : user.expenses_map.entrySet()) {
-							String name = e.getKey();
-							if (expenses_map.containsKey(name)) {
-								if (expenses_map.get(name)<user.expenses_map.get(name))
-									expenses_map.put(name, user.expenses_map.get(name));
-							}							
-						}
-					} 
-
-					// Sort rebate map according to largest rebate (descending order)
-					List<Entry<String, Float>> list_of_entries_1 = new ArrayList<Entry<String, Float>>(rebate_map.entrySet());
-					Collections.sort(list_of_entries_1, new Comparator<Entry<String, Float>>() {
-						@Override
-						public int compare(Entry<String, Float> e1, Entry<String, Float> e2) {
-							return -Float.valueOf(e1.getValue()).compareTo(e2.getValue());
-						}
-					});
-					rebate_map.clear();
-					for (Entry<String, Float> e : list_of_entries_1) {
-						rebate_map.put(e.getKey(), e.getValue());
-					}
-					// Sort expenses map according to largest expense (descending order)
-					List<Entry<String, Float>> list_of_entries_2 = new ArrayList<Entry<String, Float>>(expenses_map.entrySet());
-					Collections.sort(list_of_entries_2, new Comparator<Entry<String, Float>>() {
-						@Override
-						public int compare(Entry<String, Float> e1, Entry<String, Float> e2) {
-							return -Float.valueOf(e1.getValue()).compareTo(e2.getValue());
-						}
-					});
-					expenses_map.clear();
-					for (Entry<String, Float> e : list_of_entries_2) {
-						expenses_map.put(e.getKey(), e.getValue());
-					}
-					
-					user.rebate_map = rebate_map;
-					user.expenses_map = expenses_map;	
-					
-					user_map.put(user.gln_code, user);
-				}
-				counter++;
-			}
-			br.close();
-		} catch (Exception e) {
-			System.err.println(">> Error in reading csv file " + csv_file_name);
+		
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\" + ser_file_name);	
+		if (encrypted_msg==null) {
+			encrypted_msg = FileOps.readBytesFromFile(Constants.ROSE_FOLDER + ser_file_name);
+			System.out.println("Loading " + ser_file_name + " from default folder... " + encrypted_msg.length);
+		} else {
+			System.out.println("Loading " + ser_file_name + " from app data folder... " + encrypted_msg.length);
 		}
-		/*
-		// Test
-		if (Constants.DEBUG) {
-			HashMap<String, Float> reb_map = user_map.get("7601000600356").rebate_map;
-			if (reb_map != null) {
-				System.out.println("rebate map");
-				for (Map.Entry<String, Float> m : reb_map.entrySet()) {
-					System.out.println(m.getKey() + " -> " + m.getValue());
+		if (encrypted_msg!=null) {
+			Crypto crypto = new Crypto();
+			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
+			user_map = (HashMap<String, User>)FileOps.deserialize(plain_msg);
+		
+			/*
+			// Test
+			if (Constants.DEBUG) {
+				HashMap<String, Float> reb_map = user_map.get("7601000600356").rebate_map;
+				if (reb_map != null) {
+					System.out.println("rebate map");
+					for (Map.Entry<String, Float> m : reb_map.entrySet()) {
+						System.out.println(m.getKey() + " -> " + m.getValue());
+					}
+				}
+				HashMap<String, Float> expenses_map = user_map.get("7601000600356").expenses_map;
+				if (expenses_map != null) {
+					System.out.println("expenses map");
+					for (Map.Entry<String, Float> m : expenses_map.entrySet()) {
+						System.out.println(m.getKey() + " -> " + m.getValue());
+					}
 				}
 			}
-			HashMap<String, Float> expenses_map = user_map.get("7601000600356").expenses_map;
-			if (expenses_map != null) {
-				System.out.println("expenses map");
-				for (Map.Entry<String, Float> m : expenses_map.entrySet()) {
-					System.out.println(m.getKey() + " -> " + m.getValue());
-				}
-			}
+			*/
 		}
-		*/
+		
 		return user_map;
 	}
 	
@@ -263,61 +182,46 @@ public class FileLoader {
 	 * @param csv_file_name
 	 * @return sales figures map
 	 */
-	public HashMap<String, Float> loadRoseSalesFigures(String csv_file_name) {
+	@SuppressWarnings("unchecked")
+	public HashMap<String, Float> loadRoseSalesFigures(String ser_file_name) {
 		HashMap<String, Float> sales_figures_map = new HashMap<String, Float>();
 
-		try {
-			File file = new File(csv_file_name);
-			if (!file.exists()) 
-				return null;			
-			FileInputStream fis = new FileInputStream(csv_file_name);
-			BufferedReader br = new BufferedReader(new InputStreamReader(fis, "cp1252"));
-			int counter = 0;
-			String line;
-			while ((line = br.readLine()) != null) {
-				String token[] = line.split(";", -1);
-				if (counter>0 && token.length>2) {
-					String pharma_code = token[0];
-					float sales_figures = 0;
-					if (token[2]!=null) {
-						token[2] = token[2].replaceAll("'", "");
-						sales_figures = Float.valueOf(token[2]);
-					}
-					sales_figures_map.put(pharma_code, sales_figures);
-				}
-				counter++;
-			}
-			br.close();
-		} catch (Exception e) {
-			System.err.println(">> Error in reading csv file " + csv_file_name);
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\" + ser_file_name);	
+		if (encrypted_msg==null) {
+			encrypted_msg = FileOps.readBytesFromFile(Constants.ROSE_FOLDER + ser_file_name);
+			System.out.println("Loading " + ser_file_name + " from default folder... " + encrypted_msg.length);
+		} else {
+			System.out.println("Loading " + ser_file_name + " from app data folder... " + encrypted_msg.length);
+		}
+		if (encrypted_msg!=null) {
+			Crypto crypto = new Crypto();
+			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
+			sales_figures_map = (HashMap<String, Float>)FileOps.deserialize(plain_msg);
 		}
 		
 		return sales_figures_map;
 	}
 	
-	public ArrayList<String> loadRoseAutoGenerika(String csv_file_name) {
+	/**
+	 * 
+	 * @param ser_file_name
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	public ArrayList<String> loadRoseAutoGenerika(String ser_file_name) {
 		ArrayList<String> auto_generika_list = new ArrayList<String>();
 
-		try {
-			File file = new File(csv_file_name);
-			if (!file.exists()) 
-				return null;			
-			FileInputStream fis = new FileInputStream(csv_file_name);
-			BufferedReader br = new BufferedReader(new InputStreamReader(fis, "cp1252"));
-			int counter = 0;
-			String line;
-			while ((line = br.readLine()) != null) {
-				String token[] = line.split(";", -1);
-				if (counter>0 && token.length>10) {
-					String ean_code = token[10];
-					if (ean_code!=null)
-					auto_generika_list.add(ean_code);
-				}
-				counter++;
-			}
-			br.close();
-		} catch (Exception e) {
-			System.err.println(">> Error in reading csv file " + csv_file_name);
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\" + ser_file_name);	
+		if (encrypted_msg==null) {
+			encrypted_msg = FileOps.readBytesFromFile(Constants.ROSE_FOLDER + ser_file_name);
+			System.out.println("Loading " + ser_file_name + " from default folder... " + encrypted_msg.length);
+		} else {
+			System.out.println("Loading " + ser_file_name + " from app data folder... " + encrypted_msg.length);
+		}
+		if (encrypted_msg!=null) {
+			Crypto crypto = new Crypto();
+			byte[] plain_msg = crypto.decrypt(encrypted_msg);	
+			auto_generika_list = (ArrayList<String>)FileOps.deserialize(plain_msg);
 		}
 		
 		return auto_generika_list;

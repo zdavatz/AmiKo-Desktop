@@ -53,9 +53,11 @@ public class Utilities {
 	static {
 		// LinkedHashMap preserves insertion order
 		rosePreferences = new LinkedHashMap<String, Integer>();
-		rosePreferences.put("sandoz", 1);		// sandoz pharmaceuticals ag
-		rosePreferences.put("mepha", 2);		// mepha schweiz ag	
-		rosePreferences.put("teva", 3);			// teva pharma ag
+		rosePreferences.put("helvepharm", 1);	// helvepharm 
+		rosePreferences.put("sanofi", 2);		// zentiva (Sanofi)
+		rosePreferences.put("sandoz", 3);		// sandoz pharmaceuticals ag
+		rosePreferences.put("mepha", 4);		// mepha schweiz ag	
+		rosePreferences.put("teva", 5);			// teva pharma ag
 	}
 		
 	static public String appDataFolder() {

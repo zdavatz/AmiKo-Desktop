@@ -30,6 +30,12 @@ public class User implements java.io.Serializable {
 	public boolean bet_mittel = false;
 	public boolean is_human = true;
 	
+	public String sap_id = "";
+	public String specialities = "";
+	public String capabilities = "";
+	public String bm_type = "";
+	public String status = "A";		// Default: Aktiv
+	
 	// Map of GLN to list of company-specific rebate
 	public LinkedHashMap<String, Float> rebate_map = null;
 	// Map of GLN to list of company-specific expenses

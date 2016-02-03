@@ -108,6 +108,10 @@ public abstract class ShoppingCart {
 	/**
 	 *  Virtual methods - implement in derived class, if required.
 	 */
+	public void loadFiles() {
+		// VIRTUAL
+	}
+	
 	public void setMap(Map<String, Float> conditions) {
 		// VIRTUAL
 	}
@@ -134,6 +138,10 @@ public abstract class ShoppingCart {
 	
 	public void updateSelectList(String ean) {
 		// VIRTUAL
+	}
+	
+	public List<Article> getSelectList() {
+		return null;
 	}
 	
 	public List<String> getAssortList(String ean_code) {
@@ -269,6 +277,7 @@ public abstract class ShoppingCart {
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	public Map<String, Article> loadWithIndex(final int n) {
 		int index = n;
 		// If n<0 then load default cart

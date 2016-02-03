@@ -46,6 +46,8 @@ public class Article implements java.io.Serializable {
 	private String availability = "";
 	private String dropdown_str;
 	private String author_code = "";
+	private String replace_ean_code = "";
+	private String replace_pharma_code = "";
 	private String flags = "";
 	private float margin = -1.0f;	// <0.0f -> not initialized
 	private float buying_price = 0.0f;
@@ -593,6 +595,26 @@ public class Article implements java.io.Serializable {
 	
 	public String getAvailability() {
 		return availability;
+	}
+	
+	public boolean isOffMarket() {
+		return availability.equals("-1");
+	}
+	
+	public void setReplaceEan(String ean) {
+		this.replace_ean_code = ean;
+	}
+	
+	public String getReplaceEan() {
+		return replace_ean_code;
+	}
+	
+	public void setReplacePharma(String pharma) {
+		this.replace_pharma_code = pharma;
+	}
+	
+	public String getReplacePharma() {
+		return replace_pharma_code;
 	}
 	
 	public void setFlags(String flags) {

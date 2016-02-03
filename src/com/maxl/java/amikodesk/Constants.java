@@ -93,6 +93,6 @@ public class Constants {
 	// public static final String APP_NAME = COMED_ZURROSE_NAME;
 	// public static final String APP_NAME = AMIKO_IBSA_NAME;
 	// public static final String APP_NAME = COMED_IBSA_NAME;
-	public static final String APP_VERSION = "1.4.1 (32-bit)";	
-	public static final String GEN_DATE = "15.12.2015";	
+	public static final String APP_VERSION = "1.4.6 (32-bit)";	
+	public static final String GEN_DATE = "25.01.2016";	
 }

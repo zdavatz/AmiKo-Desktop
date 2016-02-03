@@ -125,6 +125,10 @@ public class UIState {
 		return shopping_mode;
 	}
 	
+	public boolean isRoseShoppingMode() {
+		return (shopping_mode && Utilities.isRoseShoppingApp());
+	}
+	
 	public boolean isLoadCart() {
 		return use_mode.equals("loadcart");
 	}

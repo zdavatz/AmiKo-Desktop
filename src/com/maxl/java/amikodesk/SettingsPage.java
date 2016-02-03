@@ -826,11 +826,11 @@ public class SettingsPage implements java.io.Serializable {
 		mUserDialog.add(jplInnerPanel1);
 
 		// Custom
-		if (Utilities.appCustomization().equals("zurrose")) {
+		if (Utilities.isRoseShoppingApp()) {
 			mUserDialog.add(Box.createRigidArea(new Dimension(0, 10)));		
 			mComparisonPanel = comparisonSettings();
 			mUserDialog.add(mComparisonPanel);
-			if (mPrefs.getInt(UserID, 0)==19)
+			if (mPrefs.getInt(UserID, 0)==19 || Utilities.isRoseShoppingApp())
 				enableComponents(mComparisonPanel, true);
 			else
 				enableComponents(mComparisonPanel, false);

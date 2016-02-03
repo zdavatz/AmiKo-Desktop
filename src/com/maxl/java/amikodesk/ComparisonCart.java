@@ -46,6 +46,7 @@ public class ComparisonCart implements java.io.Serializable {
 	
 	private static int button_state[] = new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 	
+	@SuppressWarnings("unchecked")
 	public ComparisonCart() {
 		// Load javascripts
 		m_jscripts_str = FileOps.readFromFile(Constants.JS_FOLDER + "rose_callbacks.js");
@@ -54,10 +55,10 @@ public class ComparisonCart implements java.io.Serializable {
 		// Prefs
 		m_prefs = Preferences.userRoot().node(SettingsPage.class.getName());
 		// 
-		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\access_rose.ami.ser");
+		byte[] encrypted_msg = FileOps.readBytesFromFile(Utilities.appDataFolder() + "\\rose_access.ami.ser");
 		if (encrypted_msg==null) {		
-			encrypted_msg = FileOps.readBytesFromFile(Constants.ROSE_FOLDER + "access_rose.ami.ser");
-			System.out.println("Loading access_rose.ami.ser from default folder...");
+			encrypted_msg = FileOps.readBytesFromFile(Constants.ROSE_FOLDER + "rose_access.ami.ser");
+			System.out.println("Loading rose_access.ami.ser from default folder...");
 		}
 		// Decrypt and deserialize
 		if (encrypted_msg!=null) {

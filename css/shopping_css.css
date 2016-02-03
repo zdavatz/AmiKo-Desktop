@@ -2,7 +2,7 @@
 #shopping a {text-decoration:none;color:black;}
 #shopping div p {font-size:0.8em;}
 #shopping table {background-color:#f0f0f0;font-family:"Verdana","sans-serif";font-size:0.85em;margin-top:0.9em;margin-bottom:0.9em;}
-#shopping td {font-family:"Verdana","sans-serif";font-size:0.85em;}
+#shopping td {font-family:"Verdana","sans-serif";font-size:0.85em;padding-left:0.5em;padding-right:0.5em;}
 #shopping td p {font-family:"Verdana","sans-serif";font-size:0.85em;}
 #shopping button {cursor:pointer;border:none;background-color:transparent;}
 #shopping input {font-family:"Verdana","sans-serif";font-size:1.0em;}

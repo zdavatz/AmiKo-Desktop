@@ -25,6 +25,8 @@ public class RoseSqlDb {
 	// private static final String KEY_PRICE = "price";
 	// private static final String KEY_AVAIL = "availability";
 	private static final String KEY_SUPPLIER = "supplier";
+	// private static final String KEY_REPLACE_EAN = "replaceean";
+	// private static final String KEY_REPLACE_PHARMA = "replacepharma";
 	
 	private static final String ROSE_DB_TABLE = "rosedb";
 	
@@ -234,6 +236,8 @@ public class RoseSqlDb {
 			article.setAvailability(result.getString(12));	// KEY_AVAIL
 			article.setSupplier(result.getString(13));		// KEY_SUPPLIER
 			article.setLikes(result.getInt(14));			// KEY_LIKES	
+			article.setReplaceEan(result.getString(15));	// KEY_REPLACE_EAN
+			article.setReplacePharma(result.getString(16));	// KEY_REPLACE_PHARMA
 			boolean off_market = result.getBoolean(17);
 			if (off_market)
 				article.setAvailability("-1");				// -1 -> not on the market anymore!
